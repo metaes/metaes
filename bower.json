@@ -1,0 +1,15 @@
+{
+  "name": "MetaES",
+  "version": "0.1.0",
+  "dependencies": {
+    "esprima": "harmony"
+  },
+  "scripts": [
+    "metaes.js"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components"
+  ]
+}
