@@ -19,7 +19,7 @@ MetaES is currently in an alpha state.
 
 ### Using `npm`:
 
-    npm install git+https://git@github.com/metaes/metaes.git
+    npm install git+git@github.com:metaes/metaes.git
     
 Then write in a `.js` file:
 
@@ -63,7 +63,7 @@ metaes.evaluate('console.log("hello world!")', window);
     
 ## Documentation
 
-Read API docs at [2. API Reference](fill me)
+Read API docs at [2. API Reference](https://github.com/metaes/metaes#2-api-reference)
 
 ## License
 
@@ -71,9 +71,9 @@ Read API docs at [2. API Reference](fill me)
     
 # Table of contents
 
-1. [About MetaES as a metacircular interpreter]()
-2. [API Reference]()
-3. [Roadmap]()
+1. [About MetaES as a metacircular interpreter](https://github.com/metaes/metaes#1-about-metaes-as-a-metacircular-interpreter)
+2. [API Reference](https://github.com/metaes/metaes#2-api-reference)
+3. [Roadmap](https://github.com/metaes/metaes#3-roadmap)
 
 ## 1. About MetaES as a metacircular interpreter
 
@@ -291,7 +291,7 @@ Nevertheless, it's possible to run everything in MetaES mode having in mind perf
 
 ##  2. API Reference
 
-There are TypeScript typings [available](http://github.com/metaes/metaes). You can treat them as complemention of this reference. 
+There are TypeScript typings [available](https://github.com/metaes/metaes/blob/master/metaes.d.ts). You can treat them as complemention of this reference. 
 
 This is the signature of function calling the interpreter in `metaes` object:
 
