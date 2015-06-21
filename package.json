@@ -1,5 +1,5 @@
 {
-  "name": "MetaES",
+  "name": "metaes",
   "version": "0.1.0",
   "main": "metaes.js",
   "dependencies": {

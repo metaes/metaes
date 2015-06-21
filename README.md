@@ -46,7 +46,7 @@ to see the output in the console.
    
 ### Using `bower`:
 
-    bower install https://github.com/metaes/metaes.git
+    bower install git@github.com:metaes/metaes.git
     
 Then import the script:
 
