@@ -102,7 +102,7 @@ Those informations are, with examples:
   * access to scope as the JavaScript object:
     
     ```js
-    var metaes = require('./metaes');
+    var metaes = require('metaes');
 
     function interceptor(e, value, env, pause) {
       if (e.type === 'CallExpression' && value && value.callee == getScopeVariablesNames) {
@@ -135,7 +135,7 @@ Those informations are, with examples:
   * access to the stack as the JavaScript object:
   
     ```js
-    var metaes = require('./metaes');
+    var metaes = require('metaes');
 
     function interceptor(e, value, env, pause) {
       if (e.type === 'CallExpression' && value && value.callee == getStack) {
@@ -190,7 +190,7 @@ Those informations are, with examples:
   * access to functions closures:
   
     ```js
-    var metaes = require('./metaes');
+    var metaes = require('metaes');
 
     function interceptor(e, value, env, pause) {
       if (e.type === 'CallExpression' && value && value.callee == getCurrentFunctionClosure) {
@@ -225,7 +225,7 @@ Those informations are, with examples:
   * stopping/resuming the execution
   
     ```js
-    var metaes = require('./metaes');
+    var metaes = require('metaes');
   
     function interceptor(e, value, env, pause) {
       if (e.type === 'CallExpression' && value && value.callee == sleep) {
