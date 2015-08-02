@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "main": "metaes.js",
   "dependencies": {
-    "esprima": "^1.1.0-dev-harmony"
+    "esprima": "^2.5.0"
   },
   "devDependencies": {
-    "esprima": "git://github.com/ariya/esprima.git#harmony"
+    "esprima": "^2.5.0"
   },
   "engines": {
     "node": ">=0.8.0"
