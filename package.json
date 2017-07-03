@@ -1,14 +1,17 @@
 {
   "name": "metaes",
-  "version": "0.1.0",
-  "main": "metaes.js",
+  "description": "JavaScript (ECMAScript) in JavaScript interpreter for better tools.",
+  "author": {
+    "name": "Bartosz Krupa",
+    "email": "krupa.bartosz@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/metaes/metaes.git"
+  },
+  "license": "MIT",
+  "version": "2.0.0-alpha",
   "dependencies": {
     "esprima": "^3.1.3"
-  },
-  "devDependencies": {
-    "esprima": "^2.5.0"
-  },
-  "engines": {
-    "node": ">=0.8.0"
   }
 }
