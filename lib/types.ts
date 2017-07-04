@@ -1,4 +1,4 @@
-import {ASTNode} from "../nodes/nodes";
+import {ASTNode} from "./nodes/nodes";
 import {Environment, Reference} from "./environment";
 
 export class ParseError extends Error {

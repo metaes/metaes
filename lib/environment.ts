@@ -1,6 +1,6 @@
 import {Continuation, ErrorContinuation, EvaluationConfig, EvaluationType, MetaESError} from "./types";
 import {Identifier} from "./nodeTypes";
-import {ASTNode} from "../nodes/nodes";
+import {ASTNode} from "./nodes/nodes";
 
 export class EnvNotFoundError extends Error {
 }

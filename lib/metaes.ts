@@ -1,7 +1,7 @@
 import {parse} from "./parse";
 import {ErrorCallback, EvaluationConfig, LocatedError, SuccessCallback} from "./types";
 import {evaluate} from "./applyEval";
-import {ASTNode} from "../nodes/nodes";
+import {ASTNode} from "./nodes/nodes";
 import {Environment} from "./environment";
 
 

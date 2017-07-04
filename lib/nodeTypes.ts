@@ -1,4 +1,4 @@
-import { NodeBase } from "../nodes/nodes";
+import { NodeBase } from "./nodes/nodes";
 
 export interface Identifier extends NodeBase {
   type: "Identifier";

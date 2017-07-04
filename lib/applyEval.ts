@@ -1,6 +1,6 @@
 import {Continuation, ErrorContinuation, EvaluationConfig, LocatedError, MetaESError, NotImplementedYet} from "./types";
 import {tokens} from "./interpreters";
-import {ASTNode} from "../nodes/nodes";
+import {ASTNode} from "./nodes/nodes";
 import {callInterceptor, Environment} from "./environment";
 
 class EmptyNodeError extends Error {
