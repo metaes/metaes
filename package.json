@@ -10,7 +10,7 @@
     "url": "https://github.com/metaes/metaes.git"
   },
   "license": "MIT",
-  "version": "2.0.0-alpha",
+  "version": "2.0.0",
   "dependencies": {
     "esprima": "^3.1.3"
   }
