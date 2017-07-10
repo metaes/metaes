@@ -1,6 +1,6 @@
-import {Continuation, ErrorContinuation, EvaluationConfig, EvaluationType, MetaESError} from "./types";
-import {Identifier} from "./nodeTypes";
-import {ASTNode} from "./nodes/nodes";
+import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationType, MetaESError } from "./types";
+import { Identifier } from "./nodeTypes";
+import { ASTNode } from "./nodes/nodes";
 
 export class EnvNotFoundError extends Error {
 }
@@ -8,7 +8,7 @@ export class EnvNotFoundError extends Error {
 export interface Environment {
   prev?: Environment;
   names: object;
-  references?: Map<string, Reference>;
+  references?: {[key:string]:Reference};
 
   // At the moment used only for CatchClause.
   // Intended not to be available for client JavaScript programs
@@ -118,13 +118,13 @@ function _getValue(env: Environment,
 
 function setReference(env: Environment, name: string, value: any, createdByMetaES: boolean) {
   if (!env.references) {
-    env.references = new Map();
+    env.references = {};
   }
 
-  let reference = env.references.get(name);
+  let reference = env.references[name];
   if (!reference) {
     reference = new Reference(name, value, env, createdByMetaES);
-    env.references!.set(name, reference);
+    env.references[name] = reference;
     reference.value = value;
   }
   return reference;
@@ -137,9 +137,9 @@ export function getReference(env: Environment,
   _getValue(env, name, true,
     ({env, name, value}) => {
       if (!env.references) {
-        env.references = new Map();
+        env.references = {}
       }
-      c(env.references.get(name) || setReference(env, name, value, false));
+      c(env.references[name] || setReference(env, name, value, false));
     }, cerr);
 }
 
