@@ -1,6 +1,8 @@
 
 # MetaES (Work in progress)
 
+[![Build Status](https://travis-ci.org/metaes/metaes.svg?branch=master)](https://travis-ci.org/metaes/metaes)
+
 [Docs copied from legacy https://github.com/metaes/metaes-es5]
 
 MetaES is a metacircular interpreter (http://en.wikipedia.org/wiki/Meta-circular_evaluator) written in JavaScript at EcmaScript 5.1 standard, so it can be run on any environment that supports ES5.1, for example modern browsers (both with mobile), nodejs, rhino, nashorn and other ECMAScript 5.1 interpreters.
