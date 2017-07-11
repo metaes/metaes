@@ -5,12 +5,24 @@
     "name": "Bartosz Krupa",
     "email": "krupa.bartosz@gmail.com"
   },
+  "scripts": {
+    "test": "tsc; mocha test/truthinessRunner"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/metaes/metaes.git"
   },
   "license": "MIT",
   "version": "2.2.0",
+  "devDependencies": {
+    "fs-extra": "^3.0.1",
+    "glob": "^7.1.2",
+    "lodash": "^4.17.4",
+    "mocha": "^3.4.2",
+    "pify": "^3.0.0",
+    "@types/node": "^8.0.10",
+    "chai": "^4.0.2"
+  },
   "dependencies": {
     "esprima": "^3.1.3"
   }

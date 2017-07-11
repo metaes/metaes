@@ -10,7 +10,7 @@
     "paths": {
         "esprima": ["node_modules/esprima/dist/esprima"]
     },
-    "module": "amd",
+    "module": "commonjs",
     "target": "es6",
     "sourceMap": true,
     "strictNullChecks": true,
