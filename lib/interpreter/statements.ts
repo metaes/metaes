@@ -166,8 +166,8 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
             new LocatedError(e.block, error));
 
         let catchClauseEnv = {
-          internal: {names: {error}},
-          names: env.names,
+          internal: {values: {error}},
+          values: env.names,
           prev: env
         };
         evaluate(e.handler, catchClauseEnv, config, () => {
@@ -189,7 +189,7 @@ export function CatchClause(e: CatchClause, env, config, c, cerr) {
     error => {
       let name = e.param.name;
       evaluate(e.body, {
-        names: {[name]: error},
+        values: {[name]: error},
         prev: env
       }, config, c, cerr)
     },
@@ -249,7 +249,7 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
         case "VariableDeclaration":
           let loopEnv = {
             prev: env,
-            names: {}
+            values: {}
           };
           // create iterator in new env
           evaluate(e.left, loopEnv, config, (left: VariableDeclaratorValue[]) => {

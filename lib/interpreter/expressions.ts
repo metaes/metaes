@@ -122,7 +122,7 @@ export function MemberExpression(e: MemberExpression,
               }
             }
             break;
-          case'Literal':
+          case 'Literal':
             evaluate(e.property, {names: object}, config, c, cerr);
             break;
           default:
