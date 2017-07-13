@@ -123,7 +123,7 @@ export function MemberExpression(e: MemberExpression,
             }
             break;
           case 'Literal':
-            evaluate(e.property, {names: object}, config, c, cerr);
+            evaluate(e.property, {values: object}, config, c, cerr);
             break;
           default:
             cerr(new NotImplementedYet('This kind of member expression is not supported yet.'));
@@ -411,7 +411,7 @@ export function UpdateExpression(e: UpdateExpression, env: Environment, _config,
         reference => {
           if (reference.environment && reference.name) {
             try {
-              let container = reference.environment.names;
+              let container = reference.environment.values;
               let propName = reference.name;
               let value;
               if (e.prefix) {

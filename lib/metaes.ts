@@ -62,10 +62,10 @@ export function metaESEval(input: string | Function | ASTNode,
     } else {
       env = {
         prev: undefined,
-        names: environment
+        values: environment
       };
     }
-    env.names['this'] = env.names;
+    env.values['this'] = env.values;
 
     let value = Symbol('No value assigned');
     evaluate(node, env, config,

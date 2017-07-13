@@ -7,7 +7,7 @@ export class EnvNotFoundError extends Error {
 
 export interface Environment {
   prev?: Environment;
-  names: object;
+  values: object;
   references?: {[key:string]:Reference};
 
   // At the moment used only for CatchClause.
@@ -65,14 +65,14 @@ export function setValue(env: Environment,
   let _env: Environment | undefined = env;
   if (isDeclaration) {
     setReference(env, name, value, isDeclaration);
-    c(env.names[name] = value);
+    c(env.values[name] = value);
   } else {
     while (_env) {
       // TODO: TS shouldn't complain here, should he?
-      if (name in <any>_env.names) {
+      if (name in <any>_env.values) {
         // TODO: set reference value as well
         setReference(env, name, value, false);
-        c(_env.names[name] = value);
+        c(_env.values[name] = value);
         return;
       }
       _env = _env.prev;
@@ -97,16 +97,16 @@ function _getValue(env: Environment,
     if (!_env) {
       break;
     }
-    if (_env.names === null || typeof _env.names === undefined) {
+    if (_env.values === null || typeof _env.values === undefined) {
       try {
-        _env.names[name]; // force error to be thrown
+        _env.values[name]; // force error to be thrown
       } catch (e) {
         return cerr(new MetaESError(e));
       }
     }
     // TODO: TS shouldn't complain here, no?
-    if (name in <any>_env.names) {
-      let value = _env.names[name];
+    if (name in <any>_env.values) {
+      let value = _env.values[name];
 
       // return required here to avoid calling `cerr` at the end
       return c(returnWithContainer ? {env: _env, name, value} : value);

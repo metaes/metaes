@@ -10,17 +10,17 @@ export let createMetaFunction =
       try {
         let env = {
           prev: closure,
-          names: {'this': this, arguments: args}
+          values: {'this': this, arguments: args}
         };
 
         let i = 0;
         for (let param of e.params) {
           switch (param.type) {
             case 'Identifier':
-              env.names[param.name] = args[i++];
+              env.values[param.name] = args[i++];
               break;
             case "RestElement":
-              env.names[param.argument.name] = args.slice(i);
+              env.values[param.argument.name] = args.slice(i);
               break;
             default:
               let error = new LocatedError(
