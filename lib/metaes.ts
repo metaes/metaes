@@ -8,6 +8,8 @@ import {Environment} from "./environment";
 function noop(..._args) {
 }
 
+export type Message = { script: string; env: Environment };
+
 export interface ScriptingContext {
   evaluate(input: string | Function | ASTNode): any | undefined;
 }
@@ -19,8 +21,8 @@ export class MetaESContext implements ScriptingContext {
               public cerr?: ErrorCallback) {
   }
 
-  evaluate(input: string | Function | ASTNode): any | undefined {
-    return metaESEval(input, this.environment, this.config, this.c, this.cerr);
+  evaluate(input: string | Function | ASTNode, c?:SuccessCallback, cerr?:ErrorCallback): any | undefined {
+    return metaESEval(input, this.environment, this.config, c || this.c, cerr || this.cerr);
   }
 }
 
