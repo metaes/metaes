@@ -5,11 +5,14 @@ import { ASTNode } from "./nodes/nodes";
 export class EnvNotFoundError extends Error {
 }
 
-export interface Environment {
-  prev?: Environment;
+export interface EnvironmentData {
   values: object;
   references?: {[key:string]:Reference};
+}
 
+export interface Environment extends EnvironmentData {
+  prev?: Environment;
+  
   // At the moment used only for CatchClause.
   // Intended not to be available for client JavaScript programs
   internal?: Environment;

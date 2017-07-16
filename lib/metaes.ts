@@ -2,14 +2,19 @@ import { parse } from './parse';
 import { ErrorCallback, EvaluationConfig, LocatedError, SuccessCallback } from './types';
 import { evaluate } from './applyEval';
 import { ASTNode } from './nodes/nodes';
-import { Environment } from './environment';
+import { Environment, EnvironmentData } from './environment';
 
 function noop(..._args) {}
 
 export type Message = { script: string; env: Environment };
 
 export interface ScriptingContext {
-  evaluate(input: string | Function | ASTNode, c?: SuccessCallback, cerr?: ErrorCallback): any | undefined;
+  evaluate(
+    input: string | Function | ASTNode,
+    extraEnvironment?: Environment,
+    c?: SuccessCallback,
+    cerr?: ErrorCallback
+  ): any | undefined;
 }
 
 export class MetaESContext implements ScriptingContext {
@@ -20,8 +25,17 @@ export class MetaESContext implements ScriptingContext {
     public cerr?: ErrorCallback
   ) {}
 
-  evaluate(input: string | Function | ASTNode, c?: SuccessCallback, cerr?: ErrorCallback): any | undefined {
-    return metaESEval(input, this.environment, this.config, c || this.c, cerr || this.cerr);
+  evaluate(
+    input: string | Function | ASTNode,
+    environmentData?: EnvironmentData,
+    c?: SuccessCallback,
+    cerr?: ErrorCallback
+  ): any | undefined {
+    let env = this.environment;
+    if (environmentData) {
+      env = Object.assign({ prev: this.environment }, environmentData);
+    }
+    return metaESEval(input, env, this.config, c || this.c, cerr || this.cerr);
   }
 }
 
