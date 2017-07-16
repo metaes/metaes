@@ -9,7 +9,7 @@ function noop(..._args) {}
 export type Message = { script: string; env: Environment };
 
 export interface ScriptingContext {
-  evaluate(input: string | Function | ASTNode): any | undefined;
+  evaluate(input: string | Function | ASTNode, c?: SuccessCallback, cerr?: ErrorCallback): any | undefined;
 }
 
 export class MetaESContext implements ScriptingContext {
