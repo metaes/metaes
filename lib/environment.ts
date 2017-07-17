@@ -1,7 +1,11 @@
-import { Environment } from 'metaes/environment';
 import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationType, MetaESError } from './types';
 import { Identifier } from './nodeTypes';
 import { ASTNode } from './nodes/nodes';
+import { ScriptingContext } from './metaes';
+
+declare let Object: {
+  entries: Function;
+};
 
 export class EnvNotFoundError extends Error {}
 
@@ -33,6 +37,8 @@ export interface Reference {
   name: string;
   value: any;
   createdByMetaES: boolean;
+  environment: Environment;
+  id?: string;
 }
 
 export class ReferenceCtor implements Reference {
@@ -48,7 +54,14 @@ export class ReferenceCtor implements Reference {
   ) {}
 }
 
-export function deserializeEnvironment(environment: EnvironmentData): Environment {}
+export function environmentFromJSON(environmentData: EnvironmentData, context: ScriptingContext): Environment {
+  if (environmentData.references) {
+    for (let [k, v] of Object.entries(environmentData.references)) {
+    }
+  }
+}
+
+export function environmentToJSON(environment: Environment): EnvironmentData {}
 
 // TODO: verify if it's really needed
 export function setValueAndCallAfterInterceptor(
