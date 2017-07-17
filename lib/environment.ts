@@ -1,3 +1,4 @@
+import { Environment } from 'metaes/environment';
 import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationType, MetaESError } from "./types";
 import { Identifier } from "./nodeTypes";
 import { ASTNode } from "./nodes/nodes";
@@ -33,7 +34,13 @@ export function callInterceptor(e: ASTNode,
   });
 }
 
-export class Reference {
+export interface Reference {
+  name:string;
+  value:any;
+  createdByMetaES:boolean;
+}
+
+export class ReferenceCtor implements Reference {
   get createdByMetaES(): boolean {
     return this._createdByMetaES;
   }
@@ -41,6 +48,10 @@ export class Reference {
   constructor(public name: string, public value: any,
               public environment: Environment, private _createdByMetaES: boolean) {
   }
+}
+
+export function deserializeEnvironment(environment:EnvironmentData):Environment{
+  
 }
 
 // TODO: verify if it's really needed
@@ -126,7 +137,7 @@ function setReference(env: Environment, name: string, value: any, createdByMetaE
 
   let reference = env.references[name];
   if (!reference) {
-    reference = new Reference(name, value, env, createdByMetaES);
+    reference = new ReferenceCtor(name, value, env, createdByMetaES);
     env.references[name] = reference;
     reference.value = value;
   }
