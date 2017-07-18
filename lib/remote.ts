@@ -1,16 +1,28 @@
-import {ScriptingContext} from "./metaes";
-import {EnvironmentData, Environment} from "./environment";
+import { ScriptingContext } from './metaes';
+import { EnvironmentData, Environment } from './environment';
 
 declare let Object: {
   entries: Function;
 };
 
-export function environmentFromJSON(environmentData: EnvironmentData, context: ScriptingContext): Environment {
+export type Message = { script: string; env?: EnvironmentData };
+
+export function environmentFromJSON(context: ScriptingContext,environmentData?: EnvironmentData): Environment {
   if (environmentData.references) {
     for (let [k, v] of Object.entries(environmentData.references)) {
-      console.log(k,v);
+      console.log(k, v);
     }
   }
 }
 
 export function environmentToJSON(environment: Environment): EnvironmentData {}
+
+export function validateMessage(message: Message): Message {
+  if (typeof message.script !== 'string') {
+    throw new Error('Message should contain `script` value of type string.');
+  }
+  if (message.env && typeof message.env !== 'object') {
+    throw new Error('Message should contain `env` value of type object.');
+  }
+  return message;
+}

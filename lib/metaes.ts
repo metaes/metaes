@@ -17,6 +17,16 @@ export interface ScriptingContext {
   ): any | undefined;
 }
 
+export function evaluateAsync(
+  context: ScriptingContext,
+  input: string | Function | ASTNode,
+  extraEnvironment?: Environment
+) {
+  return new Promise((resolve, reject) => {
+    context.evaluate(input, extraEnvironment, success => resolve(success.value), error => reject(error.originalError));
+  });
+}
+
 export class MetaESContext implements ScriptingContext {
   constructor(
     public environment: Environment | object = {},
