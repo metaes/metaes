@@ -1,42 +1,60 @@
 import { ScriptingContext, Source } from './metaes';
 import { EnvironmentBase, Environment } from './environment';
 
-const boundaries = new Map<ScriptingContext, object>();
-const boundaryFor = (context: ScriptingContext) => {
-  let values = boundaries.get(context);
-  if (!values) {
-    boundaries.set(context, (values = {}));
-    return values;
+const boundaryEnvironments = new Map<ScriptingContext, Map<object | Function, string>>();
+
+function pairs(o: object) {
+  let result: any[] = [];
+  for (let k of Object.keys(o)) {
+    result.push([k, o[k]]);
   }
-  return values;
+  return result;
+}
+
+const boundaryEnvironmentFor = (context: ScriptingContext) => {
+  let env = boundaryEnvironments.get(context);
+  if (!env) {
+    boundaryEnvironments.set(context, (env = new Map()));
+    return env;
+  }
+  return env;
 };
 
 export type Message = { source: Source; env?: EnvironmentBase };
 
-export function environmentFromJSON(context: ScriptingContext, environment?: EnvironmentBase): Environment {
-  if (environment && environment.references) {
-    for (let k of Object.keys(environment.values)) {
-      let v = environment.values[k];
-      console.log('fromjson', k, v);
-    }
-  }
-}
-
-export function environmentToJSON(context: ScriptingContext, environment: EnvironmentBase): EnvironmentBase {
-  let boundary = boundaryFor(context);
-
-  // store references as values
-  for (let k of Object.keys(environment.values)) {
-    let v = environment.values[k];
-    if (typeof v === 'function') {
-      for (let referenceKey of Object.keys(boundary)) {
-        let referenceValue = boundary[referenceKey];
-        if (v === referenceValue) {
+export function environmentFromJSON(context: ScriptingContext, environment: EnvironmentBase): Environment {
+  let boundaryEnv = boundaryEnvironmentFor(context);
+  let values = environment.values || {};
+  if (environment.references) {
+    for (let [key, {id}] of pairs(environment.references)) {
+      for (let [value, boundaryId] of boundaryEnv.entries()) {
+        if (boundaryId === id) {
+          values[key] = value;
         }
       }
     }
-    console.log('tojson', k, v);
   }
+  return { values };
+}
+
+export function environmentToJSON(context: ScriptingContext, environment: EnvironmentBase): EnvironmentBase {
+  let boundaryEnv = boundaryEnvironmentFor(context);
+  let references: { [key: string]: { id: string } } = {};
+  let values = {};
+
+  for (let [k, v] of pairs(environment.values)) {
+    if (k) {
+      if (typeof v === 'function' || typeof v === 'object') {
+        if (!boundaryEnv.has(v)) {
+          boundaryEnv.set(v, Math.random() + '');
+        }
+        references[k] = { id: boundaryEnv.get(v)! };
+      } else {
+        values[k] = v;
+      }
+    }
+  }
+  return { references, values };
 }
 
 export function validateMessage(message: Message): Message {
