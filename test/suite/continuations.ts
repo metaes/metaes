@@ -3,13 +3,11 @@ import { metaESEval } from '../../lib/metaes';
 import { assert } from 'chai';
 
 describe('Continuations', () => {
-  it('success continuation should be called', () => {
-    return new Promise(resolve => metaESEval('2', {}, { errorCallback: _ => {} }, resolve));
-  });
+  it('success continuation should be called', () =>
+    new Promise(resolve => metaESEval('2', {}, { errorCallback: _ => {} }, resolve)));
 
-  it('error continuation should be called', () => {
-    return new Promise(resolve => metaESEval('throw 1;', {}, { errorCallback: _ => {} }, void 0, resolve));
-  });
+  it('error continuation should be called', () =>
+    new Promise(resolve => metaESEval('throw 1;', {}, { errorCallback: _ => {} }, void 0, resolve)));
 
   it('error callback should be called', () =>
     new Promise(resolve => {
