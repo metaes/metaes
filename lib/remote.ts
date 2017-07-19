@@ -1,14 +1,14 @@
-import { ScriptingContext } from './metaes';
+import { ScriptingContext, Source } from './metaes';
 import { EnvironmentData, Environment } from './environment';
 
 declare let Object: {
   entries: Function;
 };
 
-export type Message = { script: string; env?: EnvironmentData };
+export type Message = { script: Source; env?: EnvironmentData };
 
-export function environmentFromJSON(context: ScriptingContext,environmentData?: EnvironmentData): Environment {
-  if (environmentData.references) {
+export function environmentFromJSON(context: ScriptingContext, environmentData?: EnvironmentData): Environment {
+  if (environmentData && environmentData.references) {
     for (let [k, v] of Object.entries(environmentData.references)) {
       console.log(k, v);
     }

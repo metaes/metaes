@@ -2,13 +2,15 @@ import { parse } from './parse';
 import { ErrorCallback, EvaluationConfig, LocatedError, SuccessCallback } from './types';
 import { evaluate } from './applyEval';
 import { ASTNode } from './nodes/nodes';
-import { Environment, EnvironmentData } from './environment';
+import { Environment } from './environment';
 
-function noop(..._args) {}
+const log = e => console.log(e);
+
+export type Source = string | ASTNode;
 
 export interface ScriptingContext {
   evaluate(
-    input: string | Function | ASTNode,
+    source: Source | Function,
     extraEnvironment?: Environment,
     c?: SuccessCallback,
     cerr?: ErrorCallback
@@ -18,34 +20,33 @@ export interface ScriptingContext {
 export class MetaESContext implements ScriptingContext {
   constructor(
     public environment: Environment | object = {},
-    public config: EvaluationConfig = { errorCallback: noop },
+    public config: EvaluationConfig = { errorCallback: log },
     public c?: SuccessCallback,
     public cerr?: ErrorCallback
   ) {}
 
   evaluate(
-    input: string | Function | ASTNode,
-    environmentData?: EnvironmentData,
+    source: Source | Function,
+    extraEnvironment?: Environment,
     c?: SuccessCallback,
     cerr?: ErrorCallback
   ): any | undefined {
     let env = this.environment;
-    if (environmentData) {
-      env = Object.assign({ prev: this.environment }, environmentData);
+    if (extraEnvironment) {
+      env = Object.assign({ prev: this.environment }, extraEnvironment);
     }
-    return metaESEval(input, env, this.config, c || this.c, cerr || this.cerr);
+    return metaESEval(source, env, this.config, c || this.c, cerr || this.cerr);
   }
 }
 
-export function contextEvaluatePromise(
+export const evaluatePromisified = (
   context: ScriptingContext,
-  input: string | Function | ASTNode,
+  source: Source | Function,
   extraEnvironment?: Environment
-) {
-  return new Promise((resolve, reject) => {
-    context.evaluate(input, extraEnvironment, success => resolve(success.value), error => reject(error.originalError));
-  });
-}
+) =>
+  new Promise((resolve, reject) =>
+    context.evaluate(source, extraEnvironment, success => resolve(success.value), error => reject(error.originalError))
+  );
 
 export function consoleLoggingMetaESContext(environment: Environment | object = {}) {
   return new MetaESContext(
@@ -68,18 +69,18 @@ export function consoleLoggingMetaESContext(environment: Environment | object = 
 let VMsCounter = 0;
 
 export function metaESEval(
-  input: string | Function | ASTNode,
+  source: Source | Function,
   environment: Environment | object = {},
-  config: EvaluationConfig = { errorCallback: noop },
+  config: EvaluationConfig = { errorCallback: log },
   c?: SuccessCallback,
   cerr?: ErrorCallback
 ): any | undefined {
   config.name = config.name || 'VM' + VMsCounter++;
 
   try {
-    let node: ASTNode = (typeof input === 'object'
-        ? input
-        : parse(typeof input === 'function' ? '(' + input.toString() + ')' : input)) as ASTNode,
+    let node: ASTNode = (typeof source === 'object'
+        ? source
+        : parse(typeof source === 'function' ? '(' + source.toString() + ')' : source)) as ASTNode,
       env: Environment;
 
     if ('names' in (<any>environment)) {
