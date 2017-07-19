@@ -2,7 +2,7 @@ import { parse } from './parse';
 import { ErrorCallback, EvaluationConfig, LocatedError, SuccessCallback } from './types';
 import { evaluate } from './applyEval';
 import { ASTNode } from './nodes/nodes';
-import { Environment } from './environment';
+import { Environment, EnvironmentBase } from './environment';
 
 const log = e => console.log(e);
 
@@ -11,7 +11,7 @@ export type Source = string | ASTNode;
 export interface ScriptingContext {
   evaluate(
     source: Source | Function,
-    extraEnvironment?: Environment,
+    extraEnvironment?: EnvironmentBase,
     c?: SuccessCallback,
     cerr?: ErrorCallback
   ): any | undefined;
@@ -27,7 +27,7 @@ export class MetaESContext implements ScriptingContext {
 
   evaluate(
     source: Source | Function,
-    extraEnvironment?: Environment,
+    extraEnvironment?: EnvironmentBase,
     c?: SuccessCallback,
     cerr?: ErrorCallback
   ): any | undefined {
@@ -42,10 +42,10 @@ export class MetaESContext implements ScriptingContext {
 export const evaluatePromisified = (
   context: ScriptingContext,
   source: Source | Function,
-  extraEnvironment?: Environment
+  environment?: EnvironmentBase
 ) =>
   new Promise((resolve, reject) =>
-    context.evaluate(source, extraEnvironment, success => resolve(success.value), error => reject(error.originalError))
+    context.evaluate(source, environment, success => resolve(success.value), error => reject(error.originalError))
   );
 
 export function consoleLoggingMetaESContext(environment: Environment | object = {}) {
