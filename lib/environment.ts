@@ -28,6 +28,18 @@ export function callInterceptor(e: ASTNode, config: EvaluationConfig, value, env
     });
 }
 
+export function valuesIntoEnvironment(values: object, environment?: Environment): EnvironmentBase {
+  if (environment) {
+    for (let k of Object.keys(values)) {
+      let v = values[k];
+      environment.values[k] = v;
+    }
+    return environment;
+  } else {
+    return { values };
+  }
+}
+
 export interface Reference {
   name: string;
   value: any;

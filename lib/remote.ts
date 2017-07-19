@@ -5,7 +5,7 @@ declare let Object: {
   entries: Function;
 };
 
-export type Message = { script: Source; env?: EnvironmentBase };
+export type Message = { source: Source; env?: EnvironmentBase };
 
 export function environmentFromJSON(context: ScriptingContext, environment?: EnvironmentBase): Environment {
   if (environment && environment.references) {
@@ -15,10 +15,12 @@ export function environmentFromJSON(context: ScriptingContext, environment?: Env
   }
 }
 
-export function environmentToJSON(environment: Environment): EnvironmentBase {}
+export function environmentToJSON(context: ScriptingContext, environment: EnvironmentBase): EnvironmentBase {
+  Object.entries(environment.values).forEach(([k, v]) => {});
+}
 
 export function validateMessage(message: Message): Message {
-  if (typeof message.script !== 'string') {
+  if (typeof message.source !== 'string') {
     throw new Error('Message should contain `script` value of type string.');
   }
   if (message.env && typeof message.env !== 'object') {
