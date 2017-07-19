@@ -1,22 +1,22 @@
 import { ScriptingContext, Source } from './metaes';
 import { EnvironmentBase, Environment } from './environment';
 
-declare let Object: {
-  entries: Function;
-};
-
 export type Message = { source: Source; env?: EnvironmentBase };
 
 export function environmentFromJSON(context: ScriptingContext, environment?: EnvironmentBase): Environment {
   if (environment && environment.references) {
-    for (let [k, v] of Object.entries(environment.references)) {
-      console.log(k, v);
+    for (let k of Object.keys(environment.values)) {
+      let v = environment.values[k];
+      console.log('fromjson', k, v);
     }
   }
 }
 
 export function environmentToJSON(context: ScriptingContext, environment: EnvironmentBase): EnvironmentBase {
-  Object.entries(environment.values).forEach(([k, v]) => {});
+  for (let k of Object.keys(environment.values)) {
+    let v = environment.values[k];
+    console.log('tojson', k, v);
+  }
 }
 
 export function validateMessage(message: Message): Message {

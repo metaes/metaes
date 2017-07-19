@@ -6,7 +6,7 @@ export class EnvNotFoundError extends Error {}
 
 export interface EnvironmentBase {
   values: object;
-  references?: { [key: string]: Reference };
+  references?: { [key: string]: ReferenceLike };
 }
 
 export interface Environment extends EnvironmentBase {
@@ -40,15 +40,13 @@ export function valuesIntoEnvironment(values: object, environment?: Environment)
   }
 }
 
-export interface Reference {
-  name: string;
-  value: any;
-  createdByMetaES: boolean;
-  environment: Environment;
+export interface ReferenceLike {
+  name?: string;
+  value?: any;
   id?: string;
 }
 
-export class ReferenceCtor implements Reference {
+export class Reference implements ReferenceLike {
   get createdByMetaES(): boolean {
     return this._createdByMetaES;
   }
@@ -156,7 +154,7 @@ function setReference(env: Environment, name: string, value: any, createdByMetaE
 
   let reference = env.references[name];
   if (!reference) {
-    reference = new ReferenceCtor(name, value, env, createdByMetaES);
+    reference = new Reference(name, value, env, createdByMetaES);
     env.references[name] = reference;
     reference.value = value;
   }
@@ -166,7 +164,7 @@ function setReference(env: Environment, name: string, value: any, createdByMetaE
 export function getReference(
   env: Environment,
   name: string,
-  c: (reference: Reference) => void,
+  c: (reference: ReferenceLike) => void,
   cerr: ErrorContinuation
 ) {
   _getValue(
@@ -197,7 +195,7 @@ export function getReferenceNonCPS(env: Environment, name: string) {
 /**
  * Use for reporting to interceptor.
  */
-export function getValueOrReference(name: string, env: Environment, config: EvaluationConfig, value): Reference | any {
+export function getValueOrReference(name: string, env: Environment, config: EvaluationConfig, value): ReferenceLike | any {
   if (config.useReferences) {
     return getReferenceNonCPS(env, name);
   } else {
