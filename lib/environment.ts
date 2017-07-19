@@ -5,7 +5,7 @@ import { ASTNode } from './nodes/nodes';
 export class EnvNotFoundError extends Error {}
 
 export interface EnvironmentBase {
-  values?: object;
+  values: object;
   references?: { [key: string]: Reference };
 }
 
@@ -30,13 +30,9 @@ export function callInterceptor(e: ASTNode, config: EvaluationConfig, value, env
 
 export function valuesIntoEnvironment(values: object, environment?: Environment): EnvironmentBase {
   if (environment) {
-    if (environment.values) {
-      for (let k of Object.keys(values)) {
-        let v = values[k];
-        environment.values[k] = v;
-      }
-    } else {
-      environment.values = values;
+    for (let k of Object.keys(values)) {
+      let v = values[k];
+      environment.values[k] = v;
     }
     return environment;
   } else {
@@ -187,7 +183,12 @@ export function getReferenceNonCPS(env: Environment, name: string) {
 /**
  * Use for reporting to interceptor.
  */
-export function getValueOrReference(name: string, env: Environment, config: EvaluationConfig, value): Reference | any {
+export function getValueOrReference(
+  name: string,
+  env: Environment,
+  config: EvaluationConfig,
+  value
+): Reference | any {
   if (config.useReferences) {
     return getReferenceNonCPS(env, name);
   } else {
