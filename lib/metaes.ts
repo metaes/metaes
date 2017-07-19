@@ -19,7 +19,7 @@ export interface ScriptingContext {
 
 export class MetaESContext implements ScriptingContext {
   constructor(
-    public environment: Environment | object = {},
+    public environment: Environment = { values: {} },
     public config: EvaluationConfig = { errorCallback: log },
     public c?: SuccessCallback,
     public cerr?: ErrorCallback
@@ -48,7 +48,7 @@ export const evaluatePromisified = (
     context.evaluate(source, environment, success => resolve(success.value), error => reject(error.originalError))
   );
 
-export function consoleLoggingMetaESContext(environment: Environment | object = {}) {
+export function consoleLoggingMetaESContext(environment: Environment = { values: {} }) {
   return new MetaESContext(
     environment,
     {

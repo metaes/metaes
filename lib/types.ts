@@ -1,5 +1,5 @@
-import {ASTNode} from "./nodes/nodes";
-import {Environment, Reference} from "./environment";
+import { ASTNode } from './nodes/nodes';
+import { Environment, Reference } from './environment';
 
 export class ParseError extends Error {
   line: number;
@@ -39,9 +39,9 @@ export class LocatedError extends MetaESError {
 
 export type Range = [number, number];
 
-export type SuccessValue = { node: ASTNode, value: any };
+export type SuccessValue = { node: ASTNode; value: any };
 export type SuccessCallback = (value: SuccessValue) => void;
-export type ErrorCallback = (e: LocatedError) => void
+export type ErrorCallback = (e: LocatedError) => void;
 
 /**
  * enter - before ASTNode was evaluated
@@ -81,12 +81,14 @@ export interface EvaluationConfig {
 export type Continuation = (value: any) => void;
 export type ErrorContinuation = (error: Error) => void;
 
-type Interpreter<T extends ASTNode> = (e: T,
-                                       env: Environment,
-                                       config: EvaluationConfig,
-                                       c: Continuation,
-                                       cerr: ErrorContinuation) => void;
+type Interpreter<T extends ASTNode> = (
+  e: T,
+  env: Environment,
+  config: EvaluationConfig,
+  c: Continuation,
+  cerr: ErrorContinuation
+) => void;
 
 export type interpretersMap = {
-  [key: string]: Interpreter<any>
+  [key: string]: Interpreter<any>;
 };

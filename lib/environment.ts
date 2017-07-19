@@ -6,7 +6,7 @@ export class EnvNotFoundError extends Error {}
 
 export interface EnvironmentBase {
   values: object;
-  references?: { [key: string]: ReferenceLike };
+  references?: { [key: string]: Reference };
 }
 
 export interface Environment extends EnvironmentBase {
@@ -40,23 +40,11 @@ export function valuesIntoEnvironment(values: object, environment?: Environment)
   }
 }
 
-export interface ReferenceLike {
+export interface Reference {
   name?: string;
   value?: any;
   id?: string;
-}
-
-export class Reference implements ReferenceLike {
-  get createdByMetaES(): boolean {
-    return this._createdByMetaES;
-  }
-
-  constructor(
-    public name: string,
-    public value: any,
-    public environment: Environment,
-    private _createdByMetaES: boolean
-  ) {}
+  native?: boolean;
 }
 
 // TODO: verify if it's really needed
@@ -147,14 +135,14 @@ function _getValue(
   cerr(new ReferenceError(`"${name}" is not defined.`));
 }
 
-function setReference(env: Environment, name: string, value: any, createdByMetaES: boolean) {
+function setReference(env: Environment, name: string, value: any, native: boolean) {
   if (!env.references) {
     env.references = {};
   }
 
   let reference = env.references[name];
   if (!reference) {
-    reference = new Reference(name, value, env, createdByMetaES);
+    reference = { name, value, native };
     env.references[name] = reference;
     reference.value = value;
   }
@@ -164,7 +152,7 @@ function setReference(env: Environment, name: string, value: any, createdByMetaE
 export function getReference(
   env: Environment,
   name: string,
-  c: (reference: ReferenceLike) => void,
+  c: (reference: Reference) => void,
   cerr: ErrorContinuation
 ) {
   _getValue(
@@ -195,7 +183,12 @@ export function getReferenceNonCPS(env: Environment, name: string) {
 /**
  * Use for reporting to interceptor.
  */
-export function getValueOrReference(name: string, env: Environment, config: EvaluationConfig, value): ReferenceLike | any {
+export function getValueOrReference(
+  name: string,
+  env: Environment,
+  config: EvaluationConfig,
+  value
+): Reference | any {
   if (config.useReferences) {
     return getReferenceNonCPS(env, name);
   } else {
