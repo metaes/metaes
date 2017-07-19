@@ -4,7 +4,7 @@ import * as pify from 'pify';
 import { describe, it, before } from 'mocha';
 import { assert } from 'chai';
 import { zip } from 'lodash';
-import { metaESEval } from '../lib/metaes';
+import { metaESEval } from '../../lib/metaes';
 
 const evaluate = (input: string) =>
   new Promise((resolve, reject) =>
@@ -22,7 +22,7 @@ const evaluate = (input: string) =>
     describe('Truthiness tests', async () => {
       // generate tests on runtime
       before(async () => {
-        let files = (await pify(glob)(__dirname + '/truthiness/**/*.ts')).map(async file => ({
+        let files = (await pify(glob)(__dirname + './../truthiness/**/*.ts')).map(async file => ({
           name: file,
           contents: (await fs.readFile(file)).toString(),
         }));

@@ -6,7 +6,7 @@
     "email": "krupa.bartosz@gmail.com"
   },
   "scripts": {
-    "test": "tsc; mocha test/truthinessRunner"
+    "test": "tsc; mocha test/suite/"
   },
   "repository": {
     "type": "git",
