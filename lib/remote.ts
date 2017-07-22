@@ -1,5 +1,6 @@
-import { ScriptingContext, Source } from './metaes';
-import { EnvironmentBase, Environment } from './environment';
+import { ScriptingContext, Source, metaESEval } from './metaes';
+import { EnvironmentBase, Environment, valuesIntoEnvironment } from './environment';
+import { SuccessCallback, ErrorCallback } from './types';
 
 const boundaryEnvironments = new Map<ScriptingContext, Map<object | Function, string>>();
 
@@ -79,3 +80,47 @@ export function validateMessage(message: Message): Message {
   }
   return message;
 }
+
+export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>
+  new Promise<ScriptingContext>((resolve, _reject) => {
+    const connect = () => {
+      let client = new WebSocketConstructor(connectionString);
+      let context: ScriptingContext;
+
+      const send = (message: Message) => {
+        console.log('Client: sending message');
+        console.log(JSON.stringify(message));
+        client.send(JSON.stringify(validateMessage(message)));
+      };
+      client.addEventListener('close', () => {
+        setTimeout(connect, 5000);
+      });
+      client.addEventListener('message', e => {
+        console.log('Client: got message');
+        let message = validateMessage(JSON.parse(e.data) as Message);
+        console.log('message', message);
+        if (message.env) {
+          let env = environmentFromJSON(context, message.env);
+          console.log('env', env);
+          metaESEval(
+            message.source,
+            env,
+            { errorCallback: console.log.bind(console) },
+            env.values['c'],
+            env.values['cerr']
+          );
+        }
+      });
+      client.addEventListener('open', async () => {
+        context = {
+          evaluate: (input: Source, environment?: Environment, c?: SuccessCallback, cerr?: ErrorCallback) =>
+            send({
+              source: input,
+              env: environmentToJSON(context, valuesIntoEnvironment({ c, cerr }, environment)),
+            }),
+        };
+        resolve(context);
+      });
+    };
+    connect();
+  });
