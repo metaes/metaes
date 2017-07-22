@@ -22,16 +22,29 @@ const boundaryEnvironmentFor = (context: ScriptingContext) => {
 
 export type Message = { source: Source; env?: EnvironmentBase };
 
+// TODO: solve function vs object problem
+function createRemoteFunction(context: ScriptingContext, id: string) {
+  let boundary = boundaryEnvironmentFor(context);
+  let fn = () => {
+    throw new Error(`Can't call this function yet, use 'context.valuate' using this value.`);
+  };
+  boundary.set(fn, id);
+  return fn;
+}
+
 export function environmentFromJSON(context: ScriptingContext, environment: EnvironmentBase): Environment {
   let boundaryEnv = boundaryEnvironmentFor(context);
   let values = environment.values || {};
   if (environment.references) {
-    for (let [key, {id}] of pairs(environment.references)) {
+    outer: for (let [key, { id }] of pairs(environment.references)) {
       for (let [value, boundaryId] of boundaryEnv.entries()) {
         if (boundaryId === id) {
           values[key] = value;
+          continue outer;
         }
       }
+      // TODO: don't know yet if it's function or object. Solve this ambiguity
+      values[key] = createRemoteFunction(context, id);
     }
   }
   return { values };

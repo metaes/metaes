@@ -83,7 +83,7 @@ export function metaESEval(
         : parse(typeof source === 'function' ? '(' + source.toString() + ')' : source)) as ASTNode,
       env: Environment;
 
-    if ('names' in (<any>environment)) {
+    if ('values' in environment) {
       env = environment as Environment;
     } else {
       env = {
