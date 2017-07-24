@@ -24,3 +24,6 @@ typeof true === 'boolean';
   let x = false;
   typeof x === 'boolean' && x === false;
 }
+
+// should handle template literal
+`42`;

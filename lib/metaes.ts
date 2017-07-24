@@ -44,7 +44,7 @@ export const evaluatePromisified = (
   source: Source | Function,
   environment?: EnvironmentBase
 ) =>
-  new Promise((resolve, reject) =>
+  new Promise<any>((resolve, reject) =>
     context.evaluate(source, environment, success => resolve(success.value), error => reject(error.originalError))
   );
 

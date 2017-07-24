@@ -36,7 +36,8 @@ import {
   SequenceExpression,
   ThisExpression,
   UnaryExpression,
-  UpdateExpression
+  UpdateExpression,
+  TemplateLiteral
 } from "./interpreter/expressions";
 import {Identifier, Literal} from "./interpreter/base";
 
@@ -82,5 +83,6 @@ export let tokens: interpretersMap = {
   UpdateExpression,
   ThisExpression,
   ConditionalExpression,
-  MethodDefinition
+  MethodDefinition,
+  TemplateLiteral
 };
