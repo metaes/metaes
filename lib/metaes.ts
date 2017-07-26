@@ -93,20 +93,28 @@ export function metaESEval(
     }
     env.values['this'] = env.values;
 
-    let value = Symbol('No value assigned');
+    let successValue = Symbol('No value assigned');
+    let errorValue;
     evaluate(
       node,
       env,
       config,
       val => {
-        value = val;
+        successValue = val;
         if (c) {
           c({ node, value: val });
         }
       },
-      error => cerr && cerr(error instanceof LocatedError ? error : new LocatedError(node, error))
+      error => {
+        errorValue = error;
+        cerr && cerr(error instanceof LocatedError ? error : new LocatedError(node, error));
+      }
     );
-    return value;
+    if (errorValue) {
+      throw errorValue;
+    } else {
+      return successValue;
+    }
   } catch (e) {
     if (cerr) {
       cerr(e);

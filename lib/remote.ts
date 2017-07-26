@@ -97,8 +97,9 @@ export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connect
       });
       client.addEventListener('message', e => {
         console.log('Client: got message');
+        console.log('raw', e.data);
         let message = validateMessage(JSON.parse(e.data) as Message);
-        console.log('message', message);
+        console.log('parsed message', message);
         if (message.env) {
           let env = environmentFromJSON(context, message.env);
           console.log('env', env);
@@ -113,6 +114,7 @@ export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connect
       });
       client.addEventListener('open', async () => {
         context = {
+          // TODO: should return a promise too
           evaluate: (input: Source, environment?: Environment, c?: SuccessCallback, cerr?: ErrorCallback) =>
             send({
               source: input,
