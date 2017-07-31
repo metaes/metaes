@@ -88,21 +88,15 @@ export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connect
       let context: ScriptingContext;
 
       const send = (message: Message) => {
-        console.log('Client: sending message');
-        console.log(JSON.stringify(message));
         client.send(JSON.stringify(validateMessage(message)));
       };
       client.addEventListener('close', () => {
         setTimeout(connect, 5000);
       });
       client.addEventListener('message', e => {
-        console.log('Client: got message');
-        console.log('raw', e.data);
         let message = validateMessage(JSON.parse(e.data) as Message);
-        console.log('parsed message', message);
         if (message.env) {
           let env = environmentFromJSON(context, message.env);
-          console.log('env', env);
           metaESEval(
             message.source,
             env,
