@@ -56,6 +56,12 @@ export const evaluatePromisified = (
 
 const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")");
 
+/**
+ * Function params are igonred, they are used only to satisfy linters/compilers on client code.
+ * @param context 
+ * @param source 
+ * @param environment 
+ */
 export const evaluateFunctionBodyPromisified = (
   context: ScriptingContext,
   source: Function,
