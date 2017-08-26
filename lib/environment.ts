@@ -43,7 +43,10 @@ export function valuesIntoEnvironment(values: object, environment?: Environment)
 export interface Reference {
   name?: string;
   value?: any;
-  id?: string;
+  // undefined type is used to indicate undefined variable itself.
+  // It can't be transferred with JSON (JSON handles only number/string/boolean/array/object/null), so we use Reference for that.
+  // Hint: data transmission happens on remote metaes contexts calls.
+  id?: string | "undefined";
   native?: boolean;
 }
 

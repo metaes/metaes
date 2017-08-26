@@ -1,9 +1,9 @@
-import { apply, evaluate, evaluateArray } from '../applyEval';
-import { Continuation, ErrorContinuation, EvaluationConfig, LocatedError, NotImplementedYet } from '../types';
-import { createMetaFunction } from '../metafunction';
-import { callInterceptor, Environment, getReference, getValue, setValueAndCallAfterInterceptor } from '../environment';
-import { IfStatement } from './statements';
-import { errorShouldBeForwarded, lastArrayItem } from '../utils';
+import { apply, evaluate, evaluateArray } from "../applyEval";
+import { Continuation, ErrorContinuation, EvaluationConfig, LocatedError, NotImplementedYet } from "../types";
+import { createMetaFunction } from "../metafunction";
+import { callInterceptor, Environment, getReference, getValue, setValueAndCallAfterInterceptor } from "../environment";
+import { IfStatement } from "./statements";
+import { errorShouldBeForwarded, lastArrayItem } from "../utils";
 import {
   ArrayExpression,
   ArrowFunctionExpression,
@@ -21,8 +21,8 @@ import {
   ThisExpression,
   UnaryExpression,
   UpdateExpression,
-  TemplateLiteral,
-} from '../nodeTypes';
+  TemplateLiteral
+} from "../nodeTypes";
 
 export function CallExpression(
   e: CallExpression,
@@ -39,7 +39,7 @@ export function CallExpression(
       let calleeNode = e.callee;
 
       switch (calleeNode.type) {
-        case 'MemberExpression':
+        case "MemberExpression":
           evaluate(
             calleeNode.object,
             env,
@@ -50,10 +50,10 @@ export function CallExpression(
                 env,
                 config,
                 property => {
-                  if (typeof property === 'function') {
+                  if (typeof property === "function") {
                     c(apply(e, property as Function, args, config, object));
                   } else {
-                    cerr(new TypeError(typeof property + ' is not a function'));
+                    cerr(new TypeError(typeof property + " is not a function"));
                   }
                 },
                 cerr
@@ -62,9 +62,9 @@ export function CallExpression(
             cerr
           );
           break;
-        case 'Identifier':
-        case 'FunctionExpression':
-        case 'CallExpression':
+        case "Identifier":
+        case "FunctionExpression":
+        case "CallExpression":
           evaluate(
             calleeNode,
             env,
@@ -83,14 +83,14 @@ export function CallExpression(
             cerr
           );
           break;
-        case 'ArrowFunctionExpression':
+        case "ArrowFunctionExpression":
           evaluate(
             calleeNode,
             env,
             config,
             callee => {
               try {
-                getValue(env, 'this', thisValue => c(apply(calleeNode, callee, args, config, thisValue)), cerr);
+                getValue(env, "this", thisValue => c(apply(calleeNode, callee, args, config, thisValue)), cerr);
               } catch (error) {
                 if (errorShouldBeForwarded(error)) {
                   cerr(error);
@@ -128,7 +128,7 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
         );
       } else {
         switch (e.property.type) {
-          case 'Identifier':
+          case "Identifier":
             if (e.computed) {
               evaluate(
                 e.property,
@@ -141,24 +141,24 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
               );
             } else {
               switch (e.property.type) {
-                case 'Identifier':
+                case "Identifier":
                   // just call interceptors, don't evaluate the Identifier which is not a Reference
                   let _config = Object.assign({}, config, { useReferences: false });
-                  callInterceptor(e.property, _config, undefined, env, 'enter');
-                  callInterceptor(e.property, _config, undefined, env, 'exit');
+                  callInterceptor(e.property, _config, undefined, env, "enter");
+                  callInterceptor(e.property, _config, undefined, env, "exit");
 
                   c(object[e.property.name]);
                   break;
                 default:
-                  cerr(new NotImplementedYet(`Not implemented ${e.property['type']} property type of ${e.type}`));
+                  cerr(new NotImplementedYet(`Not implemented ${e.property["type"]} property type of ${e.type}`));
               }
             }
             break;
-          case 'Literal':
+          case "Literal":
             evaluate(e.property, { values: object }, config, c, cerr);
             break;
           default:
-            cerr(new NotImplementedYet('This kind of member expression is not supported yet.'));
+            cerr(new NotImplementedYet("This kind of member expression is not supported yet."));
         }
       }
     },
@@ -189,7 +189,7 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
     config,
     right => {
       switch (e.left.type) {
-        case 'MemberExpression':
+        case "MemberExpression":
           let left = e.left;
           evaluate(
             e.left.object,
@@ -198,49 +198,49 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
             object => {
               function doAssign(object, propertyName, right) {
                 switch (e.operator) {
-                  case '=':
+                  case "=":
                     c((object[propertyName] = right));
                     break;
-                  case '+=':
+                  case "+=":
                     c((object[propertyName] += right));
                     break;
-                  case '-=':
+                  case "-=":
                     c((object[propertyName] -= right));
                     break;
-                  case '*=':
+                  case "*=":
                     c((object[propertyName] *= right));
                     break;
-                  case '/=':
+                  case "/=":
                     c((object[propertyName] /= right));
                     break;
-                  case '%=':
+                  case "%=":
                     c((object[propertyName] %= right));
                     break;
-                  case '<<=':
+                  case "<<=":
                     c((object[propertyName] <<= right));
                     break;
-                  case '>>=':
+                  case ">>=":
                     c((object[propertyName] >>= right));
                     break;
-                  case '>>>=':
+                  case ">>>=":
                     c((object[propertyName] >>>= right));
                     break;
-                  case '&=':
+                  case "&=":
                     c((object[propertyName] &= right));
                     break;
-                  case '|=':
+                  case "|=":
                     c((object[propertyName] |= right));
                     break;
-                  case '^=':
+                  case "^=":
                     c((object[propertyName] ^= right));
                     break;
                   default:
-                    cerr(new NotImplementedYet(e.type + ' not implemented ' + e.operator));
+                    cerr(new NotImplementedYet(e.type + " not implemented " + e.operator));
                 }
               }
 
               let propertyName;
-              if (left.property.type === 'Identifier') {
+              if (left.property.type === "Identifier") {
                 propertyName = left.property.name;
                 doAssign(object, propertyName, right);
               } else {
@@ -258,12 +258,12 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
             cerr
           );
           break;
-        case 'Identifier':
-          callInterceptor(e.left, config, right, env, 'enter');
+        case "Identifier":
+          callInterceptor(e.left, config, right, env, "enter");
           setValueAndCallAfterInterceptor(e.left, env, config, e.left.name, right, false, c, cerr);
           break;
         default:
-          cerr(new NotImplementedYet('This assignment is not supported yet.'));
+          cerr(new NotImplementedYet("This assignment is not supported yet."));
       }
     },
     cerr
@@ -289,14 +289,14 @@ export function ObjectExpression(e: ObjectExpression, env, config, c, cerr) {
 export function Property(e: Property, env, config, c, cerr) {
   let key;
   switch (e.key.type) {
-    case 'Identifier':
+    case "Identifier":
       key = e.key.name;
       break;
-    case 'Literal':
+    case "Literal":
       key = e.key.value;
       break;
     default:
-      cerr(new NotImplementedYet('This type or property is not supported yet.'));
+      cerr(new NotImplementedYet("This type or property is not supported yet."));
       return;
   }
   evaluate(
@@ -322,71 +322,71 @@ export function BinaryExpression(e: BinaryExpression, env, config, c, cerr) {
         config,
         right => {
           switch (e.operator) {
-            case '+':
+            case "+":
               c(left + right);
               break;
-            case '-':
+            case "-":
               c(left - right);
               break;
-            case '===':
+            case "===":
               c(left === right);
               break;
-            case '==':
+            case "==":
               c(left == right);
               break;
-            case '!==':
+            case "!==":
               c(left !== right);
               break;
-            case '!=':
+            case "!=":
               c(left != right);
               break;
-            case '<':
+            case "<":
               c(left < right);
               break;
-            case '<=':
+            case "<=":
               c(left <= right);
               break;
-            case '>':
+            case ">":
               c(left > right);
               break;
-            case '>=':
+            case ">=":
               c(left >= right);
               break;
-            case '*':
+            case "*":
               c(left * right);
               break;
-            case '/':
+            case "/":
               c(left / right);
               break;
-            case 'instanceof':
+            case "instanceof":
               c(left instanceof right);
               break;
-            case 'in':
+            case "in":
               c(left in right);
               break;
-            case '^':
+            case "^":
               c(left ^ right);
               break;
-            case '<<':
+            case "<<":
               c(left << right);
               break;
-            case '>>':
+            case ">>":
               c(left >> right);
               break;
-            case '>>>':
+            case ">>>":
               c(left >>> right);
               break;
-            case '%':
+            case "%":
               c(left % right);
               break;
-            case '&':
+            case "&":
               c(left & right);
               break;
-            case '|':
+            case "|":
               c(left | right);
               break;
             default:
-              cerr(new Error(e.type + ' not implemented ' + e.operator));
+              cerr(new Error(e.type + " not implemented " + e.operator));
           }
         },
         cerr
@@ -409,14 +409,14 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
       let calleeNode = e.callee;
 
       switch (calleeNode.type) {
-        case 'MemberExpression':
+        case "MemberExpression":
           evaluate(
             calleeNode,
             env,
             config,
             callee => {
-              if (typeof callee !== 'function') {
-                cerr(new LocatedError(e, new TypeError(typeof callee + ' is not a function')));
+              if (typeof callee !== "function") {
+                cerr(new LocatedError(e, new TypeError(typeof callee + " is not a function")));
               }
               try {
                 c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
@@ -431,13 +431,13 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
             cerr
           );
           break;
-        case 'Identifier':
+        case "Identifier":
           getValue(
             env,
             calleeNode.name,
             callee => {
-              if (typeof callee !== 'function') {
-                cerr(new LocatedError(e, new TypeError(typeof callee + ' is not a function')));
+              if (typeof callee !== "function") {
+                cerr(new LocatedError(e, new TypeError(typeof callee + " is not a function")));
                 // TODO: use if/else
                 return;
               }
@@ -484,9 +484,9 @@ export function LogicalExpression(e: LogicalExpression, env, config, c, cerr) {
     env,
     config,
     left => {
-      if (!left && e.operator === '&&') {
+      if (!left && e.operator === "&&") {
         c(left);
-      } else if (left && e.operator === '||') {
+      } else if (left && e.operator === "||") {
         c(left);
       } else {
         evaluate(e.right, env, config, c, cerr);
@@ -498,7 +498,7 @@ export function LogicalExpression(e: LogicalExpression, env, config, c, cerr) {
 
 export function UpdateExpression(e: UpdateExpression, env: Environment, _config, c, cerr) {
   switch (e.argument.type) {
-    case 'Identifier':
+    case "Identifier":
       getReference(
         env,
         e.argument.name,
@@ -510,25 +510,25 @@ export function UpdateExpression(e: UpdateExpression, env: Environment, _config,
               let value;
               if (e.prefix) {
                 switch (e.operator) {
-                  case '++':
+                  case "++":
                     value = ++container[propName];
                     break;
-                  case '--':
+                  case "--":
                     value = --container[propName];
                     break;
                   default:
-                    throw new Error('Implement me, ' + e.operator);
+                    throw new Error("Implement me, " + e.operator);
                 }
               } else {
                 switch (e.operator) {
-                  case '++':
+                  case "++":
                     value = container[propName]++;
                     break;
-                  case '--':
+                  case "--":
                     value = container[propName]--;
                     break;
                   default:
-                    throw new Error('Implement me, ' + e.operator);
+                    throw new Error("Implement me, " + e.operator);
                 }
               }
               c(value);
@@ -553,31 +553,31 @@ export function UnaryExpression(e: UnaryExpression, env: Environment, config, c,
     config,
     argument => {
       switch (e.operator) {
-        case 'typeof':
+        case "typeof":
           c(typeof argument);
           break;
-        case '-':
+        case "-":
           c(-argument);
           break;
-        case '!':
+        case "!":
           c(!argument);
           break;
-        case '+':
+        case "+":
           c(+argument);
           break;
-        case '~':
+        case "~":
           c(~argument);
           break;
-        case 'void':
+        case "void":
           c(void argument);
           break;
         default:
-          cerr(new Error('not implemented ' + e.operator));
+          cerr(new Error("not implemented " + e.operator));
       }
     },
     error => {
-      if (error instanceof LocatedError && error.originalError instanceof ReferenceError && e.operator === 'typeof') {
-        c('undefined');
+      if (error instanceof LocatedError && error.originalError instanceof ReferenceError && e.operator === "typeof") {
+        c("undefined");
       } else {
         cerr(error);
       }
@@ -586,7 +586,7 @@ export function UnaryExpression(e: UnaryExpression, env: Environment, config, c,
 }
 
 export function ThisExpression(_e: ThisExpression, env: Environment, _config, c, cerr) {
-  getValue(env, 'this', c, cerr);
+  getValue(env, "this", c, cerr);
 }
 
 export function ConditionalExpression(e: ConditionalExpression, env, config, c, cerr) {

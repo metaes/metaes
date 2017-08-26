@@ -1,6 +1,6 @@
-import { ScriptingContext, Source, metaESEval } from './metaes';
-import { EnvironmentBase, Environment, valuesIntoEnvironment } from './environment';
-import { SuccessCallback, ErrorCallback } from './types';
+import { ScriptingContext, Source, metaESEval } from "./metaes";
+import { EnvironmentBase, Environment, valuesIntoEnvironment } from "./environment";
+import { SuccessCallback, ErrorCallback } from "./types";
 
 const boundaryEnvironments = new Map<ScriptingContext, Map<object | Function, string>>();
 
@@ -33,13 +33,19 @@ function createRemoteFunction(context: ScriptingContext, id: string) {
   return fn;
 }
 
-export function environmentFromJSON(context: ScriptingContext, environment: EnvironmentBase): Environment {
+export function environmentFromJSON(
+  context: ScriptingContext,
+  environment: EnvironmentBase
+): Environment {
   let boundaryEnv = boundaryEnvironmentFor(context);
   let values = environment.values || {};
   if (environment.references) {
     outer: for (let [key, { id }] of pairs(environment.references)) {
       for (let [value, boundaryId] of boundaryEnv.entries()) {
-        if (boundaryId === id) {
+        // Special case for "undefined" id. It's a hack to transfer `undefined` value, not possible in JSON.
+        if (id === "undefined") {
+          values[key] = void 0;
+        } else if (boundaryId === id) {
           values[key] = value;
           continue outer;
         }
@@ -51,18 +57,23 @@ export function environmentFromJSON(context: ScriptingContext, environment: Envi
   return { values };
 }
 
-export function environmentToJSON(context: ScriptingContext, environment: EnvironmentBase): EnvironmentBase {
+export function environmentToJSON(
+  context: ScriptingContext,
+  environment: EnvironmentBase
+): EnvironmentBase {
   let boundaryEnv = boundaryEnvironmentFor(context);
   let references: { [key: string]: { id: string } } = {};
   let values = {};
 
   for (let [k, v] of pairs(environment.values)) {
     if (k) {
-      if (typeof v === 'function' || typeof v === 'object') {
+      if (typeof v === "function" || typeof v === "object") {
         if (!boundaryEnv.has(v)) {
-          boundaryEnv.set(v, Math.random() + '');
+          boundaryEnv.set(v, Math.random() + "");
         }
         references[k] = { id: boundaryEnv.get(v)! };
+      } else if (typeof v === "undefined") {
+        references[k] = { id: "undefined" };
       } else {
         values[k] = v;
       }
@@ -72,16 +83,18 @@ export function environmentToJSON(context: ScriptingContext, environment: Enviro
 }
 
 export function validateMessage(message: Message): Message {
-  if (typeof message.source !== 'string') {
-    throw new Error('Message should contain `script` value of type string.');
+  if (typeof message.source !== "string" && typeof message.source !== "object") {
+    throw new Error("Message should contain `script` value of type string.");
   }
-  if (message.env && typeof message.env !== 'object') {
-    throw new Error('Message should contain `env` value of type object.');
+  if (message.env && typeof message.env !== "object") {
+    throw new Error("Message should contain `env` value of type object.");
   }
   return message;
 }
 
-export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>
+export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (
+  connectionString: string
+) =>
   new Promise<ScriptingContext>((resolve, _reject) => {
     const connect = () => {
       let client = new WebSocketConstructor(connectionString);
@@ -90,30 +103,37 @@ export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connect
       const send = (message: Message) => {
         client.send(JSON.stringify(validateMessage(message)));
       };
-      client.addEventListener('close', () => {
+      client.addEventListener("close", () => {
         setTimeout(connect, 5000);
       });
-      client.addEventListener('message', e => {
+      client.addEventListener("message", e => {
         let message = validateMessage(JSON.parse(e.data) as Message);
+        console.log("client got message");
+        console.log(message);
         if (message.env) {
           let env = environmentFromJSON(context, message.env);
           metaESEval(
             message.source,
             env,
-            { errorCallback: console.log.bind(console) },
-            env.values['c'],
-            env.values['cerr']
+            { errorCallback: console.log },
+            env.values["c"],
+            env.values["cerr"]
           );
         }
       });
-      client.addEventListener('open', async () => {
+      client.addEventListener("open", async () => {
         context = {
           // TODO: should return a promise too
-          evaluate: (input: Source, environment?: Environment, c?: SuccessCallback, cerr?: ErrorCallback) =>
+          evaluate: (
+            input: Source,
+            environment?: Environment,
+            c?: SuccessCallback,
+            cerr?: ErrorCallback
+          ) =>
             send({
               source: input,
-              env: environmentToJSON(context, valuesIntoEnvironment({ c, cerr }, environment)),
-            }),
+              env: environmentToJSON(context, valuesIntoEnvironment({ c, cerr }, environment))
+            })
         };
         resolve(context);
       });

@@ -41,7 +41,7 @@ import {
 } from "./interpreter/expressions";
 import {Identifier, Literal} from "./interpreter/base";
 
-export let tokens: interpretersMap = {
+export const tokens: interpretersMap = {
   Identifier,
   Literal,
 
