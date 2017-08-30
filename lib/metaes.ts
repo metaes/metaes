@@ -121,9 +121,8 @@ export function metaESEval(
         values: environment
       };
     }
-    env.values["this"] = env.values;
 
-    let successValue = Symbol("No value assigned");
+    let successValue;
     let errorValue;
     evaluate(
       node,

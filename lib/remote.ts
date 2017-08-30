@@ -12,7 +12,7 @@ function pairs(o: object) {
   return result;
 }
 
-const boundaryEnvironmentFor = (context: ScriptingContext) => {
+const getBoundaryEnv = (context: ScriptingContext) => {
   let env = boundaryEnvironments.get(context);
   if (!env) {
     boundaryEnvironments.set(context, (env = new Map()));
@@ -25,7 +25,7 @@ export type Message = { source: Source; env?: EnvironmentBase };
 
 // TODO: solve function vs object problem
 function createRemoteFunction(context: ScriptingContext, id: string) {
-  let boundary = boundaryEnvironmentFor(context);
+  let boundary = getBoundaryEnv(context);
   let fn = () => {
     throw new Error(`Can't call this function yet, use 'context.valuate' using this value.`);
   };
@@ -37,7 +37,7 @@ export function environmentFromJSON(
   context: ScriptingContext,
   environment: EnvironmentBase
 ): Environment {
-  let boundaryEnv = boundaryEnvironmentFor(context);
+  let boundaryEnv = getBoundaryEnv(context);
   let values = environment.values || {};
   if (environment.references) {
     outer: for (let [key, { id }] of pairs(environment.references)) {
@@ -51,7 +51,10 @@ export function environmentFromJSON(
         }
       }
       // TODO: don't know yet if it's function or object. Solve this ambiguity
-      values[key] = createRemoteFunction(context, id);
+      // Set value only if nothing in values dict was provided.
+      if (!values[key]) {
+        values[key] = createRemoteFunction(context, id);
+      }
     }
   }
   return { values };
@@ -61,7 +64,7 @@ export function environmentToJSON(
   context: ScriptingContext,
   environment: EnvironmentBase
 ): EnvironmentBase {
-  let boundaryEnv = boundaryEnvironmentFor(context);
+  let boundaryEnv = getBoundaryEnv(context);
   let references: { [key: string]: { id: string } } = {};
   let values = {};
 
@@ -72,6 +75,12 @@ export function environmentToJSON(
           boundaryEnv.set(v, Math.random() + "");
         }
         references[k] = { id: boundaryEnv.get(v)! };
+
+        // add here whatever there is, it'll be serialized to json
+        if (typeof v === "object") {
+          console.log(v);
+          values[k] = v;
+        }
       } else if (typeof v === "undefined") {
         references[k] = { id: "undefined" };
       } else {
@@ -112,6 +121,8 @@ export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (
         console.log(message);
         if (message.env) {
           let env = environmentFromJSON(context, message.env);
+          console.log("env from message");
+          console.log(env, JSON.stringify(env));
           metaESEval(
             message.source,
             env,
