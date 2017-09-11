@@ -1,6 +1,12 @@
-import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationType, MetaESError } from './types';
-import { Identifier } from './nodeTypes';
-import { ASTNode } from './nodes/nodes';
+import {
+  Continuation,
+  ErrorContinuation,
+  EvaluationConfig,
+  EvaluationType,
+  MetaESError
+} from "./types";
+import { Identifier } from "./nodeTypes";
+import { ASTNode } from "./nodes/nodes";
 
 export class EnvNotFoundError extends Error {}
 
@@ -17,14 +23,23 @@ export interface Environment extends EnvironmentBase {
   internal?: Environment;
 }
 
-export function callInterceptor(e: ASTNode, config: EvaluationConfig, value, env: Environment, type: EvaluationType) {
+export function callInterceptor(
+  e: ASTNode,
+  config: EvaluationConfig,
+  value,
+  env: Environment,
+  type: EvaluationType
+) {
   config.interceptor &&
     config.interceptor({
       e,
-      value: e.type === 'Identifier' ? getValueOrReference((e as Identifier).name, env, config, value) : value,
+      value:
+        e.type === "Identifier"
+          ? getValueOrReference((e as Identifier).name, env, config, value)
+          : value,
       env,
       type,
-      timestamp: new Date().getTime(),
+      timestamp: new Date().getTime()
     });
 }
 
@@ -50,6 +65,10 @@ export interface Reference {
   native?: boolean;
 }
 
+export function createReference(value: any): Reference {
+  return { value };
+}
+
 // TODO: verify if it's really needed
 export function setValueAndCallAfterInterceptor(
   e: ASTNode,
@@ -67,7 +86,7 @@ export function setValueAndCallAfterInterceptor(
     value,
     isDeclaration,
     value => {
-      callInterceptor(e, config, getValueOrReference(name, env, config, value), env, 'exit');
+      callInterceptor(e, config, getValueOrReference(name, env, config, value), env, "exit");
       c(value);
     },
     cerr

@@ -3,6 +3,7 @@ import { metaESEval } from '../../lib/metaes';
 import { assert } from 'chai';
 
 describe('Continuations and returns', () => {
+  // TODO: use shortcut functions, evaluatePromisified
   it('success continuation should be called', () =>
     new Promise(resolve => metaESEval('2', {}, { errorCallback: _ => {} }, resolve)));
 

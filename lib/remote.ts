@@ -76,7 +76,7 @@ export function environmentToJSON(
         }
         references[k] = { id: boundaryEnv.get(v)! };
 
-        // add here whatever there is, it'll be serialized to json
+        // add here whatever there is as a value, it'll be serialized to json
         if (typeof v === "object") {
           console.log(v);
           values[k] = v;
