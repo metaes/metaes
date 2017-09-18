@@ -1,4 +1,4 @@
-import { ScriptingContext, Source, metaESEval } from "./metaes";
+import { ScriptingContext, Source, metaESEval, evaluateFunctionBodyPromisified } from "./metaes";
 import { EnvironmentBase, Environment, valuesIntoEnvironment } from "./environment";
 import { SuccessCallback, ErrorCallback } from "./types";
 
@@ -23,12 +23,19 @@ const getBoundaryEnv = (context: ScriptingContext) => {
 
 export type Message = { source: Source; env?: EnvironmentBase };
 
-// TODO: solve function vs object problem
 function createRemoteFunction(context: ScriptingContext, id: string) {
   let boundary = getBoundaryEnv(context);
-  let fn = () => {
-    throw new Error(`Can't call this function yet, use 'context.valuate' using this value.`);
-  };
+  let fn = (...args) =>
+    evaluateFunctionBodyPromisified(
+      context,
+      args => {
+        fn.apply(null, args);
+      },
+      environmentFromJSON(context, {
+        values: { args },
+        references: { fn: { id: boundary.get(fn) } }
+      })
+    );
   boundary.set(fn, id);
   return fn;
 }

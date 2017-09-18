@@ -9,6 +9,7 @@ const log = e => console.log(e);
 
 export type Source = string | ASTNode;
 
+// TODO: pass config as well, will be used to add properties while transfering RemoteValues
 export interface ScriptingContext {
   evaluate(
     source: Source | Function,
@@ -95,8 +96,9 @@ export function consoleLoggingMetaESContext(environment: Environment = { values:
   );
 }
 
-let VMsCounter = 0;
+let vmsCounter = 0;
 
+// TODO: don't return anything with return, only use c/cerr
 export function metaESEval(
   source: Source | Function,
   environment: Environment | object = {},
@@ -104,7 +106,7 @@ export function metaESEval(
   c?: SuccessCallback,
   cerr?: ErrorCallback
 ): any | undefined {
-  config.name = config.name || "VM" + VMsCounter++;
+  config.name = config.name || "vm" + vmsCounter++;
 
   try {
     let node: ASTNode =

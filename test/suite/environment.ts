@@ -1,11 +1,11 @@
 import { describe, it } from "mocha";
 import { MetaESContext } from "../../lib/metaes";
-import { environmentFromJSON, environmentToJSON } from "../../lib/remote";
+import { environmentToJSON, environmentFromJSON } from "../../lib/remote";
 import { assert } from "chai";
 
 describe("Environment", () => {
   it("should convert environment back and forth", () => {
-    let env = {values: {encodeURI, a: "teststring"}};
+    let env = { values: { encodeURI, a: "teststring" } };
     let context = new MetaESContext(env);
     let to = environmentToJSON(context, env);
     console.log("to", to);
@@ -16,7 +16,6 @@ describe("Environment", () => {
     it("should serialize primitive value", () => {
       const context1 = new MetaESContext();
     });
-    it("should serialize array/object value", () => {
-    });
+    it("should serialize array/object value", () => {});
   });
 });
