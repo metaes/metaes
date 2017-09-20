@@ -46,8 +46,7 @@ export function callInterceptor(
 export function valuesIntoEnvironment(values: object, environment?: Environment): EnvironmentBase {
   if (environment) {
     for (let k of Object.keys(values)) {
-      let v = values[k];
-      environment.values[k] = v;
+      environment.values[k] = values[k];
     }
     return environment;
   } else {
