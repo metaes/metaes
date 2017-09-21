@@ -23,17 +23,21 @@ const getBoundaryEnv = (context: ScriptingContext) => {
 
 export type Message = { source: Source; env?: EnvironmentBase };
 
-function createRemoteFunction(context: ScriptingContext, id: string) {
+function createRemoteFunction(
+  context: ScriptingContext,
+  id: string,
+  __remoteContextToCallWhenFunctionExecutes?: ScriptingContext
+) {
   let boundary = getBoundaryEnv(context);
   let fn = (...args) =>
     evaluateFunctionBodyPromisified(
-      context,
+      __remoteContextToCallWhenFunctionExecutes || context,
       args => {
         fn.apply(null, args);
       },
       environmentFromJSON(context, {
         values: { args },
-        references: { fn: { id: boundary.get(fn) } }
+        references: { fn: { id } }
       })
     );
   boundary.set(fn, id);
@@ -42,7 +46,8 @@ function createRemoteFunction(context: ScriptingContext, id: string) {
 
 export function environmentFromJSON(
   context: ScriptingContext,
-  environment: EnvironmentBase
+  environment: EnvironmentBase,
+  __remoteContextToCallWhenFunctionExecutes?: ScriptingContext
 ): Environment {
   let boundaryEnv = getBoundaryEnv(context);
   let values = environment.values || {};
@@ -60,7 +65,7 @@ export function environmentFromJSON(
       // TODO: don't know yet if it's function or object. Solve this ambiguity
       // Set value only if nothing in values dict was provided.
       if (!values[key]) {
-        values[key] = createRemoteFunction(context, id);
+        values[key] = createRemoteFunction(context, id, __remoteContextToCallWhenFunctionExecutes);
       }
     }
   }
@@ -100,7 +105,7 @@ export function environmentToJSON(
 
 export function validateMessage(message: Message): Message {
   if (typeof message.source !== "string" && typeof message.source !== "object") {
-    throw new Error("Message should contain `script` value of type string.");
+    throw new Error("Message should contain `source` value of type string or object.");
   }
   if (message.env && typeof message.env !== "object") {
     throw new Error("Message should contain `env` value of type object.");
