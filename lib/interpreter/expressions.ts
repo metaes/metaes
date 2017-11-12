@@ -1,7 +1,19 @@
 import { apply, evaluate, evaluateArray } from "../applyEval";
-import { Continuation, ErrorContinuation, EvaluationConfig, LocatedError, NotImplementedYet } from "../types";
+import {
+  Continuation,
+  ErrorContinuation,
+  EvaluationConfig,
+  LocatedError,
+  NotImplementedYet
+} from "../types";
 import { createMetaFunction } from "../metafunction";
-import { callInterceptor, Environment, getReference, getValue, setValueAndCallAfterInterceptor } from "../environment";
+import {
+  callInterceptor,
+  Environment,
+  getReference,
+  getValue,
+  setValueAndCallAfterInterceptor
+} from "../environment";
 import { IfStatement } from "./statements";
 import { errorShouldBeForwarded, lastArrayItem } from "../utils";
 import {
@@ -76,7 +88,7 @@ export function CallExpression(
                 if (errorShouldBeForwarded(error)) {
                   cerr(error);
                 } else {
-                  cerr(new LocatedError(calleeNode, error));
+                  cerr(new LocatedError(error, calleeNode));
                 }
               }
             },
@@ -90,12 +102,17 @@ export function CallExpression(
             config,
             callee => {
               try {
-                getValue(env, "this", thisValue => c(apply(calleeNode, callee, args, config, thisValue)), cerr);
+                getValue(
+                  env,
+                  "this",
+                  thisValue => c(apply(calleeNode, callee, args, config, thisValue)),
+                  cerr
+                );
               } catch (error) {
                 if (errorShouldBeForwarded(error)) {
                   cerr(error);
                 } else {
-                  cerr(new LocatedError(calleeNode, error));
+                  cerr(new LocatedError(error, calleeNode));
                 }
               }
             },
@@ -103,7 +120,11 @@ export function CallExpression(
           );
           break;
         default:
-          cerr(new NotImplementedYet(`This kind of callee node ('${calleeNode.type}') is not supported yet.`));
+          cerr(
+            new NotImplementedYet(
+              `This kind of callee node ('${calleeNode.type}') is not supported yet.`
+            )
+          );
       }
     },
     cerr
@@ -150,7 +171,11 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
                   c(object[e.property.name]);
                   break;
                 default:
-                  cerr(new NotImplementedYet(`Not implemented ${e.property["type"]} property type of ${e.type}`));
+                  cerr(
+                    new NotImplementedYet(
+                      `Not implemented ${e.property["type"]} property type of ${e.type}`
+                    )
+                  );
               }
             }
             break;
@@ -170,7 +195,7 @@ export function ArrowFunctionExpression(e: ArrowFunctionExpression, env, config,
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
-    cerr(new LocatedError(e, error));
+    cerr(new LocatedError(error, e));
   }
 }
 
@@ -178,7 +203,7 @@ export function FunctionExpression(e: FunctionExpression, env, config, c, cerr) 
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
-    cerr(new LocatedError(e, error));
+    cerr(new LocatedError(error, e));
   }
 }
 
@@ -416,7 +441,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
             config,
             callee => {
               if (typeof callee !== "function") {
-                cerr(new LocatedError(e, new TypeError(typeof callee + " is not a function")));
+                cerr(new LocatedError(new TypeError(typeof callee + " is not a function"), e));
               }
               try {
                 c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
@@ -424,7 +449,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
                 if (errorShouldBeForwarded(error)) {
                   cerr(error);
                 } else {
-                  cerr(new LocatedError(calleeNode, error));
+                  cerr(new LocatedError(error, e));
                 }
               }
             },
@@ -437,7 +462,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
             calleeNode.name,
             callee => {
               if (typeof callee !== "function") {
-                cerr(new LocatedError(e, new TypeError(typeof callee + " is not a function")));
+                cerr(new LocatedError(new TypeError(typeof callee + " is not a function"), e));
                 // TODO: use if/else
                 return;
               }
@@ -447,7 +472,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
                 if (errorShouldBeForwarded(error)) {
                   cerr(error);
                 } else {
-                  cerr(new LocatedError(calleeNode, error));
+                  cerr(new LocatedError(error, calleeNode));
                 }
               }
             },
@@ -542,7 +567,9 @@ export function UpdateExpression(e: UpdateExpression, env: Environment, _config,
 
       break;
     default:
-      cerr(new NotImplementedYet(`Support of argument of type ${e.argument.type} not implemented yet.`));
+      cerr(
+        new NotImplementedYet(`Support of argument of type ${e.argument.type} not implemented yet.`)
+      );
   }
 }
 
@@ -576,7 +603,11 @@ export function UnaryExpression(e: UnaryExpression, env: Environment, config, c,
       }
     },
     error => {
-      if (error instanceof LocatedError && error.originalError instanceof ReferenceError && e.operator === "typeof") {
+      if (
+        error instanceof LocatedError &&
+        error.originalError instanceof ReferenceError &&
+        e.operator === "typeof"
+      ) {
         c("undefined");
       } else {
         cerr(error);
@@ -597,6 +628,8 @@ export function TemplateLiteral(e: TemplateLiteral, _env, _config, c, cerr) {
   if (e.quasis.length === 1 && e.expressions.length === 0) {
     c(e.quasis[0].value);
   } else {
-    cerr(new Error(`Only single-quasis and expression-free template literals are supported for now.`));
+    cerr(
+      new Error(`Only single-quasis and expression-free template literals are supported for now.`)
+    );
   }
 }

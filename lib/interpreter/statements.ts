@@ -114,7 +114,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
     case 'ObjectPattern':
       evaluate(e.init, env, config, init => {
           if (!init) {
-            cerr(new LocatedError(e.init, new Error("Cannot match against falsy value.")))
+            cerr(new LocatedError(new Error("Cannot match against falsy value."), e.init))
           } else {
             let results: VariableDeclaratorValue[] = [];
             for (let id of (e.id as ObjectPattern).properties) {
@@ -133,7 +133,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
         cerr);
       break;
     default:
-      cerr(new LocatedError(e, new Error(`Pattern ${e.type} is not supported yet.`)));
+      cerr(new LocatedError(new Error(`Pattern ${e.type} is not supported yet.`), e));
   }
 }
 
@@ -163,7 +163,7 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
         config.errorCallback(
           error instanceof LocatedError ?
             error :
-            new LocatedError(e.block, error));
+            new LocatedError(error, e.block));
 
         let catchClauseEnv = {
           internal: {values: {error}},
@@ -211,7 +211,7 @@ export function FunctionDeclaration(e: FunctionDeclaration, env, config, c, cerr
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
-    cerr(new LocatedError(e, error));
+    cerr(new LocatedError(error, e));
   }
 }
 

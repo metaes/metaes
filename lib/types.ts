@@ -1,5 +1,12 @@
-import { ASTNode } from './nodes/nodes';
-import { Environment, Reference } from './environment';
+import { ASTNode } from "./nodes/nodes";
+import { Environment, Reference } from "./environment";
+
+interface EsprimaError extends Error {
+  line: number;
+  description: string;
+  index: number;
+  column: number;
+}
 
 export class ParseError extends Error {
   line: number;
@@ -7,12 +14,12 @@ export class ParseError extends Error {
   index: number;
   column: number;
 
-  constructor(public error: Error) {
+  constructor(public error: EsprimaError) {
     super(error.message);
-    this.line = error['line'];
-    this.description = error['description'];
-    this.index = error['index'];
-    this.column = error['column'];
+    this.line = error.line;
+    this.description = error.description;
+    this.index = error.index;
+    this.column = error.column;
   }
 }
 
@@ -32,22 +39,21 @@ export class MetaESError extends Error {
 }
 
 export class LocatedError extends MetaESError {
-  constructor(public node: ASTNode, public originalError: Error) {
+  constructor(public originalError: Error, public node?: ASTNode) {
     super(originalError);
   }
 }
 
 export type Range = [number, number];
 
-export type SuccessValue = { node: ASTNode; value: any };
-export type SuccessCallback = (value: SuccessValue) => void;
+export type SuccessCallback = (value: any, node?: ASTNode) => void;
 export type ErrorCallback = (e: LocatedError) => void;
 
 /**
  * enter - before ASTNode was evaluated
  * exit - after ASTNode was evaluated
  */
-export type EvaluationType = 'enter' | 'exit';
+export type EvaluationType = "enter" | "exit";
 
 export type EvaluationValue = any | Reference;
 
