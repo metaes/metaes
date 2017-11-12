@@ -1,13 +1,22 @@
 import * as esprima from "esprima";
-import {ParseError, Range} from "./types";
-import {Program} from "./nodeTypes";
+import { ParseError, Range } from "./types";
+import { Program } from "./nodeTypes";
 
-export function parse(source: string): Program {
+export type Parser = (source: string) => Program;
+
+export const parse: Parser = (source: string): Program => {
   try {
-    return esprima.parse(source, {range: true, comment: true, attachComment: true, loc: true, source: true});
+    return esprima.parse(source, {
+      range: true,
+      comment: true,
+      attachComment: true,
+      loc: true,
+      source: true
+    });
   } catch (e) {
     throw new ParseError(e);
   }
-}
+};
 
-export let defaultSource = (source: string) => (range: Range) => source.substring(range[0], range[1]);
+export let defaultSource = (source: string) => (range: Range) =>
+  source.substring(range[0], range[1]);
