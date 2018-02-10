@@ -93,7 +93,6 @@ export function consoleLoggingMetaESContext(environment: Environment = { values:
 
 let scriptContextId = 0;
 
-// TODO: don't return anything with return, only use c/cerr
 export function metaESEval(
   source: Source | Function,
   environment: Environment | object = {},
