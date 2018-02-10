@@ -1,10 +1,4 @@
-import {
-  Continuation,
-  ErrorContinuation,
-  EvaluationConfig,
-  EvaluationType,
-  MetaESError
-} from "./types";
+import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationType, MetaESError } from "./types";
 import { Identifier } from "./nodeTypes";
 import { ASTNode } from "./nodes/nodes";
 
@@ -23,20 +17,11 @@ export interface Environment extends EnvironmentBase {
   internal?: Environment;
 }
 
-export function callInterceptor(
-  e: ASTNode,
-  config: EvaluationConfig,
-  value,
-  env: Environment,
-  type: EvaluationType
-) {
+export function callInterceptor(e: ASTNode, config: EvaluationConfig, value, env: Environment, type: EvaluationType) {
   config.interceptor &&
     config.interceptor({
       e,
-      value:
-        e.type === "Identifier"
-          ? getValueOrReference((e as Identifier).name, env, config, value)
-          : value,
+      value: e.type === "Identifier" ? getValueOrReference((e as Identifier).name, env, config, value) : value,
       env,
       type,
       timestamp: new Date().getTime()
@@ -100,7 +85,7 @@ export function setValue(
   } else {
     while (_env) {
       // TODO: TS shouldn't complain here, should he?
-      if (name in (<any>_env.values)) {
+      if (name in <any>_env.values) {
         // TODO: set reference value as well
         setReference(env, name, value, false);
         c((_env.values[name] = value));
@@ -138,7 +123,7 @@ function _getValue(
       }
     }
     // TODO: TS shouldn't complain here, no?
-    if (name in (<any>_env.values)) {
+    if (name in <any>_env.values) {
       let value = _env.values[name];
 
       // return required here to avoid calling `cerr` at the end
@@ -197,12 +182,7 @@ export function getReferenceNonCPS(env: Environment, name: string) {
 /**
  * Use for reporting to interceptor.
  */
-export function getValueOrReference(
-  name: string,
-  env: Environment,
-  config: EvaluationConfig,
-  value
-): Reference | any {
+export function getValueOrReference(name: string, env: Environment, config: EvaluationConfig, value): Reference | any {
   if (config.useReferences) {
     return getReferenceNonCPS(env, name);
   } else {

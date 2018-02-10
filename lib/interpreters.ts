@@ -1,4 +1,4 @@
-import {interpretersMap} from "./types";
+import { interpretersMap } from "./types";
 import {
   BlockStatement,
   CatchClause,
@@ -14,7 +14,8 @@ import {
   IfStatement,
   MethodDefinition,
   Program,
-  ReturnStatement, ThrowStatement,
+  ReturnStatement,
+  ThrowStatement,
   TryStatement,
   VariableDeclaration,
   VariableDeclarator,
@@ -39,7 +40,7 @@ import {
   UpdateExpression,
   TemplateLiteral
 } from "./interpreter/expressions";
-import {Identifier, Literal} from "./interpreter/base";
+import { Identifier, Literal } from "./interpreter/base";
 
 export const tokens: interpretersMap = {
   Identifier,

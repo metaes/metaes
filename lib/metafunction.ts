@@ -59,9 +59,7 @@ export let createMetaFunction = (e: FunctionNode, closure: Environment, config: 
             _interceptorAfter(e, result, env);
             throw trapOrError;
           } else {
-            config.errorCallback(
-              trapOrError instanceof LocatedError ? trapOrError : new LocatedError(trapOrError, e)
-            );
+            config.errorCallback(trapOrError instanceof LocatedError ? trapOrError : new LocatedError(trapOrError, e));
           }
         }
       );

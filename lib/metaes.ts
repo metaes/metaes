@@ -47,21 +47,16 @@ export const evaluatePromisified = (
   environment?: EnvironmentBase
 ) =>
   new Promise<any>((resolve, reject) =>
-    context.evaluate(
-      source,
-      environment,
-      success => resolve(success.value),
-      error => reject(error.originalError)
-    )
+    context.evaluate(source, environment, success => resolve(success.value), error => reject(error.originalError))
   );
 
 const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")");
 
 /**
  * Function params are igonred, they are used only to satisfy linters/compilers on client code.
- * @param context 
- * @param source 
- * @param environment 
+ * @param context
+ * @param source
+ * @param environment
  */
 export const evaluateFunctionBodyPromisified = (
   context: ScriptingContext,
@@ -111,9 +106,7 @@ export function metaESEval(
 
   try {
     let node: ASTNode =
-        typeof source === "object"
-          ? source
-          : typeof source === "function" ? parseFunction(source) : parse(source),
+        typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source),
       env: Environment;
 
     if ("values" in environment) {
@@ -139,7 +132,7 @@ export function metaESEval(
       },
       error => {
         errorValue = error;
-        cerr && cerr(error instanceof LocatedError ? error : new LocatedError(node, error));
+        cerr && cerr(error instanceof LocatedError ? error : new LocatedError(error, node));
       }
     );
     if (errorValue) {

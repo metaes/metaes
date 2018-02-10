@@ -72,10 +72,7 @@ export function environmentFromJSON(
   return { values };
 }
 
-export function environmentToJSON(
-  context: ScriptingContext,
-  environment: EnvironmentBase
-): EnvironmentBase {
+export function environmentToJSON(context: ScriptingContext, environment: EnvironmentBase): EnvironmentBase {
   let boundaryEnv = getBoundaryEnv(context);
   let references: { [key: string]: { id: string } } = {};
   let values = {};
@@ -113,9 +110,7 @@ export function validateMessage(message: Message): Message {
   return message;
 }
 
-export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (
-  connectionString: string
-) =>
+export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>
   new Promise<ScriptingContext>((resolve, _reject) => {
     const connect = () => {
       let client = new WebSocketConstructor(connectionString);
@@ -135,24 +130,13 @@ export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (
           let env = environmentFromJSON(context, message.env);
           console.log("env from message");
           console.log(env, JSON.stringify(env));
-          metaESEval(
-            message.source,
-            env,
-            { errorCallback: console.log },
-            env.values["c"],
-            env.values["cerr"]
-          );
+          metaESEval(message.source, env, { errorCallback: console.log }, env.values["c"], env.values["cerr"]);
         }
       });
       client.addEventListener("open", async () => {
         context = {
           // TODO: should return a promise too
-          evaluate: (
-            input: Source,
-            environment?: Environment,
-            c?: SuccessCallback,
-            cerr?: ErrorCallback
-          ) =>
+          evaluate: (input: Source, environment?: Environment, c?: SuccessCallback, cerr?: ErrorCallback) =>
             send({
               source: input,
               env: environmentToJSON(context, valuesIntoEnvironment({ c, cerr }, environment))

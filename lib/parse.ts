@@ -18,5 +18,4 @@ export const parse: Parser = (source: string): Program => {
   }
 };
 
-export let defaultSource = (source: string) => (range: Range) =>
-  source.substring(range[0], range[1]);
+export let defaultSource = (source: string) => (range: Range) => source.substring(range[0], range[1]);

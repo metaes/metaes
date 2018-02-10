@@ -50,9 +50,11 @@ export function evaluate(
           if (error instanceof EmptyNodeError) {
             cerr(
               new LocatedError(
-                e,
-                new Error(`"${e.type}" tried to access non-existing descendant node.). 
-            Error occurred in "${e.type}" interpreter.`)
+                new Error(
+                  `"${e.type}" tried to access non-existing descendant node.). 
+            Error occurred in "${e.type}" interpreter.`
+                ),
+                e
               )
             );
           } else if (error instanceof MetaESError) {
@@ -61,7 +63,7 @@ export function evaluate(
             callInterceptor(e, config, error.value, env, "exit");
             cerr(error);
           } else {
-            let located = new LocatedError(e, error);
+            let located = new LocatedError(error, e);
             cerr(located);
           }
         }
@@ -73,10 +75,8 @@ export function evaluate(
   } else if (!e) {
     cerr(new EmptyNodeError());
   } else {
-    let error = new NotImplementedYet(
-      `"${e.type}" token interpreter is not defined yet. Stopped evaluation.`
-    );
-    config.errorCallback(new LocatedError(e, error));
+    let error = new NotImplementedYet(`"${e.type}" token interpreter is not defined yet. Stopped evaluation.`);
+    config.errorCallback(new LocatedError(error, e));
     cerr(error);
   }
 }
@@ -162,13 +162,13 @@ export function apply(
   try {
     result = fn.apply(thisObj, args);
   } catch (error) {
-    config.errorCallback(new LocatedError(e, error));
+    config.errorCallback(new LocatedError(error, e));
     throw error;
   }
   if (typeof result === "object" && result instanceof Promise) {
     // TODO: don't know if it's not going to break other catch'es from regular code?
     result.catch(error => {
-      config.errorCallback(new LocatedError(e, error));
+      config.errorCallback(new LocatedError(error, e));
     });
   }
   return result;

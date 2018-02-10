@@ -1,6 +1,6 @@
 export interface NodeLoc {
-  start: { column: number, line: number };
-  end: { column: number, line: number };
+  start: { column: number; line: number };
+  end: { column: number; line: number };
 }
 
 export interface NodeBase {
@@ -8,24 +8,17 @@ export interface NodeBase {
   range: [number, number];
 }
 
-export type ASTNode = NodeBase &
-  {
-    type: any
-  };
+export type ASTNode = NodeBase & {
+  type: any;
+};
 
 export function keyValueLooksLikeAnASTNode(astNode: ASTNode, key) {
   var value = astNode[key];
-  return (
-    key !== "range" &&
-    value &&
-    (Array.isArray(value) || (typeof value === "object" && "type" in value))
-  );
+  return key !== "range" && value && (Array.isArray(value) || (typeof value === "object" && "type" in value));
 }
 
 export function getNodeChildrenNames(astNode: ASTNode): string[] {
-  return Object.keys(astNode).filter(
-    keyValueLooksLikeAnASTNode.bind(null, astNode)
-  );
+  return Object.keys(astNode).filter(keyValueLooksLikeAnASTNode.bind(null, astNode));
 }
 
 export function walkAst(ast: ASTNode, visitor: (node: ASTNode) => void) {
