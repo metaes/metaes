@@ -61,15 +61,14 @@ const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")");
 export const evaluateFunctionBodyPromisified = (
   context: ScriptingContext,
   source: Function,
-  environment?: EnvironmentBase,
-  useCallbacks: boolean = true
+  environment?: EnvironmentBase
 ) => {
   return new Promise<any>((resolve, reject) =>
     context.evaluate(
       ((parseFunction(source).body[0] as ExpressionStatement).expression as FunctionNode).body,
       environment,
-      useCallbacks ? success => resolve(success.value) : void 0,
-      useCallbacks ? error => reject(error.originalError) : void 0
+      resolve,
+      reject
     )
   );
 };
@@ -127,7 +126,7 @@ export function metaESEval(
       val => {
         successValue = val;
         if (c) {
-          c({ node, value: val });
+          c(val, node);
         }
       },
       error => {
