@@ -1,8 +1,8 @@
-import {evaluate, evaluateArray, evaluateArrayAsync, ReturnStatementValue, ThrowStatementValue} from "../applyEval";
-import {callInterceptor, getValue, setValue, setValueAndCallAfterInterceptor} from "../environment";
-import {EvaluationConfig, LocatedError, NotImplementedYet} from "../types";
-import {createMetaFunction} from "../metafunction";
-import {errorShouldBeForwarded} from "../utils";
+import { evaluate, evaluateArray, evaluateArrayAsync, ReturnStatementValue, ThrowStatementValue } from "../applyEval";
+import { callInterceptor, getValue, setValue, setValueAndCallAfterInterceptor } from "../environment";
+import { EvaluationConfig, LocatedError, NotImplementedYet } from "../types";
+import { createMetaFunction } from "../metafunction";
+import { errorShouldBeForwarded } from "../utils";
 import {
   BlockStatement as BlockStatement_,
   CatchClause,
@@ -32,15 +32,21 @@ import {
 
 function hoistDeclarations(e: Statement[], env, config, c, cerr) {
   evaluateArrayAsync(
-    e.filter(e => e.type === 'FunctionDeclaration') as FunctionDeclaration[],
+    e.filter(e => e.type === "FunctionDeclaration") as FunctionDeclaration[],
     (e, c, cerr) => {
-      evaluate(e, env, config,
+      evaluate(
+        e,
+        env,
+        config,
         value => {
           setValue(env, e.id.name, value, true, c, cerr);
         },
-        cerr);
+        cerr
+      );
     },
-    c, cerr);
+    c,
+    cerr
+  );
 }
 
 export function BlockStatement(e: BlockStatement_ | Program, env, config, c, cerr) {
@@ -52,76 +58,94 @@ export function BlockStatement(e: BlockStatement_ | Program, env, config, c, cer
     }
   }
 
-  hoistDeclarations(e.body, env, config, () => {
-      evaluateArray(
-        e.body,
-        env,
-        config,
-        blockValues => c(blockValues[blockValues.length - 1]),
-        errorHandler);
+  hoistDeclarations(
+    e.body,
+    env,
+    config,
+    () => {
+      evaluateArray(e.body, env, config, blockValues => c(blockValues[blockValues.length - 1]), errorHandler);
     },
-    cerr);
+    cerr
+  );
 }
 
 export function Program(e: Program, env, config, c, cerr) {
   BlockStatement(e, env, config, c, cerr);
 }
 
-type VariableDeclaratorValue = { id: string, init: any };
+type VariableDeclaratorValue = { id: string; init: any };
 
 export function VariableDeclaration(e: VariableDeclaration, env, config, c, cerr) {
-  evaluateArrayAsync(e.declarations, (declarator: VariableDeclarator, c, cerr) => {
-      evaluate(declarator, env, config, (result: VariableDeclaratorValue) => {
-          let {id, init} = result;
+  evaluateArrayAsync(
+    e.declarations,
+    (declarator: VariableDeclarator, c, cerr) => {
+      evaluate(
+        declarator,
+        env,
+        config,
+        (result: VariableDeclaratorValue) => {
+          let { id, init } = result;
           setValue(env, id, init, true, c, cerr);
         },
-        cerr);
+        cerr
+      );
     },
-    c, cerr);
+    c,
+    cerr
+  );
 }
 
 export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) {
   switch (e.id.type) {
-    case 'Identifier':
+    case "Identifier":
       if (e.init) {
-        evaluate(e.init, env, config, init => {
+        evaluate(
+          e.init,
+          env,
+          config,
+          init => {
             let v = {
-              id: (e.id as (Identifier)).name,
+              id: (e.id as Identifier).name,
               init
             };
             // TODO: handle _error, it may happen in the future with redeclaration of `let/const` Reference
             let cnt = (_error?: Error) => {
               // undefined as value, because Identifier at this point doesn't represent a Reference.
               // It does after VariableDeclarator finishes.
-              callInterceptor(e.id, config, undefined, env, 'exit');
+              callInterceptor(e.id, config, undefined, env, "exit");
               c(v);
             };
             evaluate(e.id, env, config, cnt, cnt);
           },
-          cerr);
+          cerr
+        );
       } else {
         let value = {
           id: e.id.name,
           init: undefined
         };
         let cnt = () => {
-          callInterceptor(e.id, config, undefined, env, 'exit');
+          callInterceptor(e.id, config, undefined, env, "exit");
           c(value);
         };
         evaluate(e.id, env, config, cnt, cnt);
       }
       break;
-    case 'ObjectPattern':
-      evaluate(e.init, env, config, init => {
+    case "ObjectPattern":
+      evaluate(
+        e.init,
+        env,
+        config,
+        init => {
           if (!init) {
-            cerr(new LocatedError(new Error("Cannot match against falsy value."), e.init))
+            cerr(new LocatedError(new Error("Cannot match against falsy value."), e.init));
           } else {
             let results: VariableDeclaratorValue[] = [];
             for (let id of (e.id as ObjectPattern).properties) {
               switch (id.key.type) {
-                case 'Identifier':
+                case "Identifier":
                   let key = id.key.name;
-                  results.push({id: key, init: init[key]});
+                  results.push({ id: key, init: init[key] });
                   break;
                 default:
                   cerr(new NotImplementedYet(`'${id.key.type}' in '${e.type}' is not supported yet.`));
@@ -130,7 +154,8 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
             c(results);
           }
         },
-        cerr);
+        cerr
+      );
       break;
     default:
       cerr(new LocatedError(new Error(`Pattern ${e.type} is not supported yet.`), e));
@@ -138,7 +163,11 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
 }
 
 export function IfStatement(e: IfStatement | ConditionalExpression, env, config, c, cerr) {
-  evaluate(e.test, env, config, test => {
+  evaluate(
+    e.test,
+    env,
+    config,
+    test => {
       if (test) {
         evaluate(e.consequent, env, config, c, cerr);
       } else if (e.alternate) {
@@ -147,37 +176,39 @@ export function IfStatement(e: IfStatement | ConditionalExpression, env, config,
         c();
       }
     },
-    cerr)
+    cerr
+  );
 }
 
 export function ExpressionStatement(e: ExpressionStatement, env, config, c, cerr) {
-  evaluate(e.expression, env, config, c, cerr)
+  evaluate(e.expression, env, config, c, cerr);
 }
 
 export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, cerr) {
-  evaluate(e.block, env, config, c,
-    error => {
-      if (errorShouldBeForwarded(error) && !(error instanceof ThrowStatementValue)) {
-        cerr(error);
-      } else {
-        config.errorCallback(
-          error instanceof LocatedError ?
-            error :
-            new LocatedError(error, e.block));
+  evaluate(e.block, env, config, c, error => {
+    if (errorShouldBeForwarded(error) && !(error instanceof ThrowStatementValue)) {
+      cerr(error);
+    } else {
+      config.errorCallback(error instanceof LocatedError ? error : new LocatedError(error, e.block));
 
-        let catchClauseEnv = {
-          internal: {values: {error}},
-          values: env.names,
-          prev: env
-        };
-        evaluate(e.handler, catchClauseEnv, config, () => {
-            if (e.finalizer) {
-              return evaluate(e.finalizer, env, config, c, cerr);
-            }
-          },
-          cerr);
-      }
-    });
+      let catchClauseEnv = {
+        internal: { values: { error } },
+        values: env.names,
+        prev: env
+      };
+      evaluate(
+        e.handler,
+        catchClauseEnv,
+        config,
+        () => {
+          if (e.finalizer) {
+            return evaluate(e.finalizer, env, config, c, cerr);
+          }
+        },
+        cerr
+      );
+    }
+  });
 }
 
 export function ThrowStatement(e: ThrowStatement, env, config, _c, cerr) {
@@ -185,23 +216,37 @@ export function ThrowStatement(e: ThrowStatement, env, config, _c, cerr) {
 }
 
 export function CatchClause(e: CatchClause, env, config, c, cerr) {
-  getValue(env.internal, 'error',
+  getValue(
+    env.internal,
+    "error",
     error => {
       let name = e.param.name;
-      evaluate(e.body, {
-        values: {[name]: error},
-        prev: env
-      }, config, c, cerr)
+      evaluate(
+        e.body,
+        {
+          values: { [name]: error },
+          prev: env
+        },
+        config,
+        c,
+        cerr
+      );
     },
-    cerr);
+    cerr
+  );
 }
 
 export function ReturnStatement(e: ReturnStatement, env, config, _c, cerr) {
   if (e.argument) {
-    evaluate(e.argument, env, config, value => {
-        cerr(new ReturnStatementValue(value))
+    evaluate(
+      e.argument,
+      env,
+      config,
+      value => {
+        cerr(new ReturnStatementValue(value));
       },
-      cerr);
+      cerr
+    );
   } else {
     cerr(new ReturnStatementValue(void 0));
   }
@@ -216,35 +261,60 @@ export function FunctionDeclaration(e: FunctionDeclaration, env, config, c, cerr
 }
 
 export function ForInStatement(e: ForInStatement, env, config, c, cerr) {
-  evaluate(e.right, env, config, right => {
+  evaluate(
+    e.right,
+    env,
+    config,
+    right => {
       let leftNode = e.left;
-      if (leftNode.type === 'Identifier') {
+      if (leftNode.type === "Identifier") {
         let names = Object.keys(right);
 
-        evaluateArrayAsync(names, (name, c, cerr) => {
-          setValueAndCallAfterInterceptor(leftNode, env, config, leftNode.name, name, false,
-            () => {
-              evaluate(e.body, env, config, c, cerr)
-            },
-            cerr);
-        }, c, cerr);
+        evaluateArrayAsync(
+          names,
+          (name, c, cerr) => {
+            setValueAndCallAfterInterceptor(
+              leftNode,
+              env,
+              config,
+              leftNode.name,
+              name,
+              false,
+              () => {
+                evaluate(e.body, env, config, c, cerr);
+              },
+              cerr
+            );
+          },
+          c,
+          cerr
+        );
       } else {
         cerr(new NotImplementedYet("Only identifier in left-hand side is supported now."));
       }
     },
-    cerr);
+    cerr
+  );
 }
 
-
 export function ForStatement(e: ForStatement, env, config, _c, cerr) {
-  evaluate(e.init, env, config, _init => {
+  evaluate(
+    e.init,
+    env,
+    config,
+    _init => {
       debugger;
     },
-    cerr);
+    cerr
+  );
 }
 
 export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
-  evaluate(e.right, env, config, right => {
+  evaluate(
+    e.right,
+    env,
+    config,
+    right => {
       switch (e.left.type) {
         case "VariableDeclaration":
           let loopEnv = {
@@ -252,37 +322,59 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
             values: {}
           };
           // create iterator in new env
-          evaluate(e.left, loopEnv, config, (left: VariableDeclaratorValue[]) => {
-              evaluateArrayAsync(right, (rightItem, c, cerr) => {
-                // TODO: iterate over declarations in e.left
-                setValueAndCallAfterInterceptor(e.left, loopEnv, config, left[0].id, rightItem, false,
-                  () => {
-                    evaluate(e.body, loopEnv, config,
-                      c,
-                      e => {
+          evaluate(
+            e.left,
+            loopEnv,
+            config,
+            (left: VariableDeclaratorValue[]) => {
+              evaluateArrayAsync(
+                right,
+                (rightItem, c, cerr) => {
+                  // TODO: iterate over declarations in e.left
+                  setValueAndCallAfterInterceptor(
+                    e.left,
+                    loopEnv,
+                    config,
+                    left[0].id,
+                    rightItem,
+                    false,
+                    () => {
+                      evaluate(e.body, loopEnv, config, c, e => {
                         cerr(e);
                         throw e;
                       });
-                  },
-                  cerr);
-              }, c, cerr)
+                    },
+                    cerr
+                  );
+                },
+                c,
+                cerr
+              );
             },
-            cerr);
+            cerr
+          );
           break;
         default:
           cerr(new NotImplementedYet(`Left-hand side of type ${e.left.type} in ${e.type} not implemented yet.`));
           break;
       }
     },
-    cerr);
+    cerr
+  );
 }
 
 export function WhileStatement(e: WhileStatement, env, config, c, cerr) {
   function loop() {
-    evaluate(e.test, env, config,
+    evaluate(
+      e.test,
+      env,
+      config,
       test => {
         if (test) {
-          evaluate(e.body, env, config,
+          evaluate(
+            e.body,
+            env,
+            config,
             val => {
               if (errorShouldBeForwarded(val)) {
                 cerr(val);
@@ -290,12 +382,14 @@ export function WhileStatement(e: WhileStatement, env, config, c, cerr) {
                 loop();
               }
             },
-            cerr)
+            cerr
+          );
         } else {
           c();
         }
       },
-      cerr);
+      cerr
+    );
   }
 
   loop();
@@ -307,40 +401,60 @@ export function EmptyStatement(_e: EmptyStatement, _env, _config, c) {
 
 // TODO: clean up, fix error, avoid return statement here
 export function ClassDeclaration(e: ClassDeclaration, env, config, c, cerr) {
-  evaluate(e.superClass, env, config, superClass => {
-      evaluate(e.body, env, config, body => {
-          evaluateArrayAsync(body, ({key, value}, c, cerr) => {
-            if (key === 'constructor') {
-              value.prototype = Object.create(superClass.prototype);
-              if (e.id) {
-                setValueAndCallAfterInterceptor(e.id, env, config, e.id.name, value, true, c, cerr);
+  evaluate(
+    e.superClass,
+    env,
+    config,
+    superClass => {
+      evaluate(
+        e.body,
+        env,
+        config,
+        body => {
+          evaluateArrayAsync(
+            body,
+            ({ key, value }, c, cerr) => {
+              if (key === "constructor") {
+                value.prototype = Object.create(superClass.prototype);
+                if (e.id) {
+                  setValueAndCallAfterInterceptor(e.id, env, config, e.id.name, value, true, c, cerr);
+                }
+              } else {
+                cerr(new NotImplementedYet("Methods handling not implemented yet."));
               }
-            } else {
-              cerr(new NotImplementedYet("Methods handling not implemented yet."));
-            }
-          }, c, cerr);
+            },
+            c,
+            cerr
+          );
           // TODO: how to handle it?
           // cerr(new LocatedError(e.body, new NotImplementedYet(`Couldn't init properly this class yet.`)));
         },
-        cerr);
+        cerr
+      );
     },
-    cerr);
+    cerr
+  );
 }
 
 export function ClassBody(e: ClassBody, env, config, c, cerr) {
-  evaluateArray(e.body, env, config, c, cerr)
+  evaluateArray(e.body, env, config, c, cerr);
 }
 
 export function MethodDefinition(e: MethodDefinition, env, config, c, cerr) {
-  evaluate(e.value, env, config, value => {
-      if (e.kind === 'constructor') {
+  evaluate(
+    e.value,
+    env,
+    config,
+    value => {
+      if (e.kind === "constructor") {
         let key = e.key.name;
-        c({key, value});
+        c({ key, value });
       } else {
         cerr(new NotImplementedYet("Object methods not implemented yet."));
       }
     },
-    cerr);
+    cerr
+  );
 }
 
 export function DebuggerStatement(_e: DebuggerStatement, _env, _config, c) {
