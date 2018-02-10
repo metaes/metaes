@@ -91,7 +91,7 @@ export function consoleLoggingMetaESContext(environment: Environment = { values:
   );
 }
 
-let vmsCounter = 0;
+let scriptContextId = 0;
 
 // TODO: don't return anything with return, only use c/cerr
 export function metaESEval(
@@ -100,8 +100,8 @@ export function metaESEval(
   config: EvaluationConfig = { errorCallback: log },
   c?: SuccessCallback,
   cerr?: ErrorCallback
-): any | undefined {
-  config.name = config.name || "vm" + vmsCounter++;
+): void {
+  config.name = config.name || "scriptContext" + scriptContextId++;
 
   try {
     let node: ASTNode =
@@ -117,28 +117,13 @@ export function metaESEval(
       };
     }
 
-    let successValue;
-    let errorValue;
     evaluate(
       node,
       env,
       config,
-      val => {
-        successValue = val;
-        if (c) {
-          c(val, node);
-        }
-      },
-      error => {
-        errorValue = error;
-        cerr && cerr(error instanceof LocatedError ? error : new LocatedError(error, node));
-      }
+      val => c && c(val, node),
+      error => cerr && cerr(error instanceof LocatedError ? error : new LocatedError(error, node))
     );
-    if (errorValue) {
-      throw errorValue;
-    } else {
-      return successValue;
-    }
   } catch (e) {
     if (cerr) {
       cerr(e);

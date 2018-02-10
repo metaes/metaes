@@ -116,9 +116,8 @@ export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connect
       let client = new WebSocketConstructor(connectionString);
       let context: ScriptingContext;
 
-      const send = (message: Message) => {
-        client.send(JSON.stringify(validateMessage(message)));
-      };
+      const send = (message: Message) => client.send(JSON.stringify(validateMessage(message)))
+      
       client.addEventListener("close", () => {
         setTimeout(connect, 5000);
       });
