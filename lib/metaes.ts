@@ -47,7 +47,7 @@ export const evaluatePromisified = (
   environment?: EnvironmentBase
 ) =>
   new Promise<any>((resolve, reject) =>
-    context.evaluate(source, environment, success => resolve(success.value), error => reject(error.originalError))
+    context.evaluate(source, environment, value => resolve(value), error => reject(error))
   );
 
 const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")");

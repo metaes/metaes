@@ -202,7 +202,7 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
         config,
         () => {
           if (e.finalizer) {
-            return evaluate(e.finalizer, env, config, c, cerr);
+            evaluate(e.finalizer, env, config, c, cerr);
           }
         },
         cerr
@@ -399,7 +399,7 @@ export function EmptyStatement(_e: EmptyStatement, _env, _config, c) {
   c();
 }
 
-// TODO: clean up, fix error, avoid return statement here
+// TODO: clean up, fix error
 export function ClassDeclaration(e: ClassDeclaration, env, config, c, cerr) {
   evaluate(
     e.superClass,
