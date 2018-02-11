@@ -87,7 +87,6 @@ export function environmentToJSON(context: ScriptingContext, environment: Enviro
 
         // add here whatever there is as a value, it'll be serialized to json
         if (typeof v === "object") {
-          console.log(v);
           values[k] = v;
         }
       } else if (typeof v === "undefined") {
@@ -123,12 +122,8 @@ export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connect
       });
       client.addEventListener("message", e => {
         let message = validateMessage(JSON.parse(e.data) as Message);
-        console.log("client got message");
-        console.log(message);
         if (message.env) {
           let env = environmentFromJSON(context, message.env);
-          console.log("env from message");
-          console.log(env, JSON.stringify(env));
           metaESEval(message.source, env, { errorCallback: console.log }, env.values["c"], env.values["cerr"]);
         }
       });

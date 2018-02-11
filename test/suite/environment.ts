@@ -8,7 +8,6 @@ describe("Environment", () => {
     let env = { values: { encodeURI, a: "teststring" } };
     let context = new MetaESContext(env);
     let to = environmentToJSON(context, env);
-    console.log("to", to);
     assert.equal(environmentFromJSON(context, to).values["encodeURI"], encodeURI);
   });
 
