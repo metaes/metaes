@@ -1,18 +1,19 @@
-import { describe, it } from 'mocha';
-import { assert } from 'chai';
-import { metaESEval } from '../../lib/metaes';
-import { Evaluation } from '../../lib/types';
+import { describe, it } from "mocha";
+import { assert } from "chai";
+import { metaesEval } from "../../lib/metaes";
+import { Evaluation } from "../../lib/types";
 
-describe('Interceptor', () => {
-  it('should be called', () => {
+describe("Interceptor", () => {
+  it("should be called", () => {
     let evaluations: Evaluation[] = [];
-    function errorCallback(e) {
+    function onError(e) {
       console.log(e);
     }
     function interceptor(e: Evaluation) {
       evaluations.push(e);
     }
-    metaESEval('2', {}, { interceptor, errorCallback });
+    function noop() {}
+    metaesEval("2", noop, noop, {}, { interceptor, onError });
     assert.equal(evaluations.length, 6);
   });
 });

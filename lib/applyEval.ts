@@ -76,7 +76,7 @@ export function evaluate(
     cerr(new EmptyNodeError());
   } else {
     let error = new NotImplementedYet(`"${e.type}" token interpreter is not defined yet. Stopped evaluation.`);
-    config.errorCallback(new LocatedError(error, e));
+    config.onError && config.onError(new LocatedError(error, e));
     cerr(error);
   }
 }
@@ -162,14 +162,12 @@ export function apply(
   try {
     result = fn.apply(thisObj, args);
   } catch (error) {
-    config.errorCallback(new LocatedError(error, e));
+    config.onError && config.onError(new LocatedError(error, e));
     throw error;
   }
   if (typeof result === "object" && result instanceof Promise) {
     // TODO: don't know if it's not going to break other catch'es from regular code?
-    result.catch(error => {
-      config.errorCallback(new LocatedError(error, e));
-    });
+    result.catch(error => config.onError && config.onError(new LocatedError(error, e)));
   }
   return result;
 }

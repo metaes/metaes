@@ -5,8 +5,9 @@ import { assert } from "chai";
 
 describe("Environment", () => {
   it("should convert environment back and forth", () => {
+    function noop() {}
     let env = { values: { encodeURI, a: "teststring" } };
-    let context = new MetaESContext(env);
+    let context = new MetaESContext(noop, noop, env);
     let to = environmentToJSON(context, env);
     assert.equal(environmentFromJSON(context, to).values["encodeURI"], encodeURI);
   });

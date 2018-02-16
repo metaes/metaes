@@ -1,5 +1,5 @@
 import { parse } from "./parse";
-import { ErrorCallback, EvaluationConfig, LocatedError, SuccessCallback } from "./types";
+import { ErrorCallback, EvaluationConfig, LocatedError, SuccessCallback, Evaluate, Source } from "./types";
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
 import { FunctionNode, ExpressionStatement } from "./nodeTypes";
@@ -7,101 +7,11 @@ import { Environment, EnvironmentBase } from "./environment";
 
 const log = e => console.log(e);
 
-export type Source = string | ASTNode;
-
-// TODO: pass config as well, will be used to add properties while transfering RemoteValues
 export interface ScriptingContext {
-  evaluate(
-    source: Source | Function,
-    extraEnvironment?: EnvironmentBase,
-    c?: SuccessCallback,
-    cerr?: ErrorCallback
-  ): any | undefined;
+  evaluate: Evaluate;
 }
 
-export class MetaESContext implements ScriptingContext {
-  constructor(
-    public environment: Environment = { values: {} },
-    public config: EvaluationConfig = { errorCallback: log },
-    public c?: SuccessCallback,
-    public cerr?: ErrorCallback
-  ) {}
-
-  evaluate(
-    source: Source | Function,
-    extraEnvironment?: EnvironmentBase,
-    c?: SuccessCallback,
-    cerr?: ErrorCallback
-  ): any | undefined {
-    let env = this.environment;
-    if (extraEnvironment) {
-      env = Object.assign({ prev: this.environment }, extraEnvironment);
-    }
-    return metaESEval(source, env, this.config, c || this.c, cerr || this.cerr);
-  }
-}
-
-export const evaluatePromisified = (
-  context: ScriptingContext,
-  source: Source | Function,
-  environment?: EnvironmentBase
-) =>
-  new Promise<any>((resolve, reject) =>
-    context.evaluate(source, environment, value => resolve(value), error => reject(error))
-  );
-
-const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")");
-
-/**
- * Function params are igonred, they are used only to satisfy linters/compilers on client code.
- * @param context
- * @param source
- * @param environment
- */
-export const evaluateFunctionBodyPromisified = (
-  context: ScriptingContext,
-  source: Function,
-  environment?: EnvironmentBase
-) => {
-  return new Promise<any>((resolve, reject) =>
-    context.evaluate(
-      ((parseFunction(source).body[0] as ExpressionStatement).expression as FunctionNode).body,
-      environment,
-      resolve,
-      reject
-    )
-  );
-};
-
-export function consoleLoggingMetaESContext(environment: Environment = { values: {} }) {
-  return new MetaESContext(
-    environment,
-    {
-      interceptor: evaluation => {
-        console.log(evaluation);
-      },
-      errorCallback: (e: LocatedError) => {
-        console.log(e);
-      }
-    },
-    value => {
-      console.log(value);
-    },
-    e => console.log(e)
-  );
-}
-
-let scriptContextId = 0;
-
-export function metaESEval(
-  source: Source | Function,
-  environment: Environment | object = {},
-  config: EvaluationConfig = { errorCallback: log },
-  c?: SuccessCallback,
-  cerr?: ErrorCallback
-): void {
-  config.name = config.name || "scriptContext" + scriptContextId++;
-
+export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config = { errorCallback: log }) => {
   try {
     let node: ASTNode =
         typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source),
@@ -127,7 +37,76 @@ export function metaESEval(
     if (cerr) {
       cerr(e);
     } else {
+      // throwing here is allowed as it looks like metaes unreladed error or error inside metaes
       throw e;
     }
   }
+};
+
+export class MetaESContext implements ScriptingContext {
+  constructor(
+    public c?: SuccessCallback,
+    public cerr?: ErrorCallback,
+    public environment: Environment = { values: {} },
+    public config: EvaluationConfig = { errorCallback: log }
+  ) {}
+
+  evaluate(
+    source: Source | Function,
+    c?: SuccessCallback,
+    cerr?: ErrorCallback,
+    environment?: EnvironmentBase,
+    config?: EvaluationConfig
+  ) {
+    let env = this.environment;
+    if (environment) {
+      env = Object.assign({ prev: this.environment }, environment);
+    }
+    return metaesEval(source, c || this.c, cerr || this.cerr, env, config || this.config);
+  }
 }
+
+export const evaluatePromisified = (
+  context: ScriptingContext,
+  source: Source | Function,
+  environment?: EnvironmentBase
+) => new Promise<any>((resolve, reject) => context.evaluate(source, resolve, reject, environment));
+
+const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")");
+
+/**
+ * Function params are igonred, they are used only to satisfy linters/compilers on client code.
+ * @param context
+ * @param source
+ * @param environment
+ */
+export const evaluateFunctionBodyPromisified = (
+  context: ScriptingContext,
+  source: Function,
+  environment?: EnvironmentBase
+) =>
+  new Promise<any>((resolve, reject) =>
+    context.evaluate(
+      ((parseFunction(source).body[0] as ExpressionStatement).expression as FunctionNode).body,
+      resolve,
+      reject,
+      environment
+    )
+  );
+
+export const consoleLoggingMetaESContext = (environment: Environment = { values: {} }) =>
+  new MetaESContext(
+    value => {
+      console.log(value);
+    },
+    e => console.log(e),
+    environment,
+    {
+      interceptor: evaluation => {
+        console.log(evaluation);
+      },
+      errorCallback: (e: LocatedError) => {
+        console.log(e);
+      }
+    }
+  );

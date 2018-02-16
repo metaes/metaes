@@ -1,6 +1,6 @@
-import { ScriptingContext, Source, metaESEval, evaluateFunctionBodyPromisified } from "./metaes";
+import { ScriptingContext, metaesEval, evaluateFunctionBodyPromisified } from "./metaes";
 import { EnvironmentBase, Environment, valuesIntoEnvironment } from "./environment";
-import { SuccessCallback, ErrorCallback } from "./types";
+import { SuccessCallback, ErrorCallback, Source } from "./types";
 
 const boundaryEnvironments = new Map<ScriptingContext, Map<object | Function, string>>();
 
@@ -124,7 +124,7 @@ export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connect
         let message = validateMessage(JSON.parse(e.data) as Message);
         if (message.env) {
           let env = environmentFromJSON(context, message.env);
-          metaESEval(message.source, env, { errorCallback: console.log }, env.values["c"], env.values["cerr"]);
+          metaesEval(message.source, env, { errorCallback: console.log }, env.values["c"], env.values["cerr"]);
         }
       });
       client.addEventListener("open", async () => {

@@ -46,8 +46,8 @@ export class LocatedError extends MetaESError {
 
 export type Range = [number, number];
 
-export type SuccessCallback = (value: any, node?: ASTNode) => void;
-export type ErrorCallback = (e: LocatedError) => void;
+export type EvaluationSuccess = (value: any, node?: ASTNode) => void;
+export type EvaluationError = (e: LocatedError) => void;
 
 /**
  * enter - before ASTNode was evaluated
@@ -65,23 +65,30 @@ export interface Evaluation {
   timestamp: number;
 }
 
+export type Source = string | ASTNode;
+
+export type Evaluate = (
+  source: Source | Function,
+  c?: EvaluationSuccess,
+  cerr?: EvaluationError,
+  environment?: Environment | object,
+  config?: EvaluationConfig
+) => void;
+
 export interface Interceptor {
   (evaluation: Evaluation): void;
 }
 
+// TODO: will be used to add properties while transfering RemoteValues
 export interface EvaluationConfig {
   interceptor?: Interceptor;
-
-  // name of the VM, can be filename or just any arbitrary name.
-  // Leaving it undefined will by default assign name like VMx where `x` is next natural number.
-  name?: string;
 
   // if true, the interceptor will receive Reference object for Identifiers, not a bare JavaScript values.
   // It's following ECMAScript reference naming guidelines
   useReferences?: boolean;
 
   // used to catch errors outside of the callstack
-  errorCallback: ErrorCallback;
+  onError?: EvaluationError;
 }
 
 export type Continuation = (value: any) => void;

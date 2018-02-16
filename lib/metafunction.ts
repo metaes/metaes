@@ -4,10 +4,10 @@ import { FunctionNode } from "./nodeTypes";
 import { errorShouldBeForwarded } from "./utils";
 import { callInterceptor, Environment } from "./environment";
 
-export let createMetaFunction = (e: FunctionNode, closure: Environment, config: EvaluationConfig) =>
+export const createMetaFunction = (e: FunctionNode, closure: Environment, config: EvaluationConfig) =>
   function __metaFunction(this: any, ...args) {
     try {
-      let env = {
+      const env = {
         prev: closure,
         values: { this: this, arguments: args }
       };
@@ -22,11 +22,11 @@ export let createMetaFunction = (e: FunctionNode, closure: Environment, config: 
             env.values[param.argument.name] = args.slice(i);
             break;
           default:
-            let error = new LocatedError(
+            const error = new LocatedError(
               new NotImplementedYet(`Not supported type (${param["type"]}) of function param.`),
               param
             );
-            config.errorCallback && config.errorCallback(error);
+            config.onError && config.onError(error);
             throw error;
         }
       }
@@ -59,14 +59,16 @@ export let createMetaFunction = (e: FunctionNode, closure: Environment, config: 
             _interceptorAfter(e, result, env);
             throw trapOrError;
           } else {
-            config.errorCallback(trapOrError instanceof LocatedError ? trapOrError : new LocatedError(trapOrError, e));
+            config.onError &&
+              config.onError(trapOrError instanceof LocatedError ? trapOrError : new LocatedError(trapOrError, e));
           }
         }
       );
       _interceptorAfter(e, result, env);
       return result;
     } catch (e) {
-      config.errorCallback(e);
-      throw e;
+      config.onError && config.onError(e);
+      // TODO: maybe should be restored
+      // throw e;
     }
   };
