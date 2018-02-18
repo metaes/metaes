@@ -189,7 +189,7 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
     if (errorShouldBeForwarded(error) && !(error instanceof ThrowStatementValue)) {
       cerr(error);
     } else {
-      config.errorCallback(error instanceof LocatedError ? error : new LocatedError(error, e.block));
+      config.onError && config.onError(error instanceof LocatedError ? error : new LocatedError(error, e.block));
 
       let catchClauseEnv = {
         internal: { values: { error } },

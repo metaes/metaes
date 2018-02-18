@@ -1,5 +1,5 @@
 import { parse } from "./parse";
-import { ErrorCallback, EvaluationConfig, LocatedError, SuccessCallback, Evaluate, Source } from "./types";
+import { EvaluationError, EvaluationConfig, LocatedError, EvaluationSuccess, Evaluate, Source } from "./types";
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
 import { FunctionNode, ExpressionStatement } from "./nodeTypes";
@@ -11,7 +11,7 @@ export interface ScriptingContext {
   evaluate: Evaluate;
 }
 
-export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config = { errorCallback: log }) => {
+export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config = { onError: log }) => {
   try {
     let node: ASTNode =
         typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source),
@@ -45,16 +45,16 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
 
 export class MetaESContext implements ScriptingContext {
   constructor(
-    public c?: SuccessCallback,
-    public cerr?: ErrorCallback,
+    public c?: EvaluationSuccess,
+    public cerr?: EvaluationError,
     public environment: Environment = { values: {} },
-    public config: EvaluationConfig = { errorCallback: log }
+    public config: EvaluationConfig = { onError: log }
   ) {}
 
   evaluate(
     source: Source | Function,
-    c?: SuccessCallback,
-    cerr?: ErrorCallback,
+    c?: EvaluationSuccess,
+    cerr?: EvaluationError,
     environment?: EnvironmentBase,
     config?: EvaluationConfig
   ) {
@@ -105,7 +105,7 @@ export const consoleLoggingMetaESContext = (environment: Environment = { values:
       interceptor: evaluation => {
         console.log(evaluation);
       },
-      errorCallback: (e: LocatedError) => {
+      onError: (e: LocatedError) => {
         console.log(e);
       }
     }

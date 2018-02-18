@@ -1,6 +1,6 @@
 import { ScriptingContext, metaesEval, evaluateFunctionBodyPromisified } from "./metaes";
 import { EnvironmentBase, Environment, valuesIntoEnvironment } from "./environment";
-import { SuccessCallback, ErrorCallback, Source } from "./types";
+import { EvaluationSuccess, EvaluationError, Source, EvaluationConfig } from "./types";
 
 const boundaryEnvironments = new Map<ScriptingContext, Map<object | Function, string>>();
 
@@ -23,15 +23,11 @@ const getBoundaryEnv = (context: ScriptingContext) => {
 
 export type Message = { source: Source; env?: EnvironmentBase };
 
-function createRemoteFunction(
-  context: ScriptingContext,
-  id: string,
-  __remoteContextToCallWhenFunctionExecutes?: ScriptingContext
-) {
+function createRemoteFunction(context: ScriptingContext, id: string) {
   let boundary = getBoundaryEnv(context);
   let fn = (...args) =>
     evaluateFunctionBodyPromisified(
-      __remoteContextToCallWhenFunctionExecutes || context,
+      context,
       args => {
         fn.apply(null, args);
       },
@@ -44,11 +40,7 @@ function createRemoteFunction(
   return fn;
 }
 
-export function environmentFromJSON(
-  context: ScriptingContext,
-  environment: EnvironmentBase,
-  __remoteContextToCallWhenFunctionExecutes?: ScriptingContext
-): Environment {
+export function environmentFromJSON(context: ScriptingContext, environment: EnvironmentBase): Environment {
   let boundaryEnv = getBoundaryEnv(context);
   let values = environment.values || {};
   if (environment.references) {
@@ -65,7 +57,7 @@ export function environmentFromJSON(
       // TODO: don't know yet if it's function or object. Solve this ambiguity
       // Set value only if nothing in values dict was provided.
       if (!values[key]) {
-        values[key] = createRemoteFunction(context, id, __remoteContextToCallWhenFunctionExecutes);
+        values[key] = createRemoteFunction(context, id);
       }
     }
   }
@@ -110,31 +102,39 @@ export function validateMessage(message: Message): Message {
 }
 
 export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>
-  new Promise<ScriptingContext>((resolve, _reject) => {
+  new Promise<ScriptingContext>(resolve => {
     const connect = () => {
-      let client = new WebSocketConstructor(connectionString);
+      const client = new WebSocketConstructor(connectionString);
       let context: ScriptingContext;
 
-      const send = (message: Message) => client.send(JSON.stringify(validateMessage(message)))
-      
+      const send = (message: Message) => client.send(JSON.stringify(validateMessage(message)));
+
       client.addEventListener("close", () => {
         setTimeout(connect, 5000);
       });
       client.addEventListener("message", e => {
-        let message = validateMessage(JSON.parse(e.data) as Message);
+        const message = validateMessage(JSON.parse(e.data) as Message);
         if (message.env) {
-          let env = environmentFromJSON(context, message.env);
-          metaesEval(message.source, env, { errorCallback: console.log }, env.values["c"], env.values["cerr"]);
+          const env = environmentFromJSON(context, message.env);
+          metaesEval(message.source, env.values["c"], env.values["cerr"], env, { onError: console.log });
+        } else {
+          console.debug("ignored message without env:", message);
         }
       });
       client.addEventListener("open", async () => {
         context = {
-          // TODO: should return a promise too
-          evaluate: (input: Source, environment?: Environment, c?: SuccessCallback, cerr?: ErrorCallback) =>
+          evaluate(
+            source: Source,
+            c?: EvaluationSuccess,
+            cerr?: EvaluationError,
+            environment?: Environment,
+            _config?: EvaluationConfig
+          ) {
             send({
-              source: input,
+              source,
               env: environmentToJSON(context, valuesIntoEnvironment({ c, cerr }, environment))
-            })
+            });
+          }
         };
         resolve(context);
       });
