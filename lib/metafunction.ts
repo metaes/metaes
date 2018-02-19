@@ -69,6 +69,7 @@ export const createMetaFunction = (e: FunctionNode, closure: Environment, config
     } catch (e) {
       config.onError && config.onError(e);
       // TODO: maybe should be restored
+      // TODO: throw if run from bare JS, don't if from metaes
       // throw e;
     }
   };

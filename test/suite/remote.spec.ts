@@ -1,10 +1,27 @@
 import { createTestServer } from "./remote/utils";
 import { before, describe, it } from "mocha";
 import { assert } from "chai";
-import { getConnectTo } from "../../lib/remote";
-import { evaluatePromisified, evaluateFunctionBodyPromisified } from "../../lib/metaes";
+import { getConnectTo, environmentFromJSON, environmentToJSON } from "../../lib/remote";
+import {
+  evaluatePromisified,
+  evaluateFunctionBodyPromisified,
+  MetaESContext,
+  ScriptingContext,
+  consoleLoggingMetaESContext
+} from "../../lib/metaes";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
+
+describe("Messages", () => {
+  let context: ScriptingContext;
+  before(() => {
+    context = consoleLoggingMetaESContext();
+  });
+  
+  it("should properly serialize environment", () => {
+    assert.deepEqual(environmentToJSON(context, { values: { foo: "bar" } }), { references: {}, values: { foo: "bar" } });
+  });
+});
 
 describe.skip("Remote websocket messaging", () => {
   let connection;
