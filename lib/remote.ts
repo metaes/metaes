@@ -2,7 +2,7 @@ import { ScriptingContext, metaesEval, evaluateFunctionBodyPromisified } from ".
 import { EnvironmentBase, Environment, valuesIntoEnvironment } from "./environment";
 import { EvaluationSuccess, EvaluationError, Source, EvaluationConfig } from "./types";
 
-const boundaryEnvironments = new Map<ScriptingContext, Map<object | Function, string>>();
+const referencesMaps = new Map<ScriptingContext, Map<object | Function, string>>();
 
 function pairs(o: object) {
   let result: any[] = [];
@@ -12,10 +12,10 @@ function pairs(o: object) {
   return result;
 }
 
-const getBoundaryEnv = (context: ScriptingContext) => {
-  let env = boundaryEnvironments.get(context);
+const getReferenceMap = (context: ScriptingContext) => {
+  let env = referencesMaps.get(context);
   if (!env) {
-    boundaryEnvironments.set(context, (env = new Map()));
+    referencesMaps.set(context, (env = new Map()));
     return env;
   }
   return env;
@@ -24,7 +24,7 @@ const getBoundaryEnv = (context: ScriptingContext) => {
 export type Message = { source: Source; env?: EnvironmentBase };
 
 function createRemoteFunction(context: ScriptingContext, id: string) {
-  let boundary = getBoundaryEnv(context);
+  let boundary = getReferenceMap(context);
   let fn = (...args) =>
     evaluateFunctionBodyPromisified(
       context,
@@ -41,7 +41,7 @@ function createRemoteFunction(context: ScriptingContext, id: string) {
 }
 
 export function environmentFromJSON(context: ScriptingContext, environment: EnvironmentBase): Environment {
-  let boundaryEnv = getBoundaryEnv(context);
+  let boundaryEnv = getReferenceMap(context);
   let values = environment.values || {};
   if (environment.references) {
     outer: for (let [key, { id }] of pairs(environment.references)) {
@@ -65,7 +65,7 @@ export function environmentFromJSON(context: ScriptingContext, environment: Envi
 }
 
 export function environmentToJSON(context: ScriptingContext, environment: EnvironmentBase): EnvironmentBase {
-  let boundaryEnv = getBoundaryEnv(context);
+  let boundaryEnv = getReferenceMap(context);
   let references: { [key: string]: { id: string } } = {};
   let values = {};
 
@@ -91,7 +91,7 @@ export function environmentToJSON(context: ScriptingContext, environment: Enviro
   return Object.keys(references).length ? { references, values } : { values };
 }
 
-export function validateMessage(message: Message): Message {
+export function assertMessage(message: Message): Message {
   if (typeof message.source !== "string" && typeof message.source !== "object") {
     throw new Error("Message should contain `source` value of type string or object.");
   }
@@ -101,19 +101,19 @@ export function validateMessage(message: Message): Message {
   return message;
 }
 
-export const getConnectTo = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>
+export const createConnector = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>
   new Promise<ScriptingContext>(resolve => {
     const connect = () => {
       const client = new WebSocketConstructor(connectionString);
       let context: ScriptingContext;
 
-      const send = (message: Message) => client.send(JSON.stringify(validateMessage(message)));
+      const send = (message: Message) => client.send(JSON.stringify(assertMessage(message)));
 
       client.addEventListener("close", () => {
         setTimeout(connect, 5000);
       });
       client.addEventListener("message", e => {
-        const message = validateMessage(JSON.parse(e.data) as Message);
+        const message = assertMessage(JSON.parse(e.data) as Message);
         if (message.env) {
           const env = environmentFromJSON(context, message.env);
           metaesEval(message.source, env.values["c"], env.values["cerr"], env, { onError: console.log });

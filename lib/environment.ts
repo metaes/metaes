@@ -28,7 +28,7 @@ export function callInterceptor(e: ASTNode, config: EvaluationConfig, value, env
     });
 }
 
-export function valuesIntoEnvironment(values: object, environment?: Environment): EnvironmentBase {
+export function withValues(values: object, environment?: Environment): EnvironmentBase {
   if (environment) {
     for (let k of Object.keys(values)) {
       environment.values[k] = values[k];

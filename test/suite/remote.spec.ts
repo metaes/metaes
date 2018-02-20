@@ -18,8 +18,9 @@ describe("Messages", () => {
     context = consoleLoggingMetaESContext();
   });
 
-  it("should properly serialize environment", () => {
-    assert.deepEqual(environmentToJSON(context, { values: { foo: "bar" } }), { values: { foo: "bar" } });
+  it("should properly serialize basic environment", () => {
+    const primitiveValues = { foo: "bar", a: 1, b: false };
+    assert.deepEqual(environmentToJSON(context, { values: primitiveValues }), { values: primitiveValues });
   });
 });
 
