@@ -88,7 +88,7 @@ export function environmentToJSON(context: ScriptingContext, environment: Enviro
       }
     }
   }
-  return { references, values };
+  return Object.keys(references).length ? { references, values } : { values };
 }
 
 export function validateMessage(message: Message): Message {

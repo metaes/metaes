@@ -17,9 +17,9 @@ describe("Messages", () => {
   before(() => {
     context = consoleLoggingMetaESContext();
   });
-  
+
   it("should properly serialize environment", () => {
-    assert.deepEqual(environmentToJSON(context, { values: { foo: "bar" } }), { references: {}, values: { foo: "bar" } });
+    assert.deepEqual(environmentToJSON(context, { values: { foo: "bar" } }), { values: { foo: "bar" } });
   });
 });
 
