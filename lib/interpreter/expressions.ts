@@ -44,21 +44,17 @@ export function CallExpression(
             calleeNode.object,
             env,
             config,
-            object => {
+            object =>
               evaluate(
                 calleeNode,
                 env,
                 config,
-                property => {
-                  if (typeof property === "function") {
-                    c(apply(e, property as Function, args, config, object));
-                  } else {
-                    cerr(new TypeError(typeof property + " is not a function"));
-                  }
-                },
+                property =>
+                  typeof property === "function"
+                    ? c(apply(e, property as Function, args, config, object))
+                    : cerr(new TypeError(typeof property + " is not a function")),
                 cerr
-              );
-            },
+              ),
             cerr
           );
           break;
@@ -463,19 +459,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
 }
 
 export function SequenceExpression(e: SequenceExpression, env, config, c, cerr) {
-  evaluateArray(
-    e.expressions,
-    env,
-    config,
-    results => {
-      if (results.length) {
-        c(lastArrayItem(results));
-      } else {
-        c();
-      }
-    },
-    cerr
-  );
+  evaluateArray(e.expressions, env, config, results => (results.length ? c(lastArrayItem(results)) : c()), cerr);
 }
 
 export function LogicalExpression(e: LogicalExpression, env, config, c, cerr) {

@@ -1,5 +1,5 @@
 import { ScriptingContext, metaesEval, evaluateFunctionBodyPromisified } from "./metaes";
-import { EnvironmentBase, Environment, valuesIntoEnvironment } from "./environment";
+import { EnvironmentBase, Environment, withValues } from "./environment";
 import { EvaluationSuccess, EvaluationError, Source, EvaluationConfig } from "./types";
 
 const referencesMaps = new Map<ScriptingContext, Map<object | Function, string>>();
@@ -123,18 +123,17 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
       });
       client.addEventListener("open", async () => {
         context = {
-          evaluate(
+          evaluate: (
             source: Source,
             c?: EvaluationSuccess,
             cerr?: EvaluationError,
             environment?: Environment,
             _config?: EvaluationConfig
-          ) {
+          ) =>
             send({
               source,
-              env: environmentToJSON(context, valuesIntoEnvironment({ c, cerr }, environment))
-            });
-          }
+              env: environmentToJSON(context, withValues({ c, cerr }, environment))
+            })
         };
         resolve(context);
       });

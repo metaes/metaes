@@ -33,38 +33,20 @@ import {
 function hoistDeclarations(e: Statement[], env, config, c, cerr) {
   evaluateArrayAsync(
     e.filter(e => e.type === "FunctionDeclaration") as FunctionDeclaration[],
-    (e, c, cerr) => {
-      evaluate(
-        e,
-        env,
-        config,
-        value => {
-          setValue(env, e.id.name, value, true, c, cerr);
-        },
-        cerr
-      );
-    },
+    (e, c, cerr) => evaluate(e, env, config, value => setValue(env, e.id.name, value, true, c, cerr), cerr),
     c,
     cerr
   );
 }
 
 export function BlockStatement(e: BlockStatement_ | Program, env, config, c, cerr) {
-  function errorHandler(e) {
-    if (errorShouldBeForwarded(e)) {
-      cerr(e);
-    } else {
-      c(e);
-    }
-  }
+  const errorHandler = e => (errorShouldBeForwarded(e) ? cerr(e) : c(e));
 
   hoistDeclarations(
     e.body,
     env,
     config,
-    () => {
-      evaluateArray(e.body, env, config, blockValues => c(blockValues[blockValues.length - 1]), errorHandler);
-    },
+    () => evaluateArray(e.body, env, config, blockValues => c(blockValues[blockValues.length - 1]), errorHandler),
     cerr
   );
 }
@@ -238,15 +220,7 @@ export function CatchClause(e: CatchClause, env, config, c, cerr) {
 
 export function ReturnStatement(e: ReturnStatement, env, config, _c, cerr) {
   if (e.argument) {
-    evaluate(
-      e.argument,
-      env,
-      config,
-      value => {
-        cerr(new ReturnStatementValue(value));
-      },
-      cerr
-    );
+    evaluate(e.argument, env, config, value => cerr(new ReturnStatementValue(value)), cerr);
   } else {
     cerr(new ReturnStatementValue(void 0));
   }
@@ -272,7 +246,7 @@ export function ForInStatement(e: ForInStatement, env, config, c, cerr) {
 
         evaluateArrayAsync(
           names,
-          (name, c, cerr) => {
+          (name, c, cerr) =>
             setValueAndCallAfterInterceptor(
               leftNode,
               env,
@@ -284,8 +258,7 @@ export function ForInStatement(e: ForInStatement, env, config, c, cerr) {
                 evaluate(e.body, env, config, c, cerr);
               },
               cerr
-            );
-          },
+            ),
           c,
           cerr
         );
@@ -326,10 +299,10 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
             e.left,
             loopEnv,
             config,
-            (left: VariableDeclaratorValue[]) => {
+            (left: VariableDeclaratorValue[]) =>
               evaluateArrayAsync(
                 right,
-                (rightItem, c, cerr) => {
+                (rightItem, c, cerr) =>
                   // TODO: iterate over declarations in e.left
                   setValueAndCallAfterInterceptor(
                     e.left,
@@ -345,12 +318,10 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
                       });
                     },
                     cerr
-                  );
-                },
+                  ),
                 c,
                 cerr
-              );
-            },
+              ),
             cerr
           );
           break;
@@ -369,25 +340,8 @@ export function WhileStatement(e: WhileStatement, env, config, c, cerr) {
       e.test,
       env,
       config,
-      test => {
-        if (test) {
-          evaluate(
-            e.body,
-            env,
-            config,
-            val => {
-              if (errorShouldBeForwarded(val)) {
-                cerr(val);
-              } else {
-                loop();
-              }
-            },
-            cerr
-          );
-        } else {
-          c();
-        }
-      },
+      test =>
+        test ? evaluate(e.body, env, config, val => (errorShouldBeForwarded(val) ? cerr(val) : loop()), cerr) : c(),
       cerr
     );
   }
@@ -405,12 +359,12 @@ export function ClassDeclaration(e: ClassDeclaration, env, config, c, cerr) {
     e.superClass,
     env,
     config,
-    superClass => {
+    superClass =>
       evaluate(
         e.body,
         env,
         config,
-        body => {
+        body =>
           evaluateArrayAsync(
             body,
             ({ key, value }, c, cerr) => {
@@ -425,13 +379,9 @@ export function ClassDeclaration(e: ClassDeclaration, env, config, c, cerr) {
             },
             c,
             cerr
-          );
-          // TODO: how to handle it?
-          // cerr(new LocatedError(e.body, new NotImplementedYet(`Couldn't init properly this class yet.`)));
-        },
+          ),
         cerr
-      );
-    },
+      ),
     cerr
   );
 }
