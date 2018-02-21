@@ -13,15 +13,14 @@ export interface ScriptingContext {
 
 export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config = { onError: log }) => {
   try {
-    let node: ASTNode =
-        typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source),
-      env: Environment;
+    const node: ASTNode =
+      typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source);
+    let env: Environment;
 
     if ("values" in environment) {
       env = environment as Environment;
     } else {
       env = {
-        prev: undefined,
         values: environment
       };
     }

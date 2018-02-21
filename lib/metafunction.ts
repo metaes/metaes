@@ -4,8 +4,15 @@ import { FunctionNode } from "./nodeTypes";
 import { errorShouldBeForwarded } from "./utils";
 import { callInterceptor, Environment } from "./environment";
 
-export const createMetaFunction = (e: FunctionNode, closure: Environment, config: EvaluationConfig) =>
-  function __metaFunction(this: any, ...args) {
+export type MetaFunction = {
+  e: FunctionNode;
+  closure: Environment;
+  config: EvaluationConfig;
+};
+
+export const createMetaFunction = (metaFunction: MetaFunction) => {
+  const { e, closure, config } = metaFunction;
+  return function metaFunction(this: any, ...args) {
     try {
       const env = {
         prev: closure,
@@ -31,7 +38,7 @@ export const createMetaFunction = (e: FunctionNode, closure: Environment, config
         }
       }
       let result;
-      callInterceptor(e, config, __metaFunction, env, "enter");
+      callInterceptor(e, config, metaFunction, env, "enter");
 
       let _calledAfterInterceptor = false;
 
@@ -73,3 +80,4 @@ export const createMetaFunction = (e: FunctionNode, closure: Environment, config
       // throw e;
     }
   };
+};

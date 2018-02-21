@@ -228,7 +228,7 @@ export function ReturnStatement(e: ReturnStatement, env, config, _c, cerr) {
 
 export function FunctionDeclaration(e: FunctionDeclaration, env, config, c, cerr) {
   try {
-    c(createMetaFunction(e, env, config));
+    c(createMetaFunction({ e, closure: env, config }));
   } catch (error) {
     cerr(new LocatedError(error, e));
   }
