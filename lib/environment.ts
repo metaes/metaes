@@ -172,7 +172,7 @@ export function getReference(
  * Utility allowing to avoid CPS overhead.
  * Use for reporting to interceptor only.
  */
-export function getReferenceNonCPS(env: Environment, name: string) {
+export function getReferenceSync(env: Environment, name: string) {
   let result, error;
   getReference(env, name, _result => (result = _result), _error => (error = _error));
   // ignore error, because it's only for reporting
@@ -184,7 +184,7 @@ export function getReferenceNonCPS(env: Environment, name: string) {
  */
 export function getValueOrReference(name: string, env: Environment, config: EvaluationConfig, value): Reference | any {
   if (config.useReferences) {
-    return getReferenceNonCPS(env, name);
+    return getReferenceSync(env, name);
   } else {
     return value;
   }
