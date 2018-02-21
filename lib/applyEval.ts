@@ -90,7 +90,7 @@ export function evaluateArrayParametrized(
   cerr: ErrorContinuation,
   pre?: (i: number) => void
 ) {
-  let results: any[] = [];
+  const results: any[] = [];
   let stopped;
   let i = 0;
   for (let e of array) {
@@ -99,9 +99,7 @@ export function evaluateArrayParametrized(
       e,
       env,
       config,
-      result => {
-        results.push(result);
-      },
+      result => results.push(result),
       e => {
         stopped = e;
         cerr(e);
@@ -114,15 +112,13 @@ export function evaluateArrayParametrized(
   c(results);
 }
 
-export function evaluateArray(
+export const evaluateArray = (
   array: ASTNode[],
   env: Environment,
   config: EvaluationConfig,
   c: Continuation,
   cerr: ErrorContinuation
-) {
-  evaluateArrayParametrized(array, env, config, c, cerr);
-}
+) => evaluateArrayParametrized(array, env, config, c, cerr);
 
 export function evaluateArrayAsync<T>(
   items: T[],
@@ -130,7 +126,7 @@ export function evaluateArrayAsync<T>(
   c: Continuation,
   cerr: ErrorContinuation
 ) {
-  let accumulated: T[] = [];
+  const accumulated: T[] = [];
 
   function loop(array: T[]) {
     if (array.length) {

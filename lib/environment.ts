@@ -47,7 +47,7 @@ export interface Reference {
 }
 
 // TODO: verify if it's really needed
-export function setValueAndCallAfterInterceptor(
+export const setValueAndCallAfterInterceptor = (
   e: ASTNode,
   env: Environment,
   config: EvaluationConfig,
@@ -56,7 +56,7 @@ export function setValueAndCallAfterInterceptor(
   isDeclaration: boolean,
   c: Continuation,
   cerr: ErrorContinuation
-) {
+) =>
   setValue(
     env,
     name,
@@ -68,7 +68,6 @@ export function setValueAndCallAfterInterceptor(
     },
     cerr
   );
-}
 
 export function setValue(
   env: Environment,
@@ -148,12 +147,12 @@ function setReference(env: Environment, name: string, value: any, native: boolea
   return reference;
 }
 
-export function getReference(
+export const getReference = (
   env: Environment,
   name: string,
   c: (reference: Reference) => void,
   cerr: ErrorContinuation
-) {
+) =>
   _getValue(
     env,
     name,
@@ -166,7 +165,6 @@ export function getReference(
     },
     cerr
   );
-}
 
 /**
  * Utility allowing to avoid CPS overhead.
@@ -182,14 +180,8 @@ export function getReferenceSync(env: Environment, name: string) {
 /**
  * Use for reporting to interceptor.
  */
-export function getValueOrReference(name: string, env: Environment, config: EvaluationConfig, value): Reference | any {
-  if (config.useReferences) {
-    return getReferenceSync(env, name);
-  } else {
-    return value;
-  }
-}
+export const getValueOrReference = (name: string, env: Environment, config: EvaluationConfig, value): Reference | any =>
+  config.useReferences ? getReferenceSync(env, name) : value;
 
-export function getValue(env: Environment, name: string, c: Continuation, cerr: ErrorContinuation) {
+export const getValue = (env: Environment, name: string, c: Continuation, cerr: ErrorContinuation) =>
   _getValue(env, name, false, c, cerr);
-}
