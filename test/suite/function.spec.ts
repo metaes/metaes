@@ -1,6 +1,6 @@
 import { describe, it } from "mocha";
 import { metaesEval } from "../../lib/metaes";
-import { assert ,should} from "chai";
+import { assert, expect } from "chai";
 
 describe("Meta functions", () => {
   it("should return correct value in simple case", () => {
@@ -19,11 +19,7 @@ describe("Meta functions", () => {
         throw new Error("should have happened");
       },
       fn => {
-        should.throw()
-        try {
-          fn();
-        } catch (e) {}
-        assert
+        expect(fn).to.throw();
       },
       null,
       global // global contains constructor for Error
