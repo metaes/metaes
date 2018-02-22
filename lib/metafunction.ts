@@ -85,7 +85,6 @@ const evaluateMetaFunction = (
   }
 };
 
-// TODO: it should probably just take 3 args and create one structure? just for now
 export const createMetaFunction = (e: FunctionNode, closure: Environment, config: EvaluationConfig) => {
   const metaFunction = { e, closure, config };
   // this is just JS interoperability streamlining
