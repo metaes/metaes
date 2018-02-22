@@ -69,8 +69,8 @@ export type Source = string | ASTNode;
 
 export type Evaluate = (
   source: Source | Function,
-  c?: EvaluationSuccess,
-  cerr?: EvaluationError,
+  c?: EvaluationSuccess | null,
+  cerr?: EvaluationError | null,
   environment?: Environment | object,
   config?: EvaluationConfig
 ) => void;
