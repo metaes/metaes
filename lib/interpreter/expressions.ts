@@ -164,7 +164,7 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
 
 export function ArrowFunctionExpression(e: ArrowFunctionExpression, env, config, c, cerr) {
   try {
-    c(createMetaFunction({ e, closure: env, config }));
+    c(createMetaFunction(e, env, config));
   } catch (error) {
     cerr(new LocatedError(error, e));
   }
@@ -172,7 +172,7 @@ export function ArrowFunctionExpression(e: ArrowFunctionExpression, env, config,
 
 export function FunctionExpression(e: FunctionExpression, env, config, c, cerr) {
   try {
-    c(createMetaFunction({ e, closure: env, config }));
+    c(createMetaFunction(e, env, config));
   } catch (error) {
     cerr(new LocatedError(error, e));
   }

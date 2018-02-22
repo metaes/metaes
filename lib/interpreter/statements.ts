@@ -228,7 +228,7 @@ export function ReturnStatement(e: ReturnStatement, env, config, _c, cerr) {
 
 export function FunctionDeclaration(e: FunctionDeclaration, env, config, c, cerr) {
   try {
-    c(createMetaFunction({ e, closure: env, config }));
+    c(createMetaFunction(e, env, config));
   } catch (error) {
     cerr(new LocatedError(error, e));
   }
@@ -254,9 +254,7 @@ export function ForInStatement(e: ForInStatement, env, config, c, cerr) {
               leftNode.name,
               name,
               false,
-              () => {
-                evaluate(e.body, env, config, c, cerr);
-              },
+              () => evaluate(e.body, env, config, c, cerr),
               cerr
             ),
           c,
@@ -311,12 +309,11 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
                     left[0].id,
                     rightItem,
                     false,
-                    () => {
+                    () =>
                       evaluate(e.body, loopEnv, config, c, e => {
                         cerr(e);
                         throw e;
-                      });
-                    },
+                      }),
                     cerr
                   ),
                 c,
@@ -335,7 +332,7 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
 }
 
 export function WhileStatement(e: WhileStatement, env, config, c, cerr) {
-  function loop() {
+  (function loop() {
     evaluate(
       e.test,
       env,
@@ -344,9 +341,7 @@ export function WhileStatement(e: WhileStatement, env, config, c, cerr) {
         test ? evaluate(e.body, env, config, val => (errorShouldBeForwarded(val) ? cerr(val) : loop()), cerr) : c(),
       cerr
     );
-  }
-
-  loop();
+  })();
 }
 
 export function EmptyStatement(_e: EmptyStatement, _env, _config, c) {

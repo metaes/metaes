@@ -11,7 +11,7 @@ export interface ScriptingContext {
   evaluate: Evaluate;
 }
 
-export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config = { onError: log }) => {
+export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config = {}) => {
   try {
     const node: ASTNode =
       typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source);
