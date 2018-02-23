@@ -1,28 +1,7 @@
-import {
-  Continuation,
-  ErrorContinuation,
-  EvaluationConfig,
-  LocatedError,
-  MetaESError,
-  NotImplementedYet
-} from "./types";
+import { Continuation, ErrorContinuation, EvaluationConfig } from "./types";
 import { tokens } from "./interpreters";
 import { ASTNode } from "./nodes/nodes";
 import { callInterceptor, Environment } from "./environment";
-
-class EmptyNodeError extends Error {}
-
-export class ReturnStatementValue extends Error {
-  constructor(public value: any) {
-    super();
-  }
-}
-
-export class ThrowStatementValue extends Error {
-  constructor(public value: any) {
-    super();
-  }
-}
 
 if (typeof window !== "undefined") {
   window.addEventListener("unhandledrejection", event => console.log(event));
@@ -46,25 +25,25 @@ export function evaluate(
           callInterceptor(e, config, value, env, "exit");
           c(value);
         },
-        error => {
-          if (error instanceof EmptyNodeError) {
-            cerr(
-              new LocatedError(
-                new Error(
+        exception => {
+          switch (exception.type) {
+            case "EmptyNode":
+              cerr({
+                value: new Error(
                   `"${e.type}" tried to access non-existing descendant node.). 
-            Error occurred in "${e.type}" interpreter.`
+          Error occurred in "${e.type}" interpreter.`
                 ),
-                e
-              )
-            );
-          } else if (error instanceof MetaESError) {
-            cerr(error);
-          } else if (error instanceof ReturnStatementValue) {
-            callInterceptor(e, config, error.value, env, "exit");
-            cerr(error);
-          } else {
-            let located = new LocatedError(error, e);
-            cerr(located);
+                location: e
+              });
+              break;
+            case "ReturnStatement":
+              callInterceptor(e, config, exception.value, env, "exit");
+              cerr(exception);
+              break;
+            default:
+              exception.location = e;
+              cerr(exception);
+              break;
           }
         }
       );
@@ -73,11 +52,14 @@ export function evaluate(
       throw error;
     }
   } else if (!e) {
-    cerr(new EmptyNodeError());
+    cerr({ type: "EmptyNode" });
   } else {
-    let error = new NotImplementedYet(`"${e.type}" token interpreter is not defined yet. Stopped evaluation.`);
-    config.onError && config.onError(new LocatedError(error, e));
-    cerr(error);
+    const exception = {
+      location: e,
+      value: new Error(`"${e.type}" token interpreter is not defined yet. Stopped evaluation.`)
+    };
+    config.onError && config.onError(exception);
+    cerr(exception);
   }
 }
 
@@ -158,12 +140,12 @@ export function apply(
   try {
     result = fn.apply(thisObj, args);
   } catch (error) {
-    config.onError && config.onError(new LocatedError(error, e));
+    config.onError && config.onError({ location: e, value: error });
     throw error;
   }
   if (typeof result === "object" && result instanceof Promise) {
     // TODO: don't know if it's not going to break other catch'es from regular code?
-    result.catch(error => config.onError && config.onError(new LocatedError(error, e)));
+    result.catch(error => config.onError && config.onError({ location: e, value: error }));
   }
   return result;
 }

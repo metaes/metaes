@@ -1,5 +1,5 @@
 import { parse } from "./parse";
-import { EvaluationError, EvaluationConfig, LocatedError, EvaluationSuccess, Evaluate, Source } from "./types";
+import { EvaluationConfig, OnSuccess, Evaluate, Source, OnError } from "./types";
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
 import { FunctionNode, ExpressionStatement } from "./nodeTypes";
@@ -43,16 +43,16 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
 
 export class MetaESContext implements ScriptingContext {
   constructor(
-    public c?: EvaluationSuccess,
-    public cerr?: EvaluationError,
+    public c?: OnSuccess,
+    public cerr?: OnError,
     public environment: Environment = { values: {} },
     public config: EvaluationConfig = { onError: log }
   ) {}
 
   evaluate(
     source: Source | Function,
-    c?: EvaluationSuccess,
-    cerr?: EvaluationError,
+    c?: OnSuccess,
+    cerr?: OnError,
     environment?: EnvironmentBase,
     config?: EvaluationConfig
   ) {

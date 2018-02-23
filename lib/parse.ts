@@ -1,8 +1,22 @@
 import * as esprima from "esprima";
-import { ParseError, Range } from "./types";
+import { Range } from "./types";
 import { Program } from "./nodeTypes";
 
 export type Parser = (source: string) => Program;
+
+interface EsprimaError {
+  message: string;
+  line: number;
+  description: string;
+  index: number;
+  column: number;
+}
+
+export class ParseError extends Error {
+  constructor(public error: EsprimaError) {
+    super(error.message);
+  }
+}
 
 export const parse: Parser = (source: string): Program => {
   try {

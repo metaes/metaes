@@ -1,7 +1,7 @@
 import { MetaESContext, evaluatePromisified, ScriptingContext } from "./metaes";
 import { Environment } from "./environment";
 import { environmentFromJSON, environmentToJSON, Message, validateMessage } from "./remote";
-import { EvaluationSuccess, EvaluationError, Source } from "./types";
+import { OnSuccess, EvaluationException, Source } from "./types";
 import { valuesIntoEnvironment } from "./environment";
 import * as WebSocket from "ws";
 import * as express from "express";
@@ -46,7 +46,7 @@ export const runWSServer = (port: number = config.port) =>
     webSocketServer.on("connection", connection => {
       const remoteContext: ScriptingContext = {
         // TODO: should return a promise too
-        evaluate: (input: Source, c?: EvaluationSuccess, cerr?: EvaluationError, environment?: Environment) => {
+        evaluate: (input: Source, c?: OnSuccess, cerr?: EvaluationException, environment?: Environment) => {
           const message = {
             source: input,
             env: environmentToJSON(localContext, valuesIntoEnvironment({}, environment))

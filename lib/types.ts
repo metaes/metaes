@@ -2,58 +2,20 @@ import { ASTNode } from "./nodes/nodes";
 import { Environment, Reference } from "./environment";
 import { FunctionNode } from "./nodeTypes";
 
-interface EsprimaError extends Error {
-  line: number;
-  description: string;
-  index: number;
-  column: number;
-}
-
-export class ParseError extends Error {
-  line: number;
-  description: string;
-  index: number;
-  column: number;
-
-  constructor(public error: EsprimaError) {
-    super(error.message);
-    this.line = error.line;
-    this.description = error.description;
-    this.index = error.index;
-    this.column = error.column;
-  }
-}
-
-export class NotImplementedYet extends Error {
-  constructor(message: string) {
-    super(message);
-  }
-}
-
-/**
- * Just means that MetaES interpreter is aware of this error happened.
- */
-export class MetaESError extends Error {
-  constructor(public originalError: Error) {
-    super(originalError.message);
-  }
-}
-
-export class LocatedError extends MetaESError {
-  constructor(public originalError: Error, public node?: ASTNode) {
-    super(originalError);
-  }
-}
-
-export type MetaError = {
+export type MetaesException = {
+  type?: "Error" | "ReturnStatement" | "EmptyNode" | "NotImplemented";
+  message?: string;
+  value?: Error | any;
   location?: ASTNode;
-  error: any;
 };
+
+export const NotImplementedException = (message: string): MetaesException => ({ type: "NotImplemented", message });
+export const LocatedException = (value: any, location: ASTNode): MetaesException => ({ value, location });
 
 export type Range = [number, number];
 
-export type EvaluationSuccess = (value: any, node?: ASTNode) => void;
-export type EvaluationError = (e: LocatedError) => void;
+export type OnSuccess = (value: any, node?: ASTNode) => void;
+export type OnError = (e: MetaesException) => void;
 
 /**
  * enter - before ASTNode was evaluated
@@ -75,8 +37,8 @@ export type Source = string | ASTNode;
 
 export type Evaluate = (
   source: Source | Function,
-  c?: EvaluationSuccess | null,
-  cerr?: EvaluationError | null,
+  c?: OnSuccess | null,
+  cerr?: OnError | null,
   environment?: Environment | object,
   config?: EvaluationConfig
 ) => void;
@@ -94,11 +56,11 @@ export interface EvaluationConfig {
   useReferences?: boolean;
 
   // used to catch errors outside of the callstack
-  onError?: EvaluationError;
+  onError?: OnError;
 }
 
 export type Continuation = (value: any) => void;
-export type ErrorContinuation = (error: Error) => void;
+export type ErrorContinuation = (error: MetaesException) => void;
 
 type Interpreter<T extends ASTNode> = (
   e: T,
@@ -112,7 +74,7 @@ export type interpretersMap = {
   [key: string]: Interpreter<any>;
 };
 
-export type MetaFunction = {
+export type MetaesFunction = {
   e: FunctionNode;
   closure: Environment;
   config?: EvaluationConfig;

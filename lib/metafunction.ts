@@ -1,12 +1,5 @@
-import {
-  EvaluationConfig,
-  LocatedError,
-  NotImplementedYet,
-  EvaluationSuccess,
-  EvaluationError,
-  MetaFunction
-} from "./types";
-import { evaluate, ReturnStatementValue } from "./applyEval";
+import { EvaluationConfig, OnSuccess, MetaesFunction } from "./types";
+import { evaluate } from "./applyEval";
 import { errorShouldBeForwarded } from "./utils";
 import { callInterceptor, Environment } from "./environment";
 import { FunctionNode } from "./nodeTypes";
@@ -16,9 +9,9 @@ const toLocatedError = (any, e?) => (any instanceof LocatedError ? any : new Loc
 // TODO: of "evaluate" should handle metaFunction too?
 // TODO: pass config also in evaluateMetaFunction: it can override or replace this from metaFunction
 export const evaluateMetaFunction = (
-  metaFunction: MetaFunction,
-  c: EvaluationSuccess,
-  cerr: EvaluationError,
+  metaFunction: MetaesFunction,
+  c: OnSuccess,
+  cerr: EvaluationException,
   thisObject: any,
   args: any[]
 ) => {
@@ -87,7 +80,7 @@ export const evaluateMetaFunction = (
   }
 };
 
-export const createMetaFunctionWrapper = (metaFunction: MetaFunction) =>
+export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) =>
   function(this: any, ...args) {
     const config = metaFunction.config;
     let result;

@@ -1,9 +1,9 @@
 import { apply, evaluate, evaluateArray } from "../applyEval";
-import { Continuation, ErrorContinuation, EvaluationConfig, LocatedError, NotImplementedYet } from "../types";
+import { Continuation, ErrorContinuation, EvaluationConfig, NotImplementedException, LocatedException } from "../types";
 import { createMetaFunction } from "../metafunction";
 import { callInterceptor, Environment, getReference, getValue, setValueAndCallAfterInterceptor } from "../environment";
 import { IfStatement } from "./statements";
-import { errorShouldBeForwarded, lastArrayItem } from "../utils";
+import { errorShouldBeForwarded } from "../utils";
 import {
   ArrayExpression,
   ArrowFunctionExpression,
@@ -23,6 +23,13 @@ import {
   UpdateExpression,
   TemplateLiteral
 } from "../nodeTypes";
+
+export function lastArrayItem(array?: any[]) {
+  if (array) {
+    return array[array.length - 1];
+  }
+  return null;
+}
 
 export function CallExpression(
   e: CallExpression,
@@ -72,7 +79,7 @@ export function CallExpression(
                 if (errorShouldBeForwarded(error)) {
                   cerr(error);
                 } else {
-                  cerr(new LocatedError(error, calleeNode));
+                  cerr(LocatedException(error, calleeNode));
                 }
               }
             },
@@ -91,7 +98,7 @@ export function CallExpression(
                 if (errorShouldBeForwarded(error)) {
                   cerr(error);
                 } else {
-                  cerr(new LocatedError(error, calleeNode));
+                  cerr(LocatedException(error, calleeNode));
                 }
               }
             },
@@ -99,7 +106,10 @@ export function CallExpression(
           );
           break;
         default:
-          cerr(new NotImplementedYet(`This kind of callee node ('${calleeNode.type}') is not supported yet.`));
+          cerr({
+            type: "NotImplemented",
+            message: `This kind of callee node ('${calleeNode.type}') is not supported yet.`
+          });
       }
     },
     cerr
@@ -146,7 +156,7 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
                   c(object[e.property.name]);
                   break;
                 default:
-                  cerr(new NotImplementedYet(`Not implemented ${e.property["type"]} property type of ${e.type}`));
+                  cerr(NotImplementedException(`Not implemented ${e.property["type"]} property type of ${e.type}`));
               }
             }
             break;
@@ -154,7 +164,7 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
             evaluate(e.property, { values: object }, config, c, cerr);
             break;
           default:
-            cerr(new NotImplementedYet("This kind of member expression is not supported yet."));
+            cerr(NotImplementedException("This kind of member expression is not supported yet."));
         }
       }
     },
@@ -166,7 +176,7 @@ export function ArrowFunctionExpression(e: ArrowFunctionExpression, env, config,
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
-    cerr(new LocatedError(error, e));
+    cerr(LocatedException(error, e));
   }
 }
 
@@ -174,7 +184,7 @@ export function FunctionExpression(e: FunctionExpression, env, config, c, cerr) 
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
-    cerr(new LocatedError(error, e));
+    cerr(LocatedException(error, e));
   }
 }
 
@@ -231,7 +241,7 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
                     c((object[propertyName] ^= right));
                     break;
                   default:
-                    cerr(new NotImplementedYet(e.type + " not implemented " + e.operator));
+                    cerr(NotImplementedException(e.type + " not implemented " + e.operator));
                 }
               }
 
@@ -259,7 +269,7 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
           setValueAndCallAfterInterceptor(e.left, env, config, e.left.name, right, false, c, cerr);
           break;
         default:
-          cerr(new NotImplementedYet("This assignment is not supported yet."));
+          cerr(NotImplementedException("This assignment is not supported yet."));
       }
     },
     cerr
@@ -292,7 +302,7 @@ export function Property(e: Property, env, config, c, cerr) {
       key = e.key.value;
       break;
     default:
-      cerr(new NotImplementedYet("This type or property is not supported yet."));
+      cerr(NotImplementedException("This type or property is not supported yet."));
       return;
   }
   evaluate(
@@ -412,7 +422,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
             config,
             callee => {
               if (typeof callee !== "function") {
-                cerr(new LocatedError(new TypeError(typeof callee + " is not a function"), e));
+                cerr(LocatedException(new TypeError(typeof callee + " is not a function"), e));
               }
               try {
                 c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
@@ -420,7 +430,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
                 if (errorShouldBeForwarded(error)) {
                   cerr(error);
                 } else {
-                  cerr(new LocatedError(error, e));
+                  cerr(LocatedException(error, e));
                 }
               }
             },
@@ -433,7 +443,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
             calleeNode.name,
             callee => {
               if (typeof callee !== "function") {
-                cerr(new LocatedError(new TypeError(typeof callee + " is not a function"), e));
+                cerr(LocatedException(new TypeError(typeof callee + " is not a function"), e));
                 // TODO: use if/else
                 return;
               }
@@ -443,7 +453,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
                 if (errorShouldBeForwarded(error)) {
                   cerr(error);
                 } else {
-                  cerr(new LocatedError(error, calleeNode));
+                  cerr(LocatedException(error, calleeNode));
                 }
               }
             },
@@ -451,7 +461,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
           );
           break;
         default:
-          cerr(new NotImplementedYet(`This type of callee is not supported yet.`));
+          cerr(NotImplementedException(`This type of callee is not supported yet.`));
       }
     },
     cerr
@@ -526,7 +536,7 @@ export function UpdateExpression(e: UpdateExpression, env: Environment, _config,
 
       break;
     default:
-      cerr(new NotImplementedYet(`Support of argument of type ${e.argument.type} not implemented yet.`));
+      cerr(NotImplementedException(`Support of argument of type ${e.argument.type} not implemented yet.`));
   }
 }
 
