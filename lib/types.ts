@@ -1,5 +1,6 @@
 import { ASTNode } from "./nodes/nodes";
 import { Environment, Reference } from "./environment";
+import { FunctionNode } from "./nodeTypes";
 
 interface EsprimaError extends Error {
   line: number;
@@ -43,6 +44,11 @@ export class LocatedError extends MetaESError {
     super(originalError);
   }
 }
+
+export type MetaError = {
+  location?: ASTNode;
+  error: any;
+};
 
 export type Range = [number, number];
 
@@ -104,4 +110,10 @@ type Interpreter<T extends ASTNode> = (
 
 export type interpretersMap = {
   [key: string]: Interpreter<any>;
+};
+
+export type MetaFunction = {
+  e: FunctionNode;
+  closure: Environment;
+  config?: EvaluationConfig;
 };

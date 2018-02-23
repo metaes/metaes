@@ -21,8 +21,49 @@ describe("Meta functions", () => {
       fn => {
         expect(fn).to.throw();
       },
-      null,
+      e => {
+        console.log(e);
+      },
       global // global contains constructor for Error
     );
+  });
+  it("should throw an error from external function", () => {
+    function thrower() {
+      throw new Error();
+    }
+    metaesEval(
+      () => thrower(),
+      fn => {
+        expect(fn).to.throw();
+      },
+      e => {
+        console.log("error", e);
+      },
+      { thrower }
+    );
+  });
+  it("should throw an receive the same error from external function", () => {
+    let message = "A message";
+    let errorConstructor = TypeError;
+    function thrower() {
+      throw new errorConstructor(message);
+    }
+    let fn;
+    metaesEval(
+      () => thrower(),
+      result => {
+        fn = result;
+      },
+      e => {
+        console.log("error", e);
+      },
+      { thrower }
+    );
+    try {
+      fn();
+    } catch (e) {
+      assert.equal(e.message, message);
+      assert.instanceOf(e, errorConstructor);
+    }
   });
 });

@@ -36,7 +36,6 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
     if (cerr) {
       cerr(e);
     } else {
-      // throwing here is allowed as it looks like metaes unreladed error or error inside metaes
       throw e;
     }
   }

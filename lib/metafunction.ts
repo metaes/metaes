@@ -1,19 +1,21 @@
-import { EvaluationConfig, LocatedError, NotImplementedYet, EvaluationSuccess, EvaluationError } from "./types";
+import {
+  EvaluationConfig,
+  LocatedError,
+  NotImplementedYet,
+  EvaluationSuccess,
+  EvaluationError,
+  MetaFunction
+} from "./types";
 import { evaluate, ReturnStatementValue } from "./applyEval";
-import { FunctionNode } from "./nodeTypes";
 import { errorShouldBeForwarded } from "./utils";
 import { callInterceptor, Environment } from "./environment";
-
-export type MetaFunction = {
-  e: FunctionNode;
-  closure: Environment;
-  config?: EvaluationConfig;
-};
+import { FunctionNode } from "./nodeTypes";
 
 const toLocatedError = (any, e?) => (any instanceof LocatedError ? any : new LocatedError(any, e));
 
 // TODO: of "evaluate" should handle metaFunction too?
-const evaluateMetaFunction = (
+// TODO: pass config also in evaluateMetaFunction: it can override or replace this from metaFunction
+export const evaluateMetaFunction = (
   metaFunction: MetaFunction,
   c: EvaluationSuccess,
   cerr: EvaluationError,
@@ -85,22 +87,32 @@ const evaluateMetaFunction = (
   }
 };
 
-export const createMetaFunction = (e: FunctionNode, closure: Environment, config: EvaluationConfig) => {
-  const metaFunction = { e, closure, config };
-  // this is just JS interoperability streamlining
-  return function __metaFunction(this: any, ...args) {
+export const createMetaFunctionWrapper = (metaFunction: MetaFunction) =>
+  function(this: any, ...args) {
+    const config = metaFunction.config;
     let result;
+    let error;
     evaluateMetaFunction(
       metaFunction,
       r => {
         result = r;
       },
       e => {
-        throw e;
+        error = e;
+        config && config.onError && config.onError(toLocatedError(e));
       },
       this,
       args
     );
+    if (error) {
+      throw error;
+    }
     return result;
   };
-};
+
+export const createMetaFunction = (e: FunctionNode, closure: Environment, config: EvaluationConfig) =>
+  createMetaFunctionWrapper({
+    e,
+    closure,
+    config
+  });
