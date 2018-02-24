@@ -2,7 +2,6 @@ import { evaluate, evaluateArray, evaluateArrayAsync, ReturnStatementValue, Thro
 import { callInterceptor, getValue, setValue, setValueAndCallAfterInterceptor } from "../environment";
 import { EvaluationConfig, LocatedError, NotImplementedYet } from "../types";
 import { createMetaFunction } from "../metafunction";
-import { errorShouldBeForwarded } from "../utils";
 import {
   BlockStatement as BlockStatement_,
   CatchClause,

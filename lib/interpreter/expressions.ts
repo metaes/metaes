@@ -3,7 +3,6 @@ import { Continuation, ErrorContinuation, EvaluationConfig, NotImplementedExcept
 import { createMetaFunction } from "../metafunction";
 import { callInterceptor, Environment, getReference, getValue, setValueAndCallAfterInterceptor } from "../environment";
 import { IfStatement } from "./statements";
-import { errorShouldBeForwarded } from "../utils";
 import {
   ArrayExpression,
   ArrowFunctionExpression,
@@ -570,7 +569,7 @@ export function UnaryExpression(e: UnaryExpression, env: Environment, config, c,
       }
     },
     error => {
-      if (error instanceof LocatedError && error.originalError instanceof ReferenceError && e.operator === "typeof") {
+      if (error instanceof LocatedError && error.value instanceof ReferenceError && e.operator === "typeof") {
         c("undefined");
       } else {
         cerr(error);

@@ -1,17 +1,13 @@
-import { EvaluationConfig, OnSuccess, MetaesFunction } from "./types";
+import { EvaluationConfig, OnSuccess, MetaesFunction, OnError, NotImplementedException } from "./types";
 import { evaluate } from "./applyEval";
-import { errorShouldBeForwarded } from "./utils";
 import { callInterceptor, Environment } from "./environment";
 import { FunctionNode } from "./nodeTypes";
 
-const toLocatedError = (any, e?) => (any instanceof LocatedError ? any : new LocatedError(any, e));
-
-// TODO: of "evaluate" should handle metaFunction too?
 // TODO: pass config also in evaluateMetaFunction: it can override or replace this from metaFunction
 export const evaluateMetaFunction = (
   metaFunction: MetaesFunction,
   c: OnSuccess,
-  cerr: EvaluationException,
+  cerr: OnError,
   thisObject: any,
   args: any[]
 ) => {
@@ -32,10 +28,7 @@ export const evaluateMetaFunction = (
           env.values[param.argument.name] = args.slice(i);
           break;
         default:
-          const error = new LocatedError(
-            new NotImplementedYet(`Not supported type (${param["type"]}) of function param.`),
-            param
-          );
+          const error = NotImplementedException(`Not supported type (${param["type"]}) of function param.`, param);
           config && config.onError && config.onError(error);
           throw error;
       }

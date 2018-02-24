@@ -30,7 +30,7 @@ describe("Continuations and returns", () => {
           {
             onError(e) {
               console.log("got it", e);
-              assert.equal(true, e.originalError instanceof TypeError);
+              assert.equal(true, e.value instanceof TypeError);
               resolve();
             }
           }

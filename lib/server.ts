@@ -1,8 +1,8 @@
 import { MetaESContext, evaluatePromisified, ScriptingContext } from "./metaes";
 import { Environment } from "./environment";
-import { environmentFromJSON, environmentToJSON, Message, validateMessage } from "./remote";
+import { environmentFromJSON, environmentToJSON, Message, assertMessage } from "./remote";
 import { OnSuccess, EvaluationException, Source } from "./types";
-import { valuesIntoEnvironment } from "./environment";
+import { withValues } from "./environment";
 import * as WebSocket from "ws";
 import * as express from "express";
 import * as http from "http";
@@ -49,16 +49,16 @@ export const runWSServer = (port: number = config.port) =>
         evaluate: (input: Source, c?: OnSuccess, cerr?: EvaluationException, environment?: Environment) => {
           const message = {
             source: input,
-            env: environmentToJSON(localContext, valuesIntoEnvironment({}, environment))
+            env: environmentToJSON(localContext, withValues({}, environment))
           };
           // console.log("[server sending message]");
           // console.log(JSON.stringify(message));
-          connection.send(JSON.stringify(validateMessage(message)));
+          connection.send(JSON.stringify(assertMessage(message)));
         }
       };
 
       connection.on("message", async message => {
-        const { source, env } = validateMessage(JSON.parse(message)) as Message;
+        const { source, env } = assertMessage(JSON.parse(message)) as Message;
         const environment = env ? environmentFromJSON(localContext, env, remoteContext) : { values: {} };
         // console.log("[server got message]:");
         // console.log(message);
@@ -68,11 +68,11 @@ export const runWSServer = (port: number = config.port) =>
           let result = await evaluatePromisified(localContext, source, environment);
           // console.log("[early result]");
           // console.log(result);
-          remoteContext.evaluate(`c(result)`, valuesIntoEnvironment({ result }, environment));
+          remoteContext.evaluate(`c(result)`, withValues({ result }, environment));
         } catch (e) {
           remoteContext.evaluate(
             `cerr(error)`,
-            valuesIntoEnvironment(
+            withValues(
               { error: { originalError: { message: (e.originalError || e).message } } },
               environment
             )
