@@ -9,11 +9,15 @@ export type MetaesException = {
   location?: ASTNode;
 };
 
+export const ensureException = (value: Error | MetaesException, location?: ASTNode): MetaesException =>
+  value instanceof Error ? { type: "Error", value, location } : value;
+
 export const NotImplementedException = (message: string, location?: ASTNode): MetaesException => ({
   type: "NotImplemented",
   message,
   location
 });
+
 export const LocatedException = (value: any, location: ASTNode): MetaesException => ({ value, location });
 
 export type Range = [number, number];

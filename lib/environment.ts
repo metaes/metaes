@@ -1,4 +1,4 @@
-import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationType, MetaESError } from "./types";
+import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationType } from "./types";
 import { Identifier } from "./nodeTypes";
 import { ASTNode } from "./nodes/nodes";
 
@@ -117,8 +117,9 @@ function _getValue(
     if (_env.values === null || typeof _env.values === undefined) {
       try {
         _env.values[name]; // force error to be thrown
-      } catch (e) {
-        return cerr(new MetaESError(e));
+      } catch (error) {
+        cerr({ value: error });
+        break;
       }
     }
     // TODO: TS shouldn't complain here, no?

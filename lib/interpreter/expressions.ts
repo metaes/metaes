@@ -1,5 +1,12 @@
 import { apply, evaluate, evaluateArray } from "../applyEval";
-import { Continuation, ErrorContinuation, EvaluationConfig, NotImplementedException, LocatedException } from "../types";
+import {
+  Continuation,
+  ErrorContinuation,
+  EvaluationConfig,
+  NotImplementedException,
+  LocatedException,
+  ensureException
+} from "../types";
 import { createMetaFunction } from "../metafunction";
 import { callInterceptor, Environment, getReference, getValue, setValueAndCallAfterInterceptor } from "../environment";
 import { IfStatement } from "./statements";
@@ -75,11 +82,7 @@ export function CallExpression(
               try {
                 c(apply(e, callee, args, config));
               } catch (error) {
-                if (errorShouldBeForwarded(error)) {
-                  cerr(error);
-                } else {
-                  cerr(LocatedException(error, calleeNode));
-                }
+                cerr(ensureException(error, calleeNode));
               }
             },
             cerr
@@ -94,11 +97,7 @@ export function CallExpression(
               try {
                 getValue(env, "this", thisValue => c(apply(calleeNode, callee, args, config, thisValue)), cerr);
               } catch (error) {
-                if (errorShouldBeForwarded(error)) {
-                  cerr(error);
-                } else {
-                  cerr(LocatedException(error, calleeNode));
-                }
+                cerr(ensureException(error, calleeNode));
               }
             },
             cerr
@@ -426,11 +425,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
               try {
                 c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
               } catch (error) {
-                if (errorShouldBeForwarded(error)) {
-                  cerr(error);
-                } else {
-                  cerr(LocatedException(error, e));
-                }
+                cerr(ensureException(error, e));
               }
             },
             cerr
@@ -449,11 +444,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
               try {
                 c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
               } catch (error) {
-                if (errorShouldBeForwarded(error)) {
-                  cerr(error);
-                } else {
-                  cerr(LocatedException(error, calleeNode));
-                }
+                cerr(ensureException(error, calleeNode));
               }
             },
             cerr
@@ -569,7 +560,7 @@ export function UnaryExpression(e: UnaryExpression, env: Environment, config, c,
       }
     },
     error => {
-      if (error instanceof LocatedError && error.value instanceof ReferenceError && e.operator === "typeof") {
+      if (error.value instanceof ReferenceError && e.operator === "typeof") {
         c("undefined");
       } else {
         cerr(error);
