@@ -1,5 +1,5 @@
 import { parse } from "./parse";
-import { EvaluationConfig, OnSuccess, Evaluate, Source, OnError } from "./types";
+import { EvaluationConfig, OnSuccess, Evaluate, Source, OnError, MetaesException } from "./types";
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
 import { FunctionNode, ExpressionStatement } from "./nodeTypes";
@@ -30,7 +30,12 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
       env,
       config,
       val => c && c(val, node),
-      error => cerr && cerr(error instanceof LocatedError ? error : new LocatedError(error, node))
+      exception => {
+        if (cerr) {
+          exception.location = node;
+          cerr(exception);
+        }
+      }
     );
   } catch (e) {
     if (cerr) {
@@ -103,7 +108,7 @@ export const consoleLoggingMetaESContext = (environment: Environment = { values:
       interceptor: evaluation => {
         console.log(evaluation);
       },
-      onError: (e: LocatedError) => {
+      onError: (e: MetaesException) => {
         console.log(e);
       }
     }

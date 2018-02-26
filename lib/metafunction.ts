@@ -1,4 +1,4 @@
-import { EvaluationConfig, OnSuccess, MetaesFunction, OnError, NotImplementedException } from "./types";
+import { EvaluationConfig, OnSuccess, MetaesFunction, OnError, NotImplementedException, LocatedError } from "./types";
 import { evaluate } from "./applyEval";
 import { callInterceptor, Environment } from "./environment";
 import { FunctionNode } from "./nodeTypes";
@@ -52,19 +52,18 @@ export const evaluateMetaFunction = (
         c(result);
         _interceptorAfter(e, result, env);
       },
-      trapOrError => {
-        if (trapOrError instanceof ReturnStatementValue) {
-          c(trapOrError.value);
-          _interceptorAfter(e, trapOrError.value, env);
-        } else if (errorShouldBeForwarded(trapOrError)) {
-          c(toLocatedError(trapOrError, e));
-          _interceptorAfter(e, trapOrError, env);
-          throw trapOrError;
-        } else {
-          _interceptorAfter(e, trapOrError, env);
-          const error = toLocatedError(trapOrError, e);
-          cerr(error);
+      exception => {
+        switch (exception.type) {
+          case "ReturnStatement":
+            c(exception.value);
+            break;
+          default:
+            exception.location = e;
+            cerr(exception);
+            // TODO: needed?
+            throw exception.value;
         }
+        _interceptorAfter(e, exception.value, env);
       }
     );
   } catch (e) {
@@ -80,12 +79,10 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) =>
     let error;
     evaluateMetaFunction(
       metaFunction,
-      r => {
-        result = r;
-      },
+      r => (result = r),
       e => {
         error = e;
-        config && config.onError && config.onError(toLocatedError(e));
+        config && config.onError && config.onError(LocatedError(e, metaFunction.e));
       },
       this,
       args

@@ -3,7 +3,7 @@ import { Environment, Reference } from "./environment";
 import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
-  type?: "Error" | "ReturnStatement" | "EmptyNode" | "NotImplemented";
+  type?: "Error" | "ReturnStatement" | "EmptyNode" | "NotImplemented" | "ThrowStatement";
   message?: string;
   value?: Error | any;
   location?: ASTNode;
@@ -18,7 +18,8 @@ export const NotImplementedException = (message: string, location?: ASTNode): Me
   location
 });
 
-export const LocatedException = (value: any, location: ASTNode): MetaesException => ({ value, location });
+export const LocatedError = (value: any, location: ASTNode): MetaesException => ({ value, location });
+export const LocatedException = (message: string, location: ASTNode): MetaesException => ({ message, location });
 
 export type Range = [number, number];
 

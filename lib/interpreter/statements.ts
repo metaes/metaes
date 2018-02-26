@@ -1,6 +1,6 @@
-import { evaluate, evaluateArray, evaluateArrayAsync, ReturnStatementValue, ThrowStatementValue } from "../applyEval";
+import { evaluate, evaluateArray, evaluateArrayAsync } from "../applyEval";
 import { callInterceptor, getValue, setValue, setValueAndCallAfterInterceptor } from "../environment";
-import { EvaluationConfig, LocatedError, NotImplementedYet } from "../types";
+import { EvaluationConfig, LocatedException, LocatedError, NotImplementedException, MetaesException } from "../types";
 import { createMetaFunction } from "../metafunction";
 import {
   BlockStatement as BlockStatement_,
@@ -39,7 +39,8 @@ function hoistDeclarations(e: Statement[], env, config, c, cerr) {
 }
 
 export function BlockStatement(e: BlockStatement_ | Program, env, config, c, cerr) {
-  const errorHandler = e => (errorShouldBeForwarded(e) ? cerr(e) : c(e));
+  const errorHandler = exception =>
+    exception.type === "ThrowStatement" || exception.type === "ReturnStatement" ? cerr(exception) : c(exception);
 
   hoistDeclarations(
     e.body,
@@ -90,7 +91,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
               init
             };
             // TODO: handle _error, it may happen in the future with redeclaration of `let/const` Reference
-            let cnt = (_error?: Error) => {
+            let cnt = (_exception?: MetaesException) => {
               // undefined as value, because Identifier at this point doesn't represent a Reference.
               // It does after VariableDeclarator finishes.
               callInterceptor(e.id, config, undefined, env, "exit");
@@ -101,11 +102,11 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
           cerr
         );
       } else {
-        let value = {
+        const value = {
           id: e.id.name,
           init: undefined
         };
-        let cnt = () => {
+        const cnt = () => {
           callInterceptor(e.id, config, undefined, env, "exit");
           c(value);
         };
@@ -119,17 +120,17 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
         config,
         init => {
           if (!init) {
-            cerr(new LocatedError(new Error("Cannot match against falsy value."), e.init));
+            cerr(LocatedException("Cannot match against falsy value.", e.init));
           } else {
-            let results: VariableDeclaratorValue[] = [];
+            const results: VariableDeclaratorValue[] = [];
             for (let id of (e.id as ObjectPattern).properties) {
               switch (id.key.type) {
                 case "Identifier":
-                  let key = id.key.name;
+                  const key = id.key.name;
                   results.push({ id: key, init: init[key] });
                   break;
                 default:
-                  cerr(new NotImplementedYet(`'${id.key.type}' in '${e.type}' is not supported yet.`));
+                  cerr(NotImplementedException(`'${id.key.type}' in '${e.type}' is not supported yet.`));
               }
             }
             c(results);
@@ -139,7 +140,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
       );
       break;
     default:
-      cerr(new LocatedError(new Error(`Pattern ${e.type} is not supported yet.`), e));
+      cerr(LocatedError(new Error(`Pattern ${e.type} is not supported yet.`), e));
   }
 }
 
@@ -166,14 +167,13 @@ export function ExpressionStatement(e: ExpressionStatement, env, config, c, cerr
 }
 
 export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, cerr) {
-  evaluate(e.block, env, config, c, error => {
-    if (errorShouldBeForwarded(error) && !(error instanceof ThrowStatementValue)) {
-      cerr(error);
-    } else {
-      config.onError && config.onError(error instanceof LocatedError ? error : new LocatedError(error, e.block));
+  evaluate(e.block, env, config, c, exception => {
+    if (exception.type === "ThrowStatement") {
+      exception.location = e.block;
+      config.onError && config.onError(exception);
 
       let catchClauseEnv = {
-        internal: { values: { error } },
+        internal: { values: { exception } },
         values: env.names,
         prev: env
       };
@@ -181,13 +181,11 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
         e.handler,
         catchClauseEnv,
         config,
-        () => {
-          if (e.finalizer) {
-            evaluate(e.finalizer, env, config, c, cerr);
-          }
-        },
+        () => e.finalizer && evaluate(e.finalizer, env, config, c, cerr),
         cerr
       );
+    } else {
+      cerr(exception);
     }
   });
 }
@@ -219,9 +217,9 @@ export function CatchClause(e: CatchClause, env, config, c, cerr) {
 
 export function ReturnStatement(e: ReturnStatement, env, config, _c, cerr) {
   if (e.argument) {
-    evaluate(e.argument, env, config, value => cerr(new ReturnStatementValue(value)), cerr);
+    evaluate(e.argument, env, config, value => cerr({ type: "ReturnStatement", value }), cerr);
   } else {
-    cerr(new ReturnStatementValue(void 0));
+    cerr({ type: "ReturnStatement" });
   }
 }
 
@@ -229,7 +227,7 @@ export function FunctionDeclaration(e: FunctionDeclaration, env, config, c, cerr
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
-    cerr(new LocatedError(error, e));
+    cerr(LocatedError(error, e));
   }
 }
 
@@ -260,7 +258,7 @@ export function ForInStatement(e: ForInStatement, env, config, c, cerr) {
           cerr
         );
       } else {
-        cerr(new NotImplementedYet("Only identifier in left-hand side is supported now."));
+        cerr(NotImplementedException("Only identifier in left-hand side is supported now."));
       }
     },
     cerr
@@ -322,7 +320,7 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
           );
           break;
         default:
-          cerr(new NotImplementedYet(`Left-hand side of type ${e.left.type} in ${e.type} not implemented yet.`));
+          cerr(NotImplementedException(`Left-hand side of type ${e.left.type} in ${e.type} not implemented yet.`));
           break;
       }
     },
@@ -368,7 +366,7 @@ export function ClassDeclaration(e: ClassDeclaration, env, config, c, cerr) {
                   setValueAndCallAfterInterceptor(e.id, env, config, e.id.name, value, true, c, cerr);
                 }
               } else {
-                cerr(new NotImplementedYet("Methods handling not implemented yet."));
+                cerr(NotImplementedException("Methods handling not implemented yet."));
               }
             },
             c,
@@ -394,7 +392,7 @@ export function MethodDefinition(e: MethodDefinition, env, config, c, cerr) {
         let key = e.key.name;
         c({ key, value });
       } else {
-        cerr(new NotImplementedYet("Object methods not implemented yet."));
+        cerr(NotImplementedException("Object methods not implemented yet."));
       }
     },
     cerr

@@ -29,10 +29,8 @@ export function evaluate(
           switch (exception.type) {
             case "EmptyNode":
               cerr({
-                value: new Error(
-                  `"${e.type}" tried to access non-existing descendant node.). 
-          Error occurred in "${e.type}" interpreter.`
-                ),
+                message: `"${e.type}" tried to access non-existing descendant node.). 
+                Error occurred in "${e.type}" interpreter.`,
                 location: e
               });
               break;

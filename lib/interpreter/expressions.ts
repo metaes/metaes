@@ -4,7 +4,7 @@ import {
   ErrorContinuation,
   EvaluationConfig,
   NotImplementedException,
-  LocatedException,
+  LocatedError,
   ensureException
 } from "../types";
 import { createMetaFunction } from "../metafunction";
@@ -174,7 +174,7 @@ export function ArrowFunctionExpression(e: ArrowFunctionExpression, env, config,
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
-    cerr(LocatedException(error, e));
+    cerr(LocatedError(error, e));
   }
 }
 
@@ -182,7 +182,7 @@ export function FunctionExpression(e: FunctionExpression, env, config, c, cerr) 
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
-    cerr(LocatedException(error, e));
+    cerr(LocatedError(error, e));
   }
 }
 
@@ -420,7 +420,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
             config,
             callee => {
               if (typeof callee !== "function") {
-                cerr(LocatedException(new TypeError(typeof callee + " is not a function"), e));
+                cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
               }
               try {
                 c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
@@ -437,7 +437,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
             calleeNode.name,
             callee => {
               if (typeof callee !== "function") {
-                cerr(LocatedException(new TypeError(typeof callee + " is not a function"), e));
+                cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
                 // TODO: use if/else
                 return;
               }
