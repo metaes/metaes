@@ -173,7 +173,7 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
       config.onError && config.onError(exception);
       evaluate(
         e.handler,
-        // Use name starting with number to make it illegal JavaScript identifier. 
+        // Use name which is illegal JavaScript identifier. 
         // It will disallow collision with user names.
         { values: { "/exception": exception.value }, prev: env },
         config,
