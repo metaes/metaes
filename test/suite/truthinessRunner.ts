@@ -6,8 +6,7 @@ import { assert } from "chai";
 import { zip } from "lodash";
 import { metaesEval } from "../../lib/metaes";
 
-const evaluate = (input: string) =>
-  new Promise((resolve, reject) => metaesEval(input, resolve, reject, global, { onError: reject }));
+const evaluate = (input: string) => new Promise((resolve, reject) => metaesEval(input, resolve, reject, global));
 
 (async () => {
   try {

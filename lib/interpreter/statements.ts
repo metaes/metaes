@@ -171,17 +171,13 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
     if (exception.type === "ThrowStatement") {
       exception.location = e.block;
       config.onError && config.onError(exception);
-
-      let catchClauseEnv = {
-        internal: { values: { exception } },
-        values: env.names,
-        prev: env
-      };
       evaluate(
         e.handler,
-        catchClauseEnv,
+        // Use name starting with number to make it illegal JavaScript identifier. 
+        // It will disallow collision with user names.
+        { values: { "/exception": exception.value }, prev: env },
         config,
-        () => e.finalizer && evaluate(e.finalizer, env, config, c, cerr),
+        () => (e.finalizer ? evaluate(e.finalizer, env, config, c, cerr) : c()),
         cerr
       );
     } else {
@@ -191,13 +187,13 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
 }
 
 export function ThrowStatement(e: ThrowStatement, env, config, _c, cerr) {
-  evaluate(e.argument, env, config, cerr, cerr);
+  evaluate(e.argument, env, config, value => cerr({ type: "ThrowStatement", value }), cerr);
 }
 
 export function CatchClause(e: CatchClause, env, config, c, cerr) {
   getValue(
-    env.internal,
-    "error",
+    env,
+    "/exception",
     error => {
       let name = e.param.name;
       evaluate(
