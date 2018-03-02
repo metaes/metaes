@@ -390,7 +390,7 @@ export function BinaryExpression(e: BinaryExpression, env, config, c, cerr) {
               c(left | right);
               break;
             default:
-              cerr(new Error(e.type + " not implemented " + e.operator));
+              cerr(NotImplementedException(e.type + " not implemented " + e.operator));
           }
         },
         cerr
@@ -500,7 +500,7 @@ export function UpdateExpression(e: UpdateExpression, env: Environment, _config,
                     value = --container[propName];
                     break;
                   default:
-                    throw new Error("Implement me, " + e.operator);
+                    throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
                 }
               } else {
                 switch (e.operator) {
@@ -511,7 +511,7 @@ export function UpdateExpression(e: UpdateExpression, env: Environment, _config,
                     value = container[propName]--;
                     break;
                   default:
-                    throw new Error("Implement me, " + e.operator);
+                    throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
                 }
               }
               c(value);
@@ -555,7 +555,7 @@ export function UnaryExpression(e: UnaryExpression, env: Environment, config, c,
           c(void argument);
           break;
         default:
-          cerr(new Error("not implemented " + e.operator));
+          cerr(NotImplementedException("not implemented " + e.operator));
       }
     },
     error => {
@@ -580,6 +580,6 @@ export function TemplateLiteral(e: TemplateLiteral, _env, _config, c, cerr) {
   if (e.quasis.length === 1 && e.expressions.length === 0) {
     c(e.quasis[0].value);
   } else {
-    cerr(new Error(`Only single-quasis and expression-free template literals are supported for now.`));
+    cerr(NotImplementedException(`Only single-quasis and expression-free template literals are supported for now.`));
   }
 }

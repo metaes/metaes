@@ -1,4 +1,4 @@
-import { Continuation, ErrorContinuation, EvaluationConfig } from "./types";
+import { Continuation, ErrorContinuation, EvaluationConfig, NotImplementedException } from "./types";
 import { tokens } from "./interpreters";
 import { ASTNode } from "./nodes/nodes";
 import { callInterceptor, Environment } from "./environment";
@@ -52,10 +52,10 @@ export function evaluate(
   } else if (!e) {
     cerr({ type: "EmptyNode" });
   } else {
-    const exception = {
-      location: e,
-      value: new Error(`"${e.type}" token interpreter is not defined yet. Stopped evaluation.`)
-    };
+    const exception = NotImplementedException(
+      `"${e.type}" token interpreter is not defined yet. Stopped evaluation.`,
+      e
+    );
     config.onError && config.onError(exception);
     cerr(exception);
   }
@@ -100,12 +100,9 @@ export const evaluateArray = (
   cerr: ErrorContinuation
 ) => evaluateArrayParametrized(array, env, config, c, cerr);
 
-export function evaluateArrayAsync<T>(
-  items: T[],
-  fn: (element: T, c: Continuation, cerr: ErrorContinuation) => void,
-  c: Continuation,
-  cerr: ErrorContinuation
-) {
+type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;
+
+export function evaluateArrayAsync<T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) {
   const accumulated: T[] = [];
 
   function loop(array: T[]) {
@@ -127,13 +124,7 @@ export function evaluateArrayAsync<T>(
   loop(items);
 }
 
-export function apply(
-  e: ASTNode,
-  fn: Function,
-  args: any[],
-  config: EvaluationConfig,
-  thisObj?: Object
-): Iterable<any> {
+export function apply(e: ASTNode, fn: Function, args: any[], config: EvaluationConfig, thisObj?: Object) {
   let result;
   try {
     result = fn.apply(thisObj, args);
