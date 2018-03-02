@@ -2,13 +2,7 @@ import { ASTNode } from "./nodes/nodes";
 import { Environment, Reference } from "./environment";
 import { FunctionNode } from "./nodeTypes";
 
-export type MetaesException = {
-  type?: "Error" | "ReturnStatement" | "EmptyNode" | "NotImplemented" | "ThrowStatement";
-  message?: string;
-  value?: Error | any;
-  location?: ASTNode;
-};
-
+// TODO: move out of this module
 export const ensureException = (value: Error | MetaesException, location?: ASTNode): MetaesException =>
   value instanceof Error ? { type: "Error", value, location } : value;
 
@@ -20,6 +14,14 @@ export const NotImplementedException = (message: string, location?: ASTNode): Me
 
 export const LocatedError = (value: any, location: ASTNode): MetaesException => ({ value, location });
 export const LocatedException = (message: string, location: ASTNode): MetaesException => ({ message, location });
+// end
+
+export type MetaesException = {
+  type?: "Error" | "ReturnStatement" | "EmptyNode" | "NotImplemented" | "ThrowStatement";
+  message?: string;
+  value?: Error | any;
+  location?: ASTNode;
+};
 
 export type Range = [number, number];
 
@@ -68,7 +70,7 @@ export interface EvaluationConfig {
   onError?: OnError;
 }
 
-export type Continuation = (value: any) => void;
+export type Continuation = (value: MetaesException | any) => void;
 export type ErrorContinuation = (error: MetaesException) => void;
 
 type Interpreter<T extends ASTNode> = (
