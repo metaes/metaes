@@ -1,8 +1,8 @@
-import { createTestServer } from "./remote/utils";
+import { createTestServer } from "./utils";
 import { before, describe, it } from "mocha";
 import { assert } from "chai";
-import { createConnector, environmentToJSON } from "../../lib/remote";
-import { evalToPromise, evalFunctionBody, ScriptingContext, consoleLoggingMetaesContext } from "../../lib/metaes";
+import { createConnector, environmentToJSON } from "../../..//lib/remote";
+import { evalToPromise, evalFunctionBody, ScriptingContext, consoleLoggingMetaesContext } from "../../../lib/metaes";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
 
