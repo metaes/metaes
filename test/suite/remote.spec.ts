@@ -1,11 +1,10 @@
 import { createTestServer } from "./remote/utils";
 import { before, describe, it } from "mocha";
 import { assert } from "chai";
-import { getConnectTo, environmentFromJSON, environmentToJSON } from "../../lib/remote";
+import { createConnector, environmentToJSON } from "../../lib/remote";
 import {
   evaluatePromisified,
   evaluateFunctionBodyPromisified,
-  MetaESContext,
   ScriptingContext,
   consoleLoggingMetaESContext
 } from "../../lib/metaes";
@@ -28,7 +27,7 @@ describe.skip("Remote websocket messaging", () => {
   let connection;
   before(async () => {
     await createTestServer(8083);
-    connection = await getConnectTo(W3CWebSocket)(`ws://localhost:8083`);
+    connection = await createConnector(W3CWebSocket)(`ws://localhost:8083`);
   });
 
   it("should correctly deliver primitive success value", async () =>

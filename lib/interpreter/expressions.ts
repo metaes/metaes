@@ -578,7 +578,7 @@ export function ConditionalExpression(e: ConditionalExpression, env, config, c, 
 
 export function TemplateLiteral(e: TemplateLiteral, _env, _config, c, cerr) {
   if (e.quasis.length === 1 && e.expressions.length === 0) {
-    c(e.quasis[0].value);
+    c(e.quasis[0].value.raw);
   } else {
     cerr(NotImplementedException(`Only single-quasis and expression-free template literals are supported for now.`));
   }

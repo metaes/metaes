@@ -102,6 +102,7 @@ type Container = {
   value: any;
 };
 
+// TODO: remove do/while loop and use recursion?
 function _getValue(
   env: Environment,
   name: string,
@@ -133,6 +134,9 @@ function _getValue(
 
   cerr(new ReferenceError(`"${name}" is not defined.`));
 }
+
+export const getValue = (env: Environment, name: string, c: Continuation, cerr: ErrorContinuation) =>
+  _getValue(env, name, false, c, cerr);
 
 function setReference(env: Environment, name: string, value: any, native: boolean) {
   if (!env.references) {
@@ -183,6 +187,3 @@ export function getReferenceSync(env: Environment, name: string) {
  */
 export const getValueOrReference = (name: string, env: Environment, config: EvaluationConfig, value): Reference | any =>
   config.useReferences ? getReferenceSync(env, name) : value;
-
-export const getValue = (env: Environment, name: string, c: Continuation, cerr: ErrorContinuation) =>
-  _getValue(env, name, false, c, cerr);

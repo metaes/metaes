@@ -25,9 +25,13 @@ const evaluate = (input: string) => new Promise((resolve, reject) => metaesEval(
 
           describe(suiteName, () => {
             zip(testNames, tests).forEach(([name, value]) => {
+              if (name.includes(":skip")) {
+                return;
+              }
               let testName = name.replace("//", "").trim();
               it(testName, async () => {
-                return assert.isTrue(!!await evaluate(value));
+                const result = await evaluate(value);
+                return assert.isTrue(typeof result === "boolean" && result);
               });
             });
           });
