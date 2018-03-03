@@ -1,7 +1,7 @@
 import { MetaESContext, evaluatePromisified, ScriptingContext } from "./metaes";
 import { Environment } from "./environment";
 import { environmentFromJSON, environmentToJSON, Message, assertMessage } from "./remote";
-import { OnSuccess, EvaluationException, Source } from "./types";
+import { OnSuccess, Source, OnError } from "./types";
 import { withValues } from "./environment";
 import * as WebSocket from "ws";
 import * as express from "express";
@@ -46,7 +46,7 @@ export const runWSServer = (port: number = config.port) =>
     webSocketServer.on("connection", connection => {
       const remoteContext: ScriptingContext = {
         // TODO: should return a promise too
-        evaluate: (input: Source, c?: OnSuccess, cerr?: EvaluationException, environment?: Environment) => {
+        evaluate: (input: Source, c?: OnSuccess, cerr?: OnError, environment?: Environment) => {
           const message = {
             source: input,
             env: environmentToJSON(localContext, withValues({}, environment))
@@ -72,10 +72,7 @@ export const runWSServer = (port: number = config.port) =>
         } catch (e) {
           remoteContext.evaluate(
             `cerr(error)`,
-            withValues(
-              { error: { originalError: { message: (e.originalError || e).message } } },
-              environment
-            )
+            withValues({ error: { originalError: { message: (e.originalError || e).message } } }, environment)
           );
         }
       });
