@@ -102,7 +102,7 @@ export function assertMessage(message: Message): Message {
 }
 
 export const createConnector = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>
-  new Promise<ScriptingContext>(resolve => {
+  new Promise<ScriptingContext>((resolve, reject) => {
     const connect = () => {
       const client = new WebSocketConstructor(connectionString);
       let context: ScriptingContext;
@@ -121,6 +121,7 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
           console.debug("ignored message without env:", message);
         }
       });
+      client.addEventListener("error", reject);
       client.addEventListener("open", async () => {
         context = {
           evaluate: (

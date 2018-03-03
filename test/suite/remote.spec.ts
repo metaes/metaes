@@ -2,16 +2,11 @@ import { createTestServer } from "./remote/utils";
 import { before, describe, it } from "mocha";
 import { assert } from "chai";
 import { createConnector, environmentToJSON } from "../../lib/remote";
-import {
-  evaluatePromisified,
-  evalFunctionBody,
-  ScriptingContext,
-  consoleLoggingMetaesContext
-} from "../../lib/metaes";
+import { evalToPromise, evalFunctionBody, ScriptingContext, consoleLoggingMetaesContext } from "../../lib/metaes";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
 
-describe("Messages", () => {
+describe.skip("Messages", () => {
   let context: ScriptingContext;
   before(() => {
     context = consoleLoggingMetaesContext();
@@ -23,7 +18,7 @@ describe("Messages", () => {
   });
 });
 
-describe.skip("Remote websocket messaging", () => {
+describe("Remote websocket messaging", () => {
   let connection;
   before(async () => {
     await createTestServer(8083);
@@ -31,11 +26,11 @@ describe.skip("Remote websocket messaging", () => {
   });
 
   it("should correctly deliver primitive success value", async () =>
-    assert.equal(4, await evaluatePromisified(connection, "2+2")));
+    assert.equal(4, await evalToPromise(connection, "2+2")));
 
   it("should correctly deliver primitive success value in multiple simultaneous contexts", async () => {
-    assert.equal(4, await evaluatePromisified(connection, "2+2"));
-    assert.equal(2, await evaluatePromisified(connection, "1+1"));
+    assert.equal(4, await evalToPromise(connection, "2+2"));
+    assert.equal(2, await evalToPromise(connection, "1+1"));
   });
 
   it("should correctly deliver primitive success value using continuation", () =>
@@ -58,14 +53,11 @@ describe.skip("Remote websocket messaging", () => {
   });
 
   it("should correctly deliver primitive success value and use env", async () =>
-    assert.equal(4, await evaluatePromisified(connection, "2+a", { values: { a: 2 } })));
+    assert.equal(4, await evalToPromise(connection, "2+a", { values: { a: 2 } })));
 
   it("should correctly deliver non-primitve success value and use env", async () => {
     let value = [1, 2, 3];
-    assert.equal(
-      value.toString(),
-      (await evaluatePromisified(connection, "a", { values: { a: [1, 2, 3] } })).toString()
-    );
+    assert.equal(value.toString(), (await evalToPromise(connection, "a", { values: { a: [1, 2, 3] } })).toString());
   });
 
   it("should return correct value reading a disk file", async () => {
@@ -73,9 +65,7 @@ describe.skip("Remote websocket messaging", () => {
       require("child_process")
         .execSync("cat tsconfig.json")
         .toString(),
-      await evalFunctionBody(connection, child_process =>
-        child_process.execSync("cat tsconfig.json").toString()
-      )
+      await evalFunctionBody(connection, child_process => child_process.execSync("cat tsconfig.json").toString())
     );
   });
 
@@ -105,9 +95,7 @@ describe.skip("Remote websocket messaging", () => {
 
     assert.equal(
       contents,
-      await evalFunctionBody(connection, child_process =>
-        child_process.execSync("cat message.txt").toString()
-      )
+      await evalFunctionBody(connection, child_process => child_process.execSync("cat message.txt").toString())
     );
   });
 

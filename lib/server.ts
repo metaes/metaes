@@ -1,4 +1,4 @@
-import { MetaesContext, evaluatePromisified, ScriptingContext } from "./metaes";
+import { MetaesContext, evalToPromise, ScriptingContext } from "./metaes";
 import { Environment } from "./environment";
 import { environmentFromJSON, environmentToJSON, Message, assertMessage } from "./remote";
 import { OnSuccess, Source, OnError } from "./types";
@@ -65,7 +65,7 @@ export const runWSServer = (port: number = config.port) =>
         // console.log("[environment]");
         // console.log(environment);
         try {
-          let result = await evaluatePromisified(localContext, source, environment);
+          let result = await evalToPromise(localContext, source, environment);
           // console.log("[early result]");
           // console.log(result);
           remoteContext.evaluate(`c(result)`, withValues({ result }, environment));

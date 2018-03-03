@@ -69,11 +69,8 @@ export class MetaesContext implements ScriptingContext {
   }
 }
 
-export const evaluatePromisified = (
-  context: ScriptingContext,
-  source: Source | Function,
-  environment?: EnvironmentBase
-) => new Promise<any>((resolve, reject) => context.evaluate(source, resolve, reject, environment));
+export const evalToPromise = (context: ScriptingContext, source: Source | Function, environment?: EnvironmentBase) =>
+  new Promise((resolve, reject) => context.evaluate(source, resolve, reject, environment));
 
 const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")");
 
@@ -84,7 +81,7 @@ const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")");
  * @param environment
  */
 export const evalFunctionBody = (context: ScriptingContext, source: Function, environment?: EnvironmentBase) =>
-  new Promise<any>((resolve, reject) =>
+  new Promise((resolve, reject) =>
     context.evaluate(
       ((parseFunction(source).body[0] as ExpressionStatement).expression as FunctionNode).body,
       resolve,

@@ -1,14 +1,10 @@
 {
   "compileOnSave": true,
   "compilerOptions": {
-    "lib": [
-      "es6",
-      "dom",
-      "es2016.array.include"
-    ],
+    "lib": ["es6", "dom", "es2016.array.include"],
     "baseUrl": ".",
     "paths": {
-        "esprima": ["node_modules/esprima/dist/esprima"]
+      "esprima": ["node_modules/esprima/dist/esprima"]
     },
     "module": "commonjs",
     "target": "es6",
@@ -19,5 +15,6 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
-  }
+  },
+  "include": ["lib/**/*.ts", "test/**/*.ts"]
 }
