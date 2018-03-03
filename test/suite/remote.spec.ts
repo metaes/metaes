@@ -4,9 +4,9 @@ import { assert } from "chai";
 import { createConnector, environmentToJSON } from "../../lib/remote";
 import {
   evaluatePromisified,
-  evaluateFunctionBodyPromisified,
+  evalFunctionBody,
   ScriptingContext,
-  consoleLoggingMetaESContext
+  consoleLoggingMetaesContext
 } from "../../lib/metaes";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
@@ -14,7 +14,7 @@ const W3CWebSocket = require("websocket").w3cwebsocket;
 describe("Messages", () => {
   let context: ScriptingContext;
   before(() => {
-    context = consoleLoggingMetaESContext();
+    context = consoleLoggingMetaesContext();
   });
 
   it("should properly serialize basic environment", () => {
@@ -73,7 +73,7 @@ describe.skip("Remote websocket messaging", () => {
       require("child_process")
         .execSync("cat tsconfig.json")
         .toString(),
-      await evaluateFunctionBodyPromisified(connection, child_process =>
+      await evalFunctionBody(connection, child_process =>
         child_process.execSync("cat tsconfig.json").toString()
       )
     );
@@ -82,7 +82,7 @@ describe.skip("Remote websocket messaging", () => {
   it("should throw reference error", async () => {
     let flag = false;
     try {
-      await evaluateFunctionBodyPromisified(connection, window => window); // window is undefined on nodejs
+      await evalFunctionBody(connection, window => window); // window is undefined on nodejs
     } catch (e) {
       if (e) {
         flag = true;
@@ -93,7 +93,7 @@ describe.skip("Remote websocket messaging", () => {
 
   it("should write a file to disk correctly", async () => {
     let contents = "Hello Node2.js";
-    await evaluateFunctionBodyPromisified(
+    await evalFunctionBody(
       connection,
       fs => {
         fs.writeFileSync("message.txt", contents, err => {
@@ -105,7 +105,7 @@ describe.skip("Remote websocket messaging", () => {
 
     assert.equal(
       contents,
-      await evaluateFunctionBodyPromisified(connection, child_process =>
+      await evalFunctionBody(connection, child_process =>
         child_process.execSync("cat message.txt").toString()
       )
     );

@@ -1,4 +1,4 @@
-import { ScriptingContext, metaesEval, evaluateFunctionBodyPromisified } from "./metaes";
+import { ScriptingContext, metaesEval, evalFunctionBody } from "./metaes";
 import { EnvironmentBase, Environment, withValues } from "./environment";
 import { OnSuccess, OnError, Source, EvaluationConfig } from "./types";
 
@@ -26,7 +26,7 @@ export type Message = { source: Source; env?: EnvironmentBase };
 function createRemoteFunction(context: ScriptingContext, id: string) {
   let boundary = getReferenceMap(context);
   let fn = (...args) =>
-    evaluateFunctionBodyPromisified(
+    evalFunctionBody(
       context,
       args => {
         fn.apply(null, args);

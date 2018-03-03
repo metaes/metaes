@@ -67,7 +67,6 @@ export const evaluateMetaFunction = (
       }
     );
   } catch (e) {
-    config && config.onError && config.onError(e);
     cerr(e);
   }
 };
@@ -80,9 +79,9 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) =>
     evaluateMetaFunction(
       metaFunction,
       r => (result = r),
-      e => {
-        error = e;
-        config && config.onError && config.onError(LocatedError(e, metaFunction.e));
+      exception => {
+        error = exception.value;
+        config && config.onError && config.onError(exception);
       },
       this,
       args

@@ -46,7 +46,7 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
   }
 };
 
-export class MetaESContext implements ScriptingContext {
+export class MetaesContext implements ScriptingContext {
   constructor(
     public c?: OnSuccess,
     public cerr?: OnError,
@@ -83,11 +83,7 @@ const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")");
  * @param source
  * @param environment
  */
-export const evaluateFunctionBodyPromisified = (
-  context: ScriptingContext,
-  source: Function,
-  environment?: EnvironmentBase
-) =>
+export const evalFunctionBody = (context: ScriptingContext, source: Function, environment?: EnvironmentBase) =>
   new Promise<any>((resolve, reject) =>
     context.evaluate(
       ((parseFunction(source).body[0] as ExpressionStatement).expression as FunctionNode).body,
@@ -97,8 +93,8 @@ export const evaluateFunctionBodyPromisified = (
     )
   );
 
-export const consoleLoggingMetaESContext = (environment: Environment = { values: {} }) =>
-  new MetaESContext(
+export const consoleLoggingMetaesContext = (environment: Environment = { values: {} }) =>
+  new MetaesContext(
     value => {
       console.log(value);
     },

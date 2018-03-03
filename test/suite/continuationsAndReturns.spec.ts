@@ -19,7 +19,7 @@ describe("Continuations and returns", () => {
       setTimeout(() => (didThrow ? reject() : resolve()), 0);
     }));
 
-  it.skip("should be notified once about async error", () =>
+  it("should be notified once about async error", () =>
     new Promise(resolve => {
       try {
         metaesEval(
@@ -28,10 +28,11 @@ describe("Continuations and returns", () => {
           null,
           { setTimeout, console },
           {
+            // FIX: this handler should be called only once.
             onError(e) {
-              console.log("got it", e);
-              assert.equal(true, e.value instanceof TypeError);
-              resolve();
+              if (e instanceof TypeError) {
+                resolve();
+              }
             }
           }
         );

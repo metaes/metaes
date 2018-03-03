@@ -124,17 +124,13 @@ export function evaluateArrayAsync<T>(items: T[], fn: Visitor<T>, c: Continuatio
   loop(items);
 }
 
-export function apply(e: ASTNode, fn: Function, args: any[], config: EvaluationConfig, thisObj?: Object) {
+export function apply(e: ASTNode, fn: Function, args: any[], _config: EvaluationConfig, thisObj?: Object) {
   let result;
   try {
     result = fn.apply(thisObj, args);
   } catch (error) {
-    config.onError && config.onError({ location: e, value: error });
+    error.location = e;
     throw error;
-  }
-  if (typeof result === "object" && result instanceof Promise) {
-    // TODO: don't know if it's not going to break other catch'es from regular code?
-    result.catch(error => config.onError && config.onError({ location: e, value: error }));
   }
   return result;
 }

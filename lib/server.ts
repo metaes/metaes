@@ -1,4 +1,4 @@
-import { MetaESContext, evaluatePromisified, ScriptingContext } from "./metaes";
+import { MetaesContext, evaluatePromisified, ScriptingContext } from "./metaes";
 import { Environment } from "./environment";
 import { environmentFromJSON, environmentToJSON, Message, assertMessage } from "./remote";
 import { OnSuccess, Source, OnError } from "./types";
@@ -20,7 +20,7 @@ export const runWSServer = (port: number = config.port) =>
     app.use(bodyParser.json());
     app.use(helmet());
 
-    const localContext = new MetaESContext(
+    const localContext = new MetaesContext(
       value => {
         console.log("[value]");
         console.log(value);
