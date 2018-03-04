@@ -13,6 +13,7 @@ describe("Meta functions", () => {
     ];
     forms.forEach(form => metaesEval(form, adderFn => assert.equal(adderFn(1, 2), 3)));
   });
+
   it("should throw an error", () =>
     new Promise(resolve =>
       metaesEval(
@@ -29,6 +30,7 @@ describe("Meta functions", () => {
         global // global contains constructor for Error
       )
     ));
+
   it("should throw an error from external function", () => {
     function thrower() {
       throw new Error();
@@ -44,6 +46,7 @@ describe("Meta functions", () => {
       { thrower }
     );
   });
+  
   it("should throw an receive the same error from external function", () => {
     let message = "A message";
     let errorConstructor = TypeError;

@@ -4,7 +4,6 @@ import { evaluate } from "./applyEval";
 import { callInterceptor, Environment } from "./environment";
 import { FunctionNode } from "./nodeTypes";
 
-// TODO: pass config also in evaluateMetaFunction: it can override or replace this from metaFunction
 export const evaluateMetaFunction = (
   metaFunction: MetaesFunction,
   c: OnSuccess,
