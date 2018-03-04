@@ -1,5 +1,5 @@
 import { ScriptingContext, metaesEval, evalFunctionBody } from "./metaes";
-import { EnvironmentBase, Environment, withValues } from "./environment";
+import { EnvironmentBase, Environment, mergeValues } from "./environment";
 import { OnSuccess, OnError, Source, EvaluationConfig } from "./types";
 
 const referencesMaps = new Map<ScriptingContext, Map<object | Function, string>>();
@@ -113,12 +113,23 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
         setTimeout(connect, 5000);
       });
       client.addEventListener("message", e => {
-        const message = assertMessage(JSON.parse(e.data) as Message);
-        if (message.env) {
-          const env = environmentFromJSON(context, message.env);
-          metaesEval(message.source, env.values["c"], env.values["cerr"], env, { onError: console.log });
-        } else {
-          console.debug("ignored message without env:", message);
+        try {
+          const message = assertMessage(JSON.parse(e.data) as Message);
+          if (message.env) {
+            const env = environmentFromJSON(context, message.env);
+            console.log("[connector]");
+            console.log("[raw message]");
+            console.log(e.data);
+            console.log("[message]");
+            console.log(message);
+            console.log("[env is]");
+            console.log(env);
+            metaesEval(message.source, env.values.c, env.values.cerr, env, { onError: console.log });
+          } else {
+            console.debug("ignored message without env:", message);
+          }
+        } catch (e) {
+          console.log(e);
         }
       });
       client.addEventListener("error", reject);
@@ -130,11 +141,18 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
             cerr?: OnError,
             environment?: Environment,
             _config?: EvaluationConfig
-          ) =>
-            send({
-              source,
-              env: environmentToJSON(context, withValues({ c, cerr }, environment))
-            })
+          ) => {
+            try {
+              send({
+                source,
+                env: environmentToJSON(context, mergeValues({ c, cerr }, environment))
+              });
+            } catch (e) {
+              if (cerr) {
+                cerr(e);
+              }
+            }
+          }
         };
         resolve(context);
       });

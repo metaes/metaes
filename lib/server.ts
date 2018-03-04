@@ -1,8 +1,7 @@
 import { MetaesContext, evalToPromise, ScriptingContext } from "./metaes";
-import { Environment } from "./environment";
+import { Environment, mergeValues } from "./environment";
 import { environmentFromJSON, environmentToJSON, Message, assertMessage } from "./remote";
 import { OnSuccess, Source, OnError } from "./types";
-import { withValues } from "./environment";
 import * as WebSocket from "ws";
 import * as express from "express";
 import * as http from "http";
@@ -13,33 +12,33 @@ const config = {
   port: 8082
 };
 
+const localContext = new MetaesContext(
+  value => {
+    console.log("[value]");
+    console.log(value);
+  },
+  e => console.log(e),
+  {
+    values: {
+      fs: require("fs"),
+      child_process: require("child_process"),
+      console
+    }
+  },
+  {
+    onError: e => {
+      console.log("[error callback]");
+      console.log(e);
+    }
+  }
+);
+
 export const runWSServer = (port: number = config.port) =>
   new Promise((resolve, _reject) => {
     const server = http.createServer();
     const app = express();
     app.use(bodyParser.json());
     app.use(helmet());
-
-    const localContext = new MetaesContext(
-      value => {
-        console.log("[value]");
-        console.log(value);
-      },
-      e => console.log(e),
-      {
-        values: {
-          fs: require("fs"),
-          child_process: require("child_process"),
-          console
-        }
-      },
-      {
-        onError: e => {
-          console.log("[error callback]");
-          console.log(e);
-        }
-      }
-    );
 
     const webSocketServer = new WebSocket.Server({ server });
 
@@ -49,7 +48,7 @@ export const runWSServer = (port: number = config.port) =>
         evaluate: (input: Source, c?: OnSuccess, cerr?: OnError, environment?: Environment) => {
           const message = {
             source: input,
-            env: environmentToJSON(localContext, withValues({}, environment))
+            env: environmentToJSON(localContext, mergeValues({}, environment))
           };
           // console.log("[server sending message]");
           // console.log(JSON.stringify(message));
@@ -58,22 +57,27 @@ export const runWSServer = (port: number = config.port) =>
       };
 
       connection.on("message", async message => {
-        const { source, env } = assertMessage(JSON.parse(message)) as Message;
-        const environment = env ? environmentFromJSON(localContext, env, remoteContext) : { values: {} };
-        // console.log("[server got message]:");
-        // console.log(message);
-        // console.log("[environment]");
-        // console.log(environment);
         try {
+          const { source, env } = assertMessage(JSON.parse(message)) as Message;
+          const environment = env ? environmentFromJSON(localContext, env) : { values: {} };
+          console.log("[server got message]:");
+          console.log(message);
+          console.log("[environment]");
+          console.log(environment);
+
           let result = await evalToPromise(localContext, source, environment);
-          // console.log("[early result]");
-          // console.log(result);
-          remoteContext.evaluate(`c(result)`, withValues({ result }, environment));
-        } catch (e) {
+          console.log("[result]");
+          console.log(result);
           remoteContext.evaluate(
-            `cerr(error)`,
-            withValues({ error: { originalError: { message: (e.originalError || e).message } } }, environment)
+            `c(result)`,
+            environment.values.c,
+            environment.values.cerr,
+            mergeValues({ result }, environment)
           );
+        } catch (e) {
+          remoteContext.evaluate(`cerr(error)`, null, null, {
+            values: { error: { message: (e.originalError || e).message } }
+          });
         }
       });
 

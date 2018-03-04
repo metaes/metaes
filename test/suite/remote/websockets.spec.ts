@@ -23,7 +23,7 @@ describe.skip("Remote websocket messaging", () => {
 
   it("should correctly deliver primitive success value using continuation", () =>
     new Promise((resolve, reject) => {
-      connection.evaluate("2+2", {}, value => {
+      connection.evaluate("2+2", value => {
         console.log("value ok", { value });
         try {
           assert.equal(value, 4);
