@@ -6,6 +6,8 @@ import { evalToPromise, evalFunctionBody } from "../../../lib/metaes";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
 
+// TODO: merge it with `evaluation` tests and run first with "normal" context, then with remote
+// behind websockets
 describe.skip("Remote websocket messaging", () => {
   let connection;
   before(async () => {
