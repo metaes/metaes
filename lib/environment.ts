@@ -5,7 +5,7 @@ import { ASTNode } from "./nodes/nodes";
 export class EnvNotFoundError extends Error {}
 
 export interface EnvironmentBase {
-  values: object;
+  values: { [key: string]: any };
   references?: { [key: string]: Reference };
 }
 
