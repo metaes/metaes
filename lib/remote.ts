@@ -24,8 +24,8 @@ const getReferenceMap = (context: ScriptingContext) => {
 export type Message = { source: Source; env?: EnvironmentBase };
 
 function createRemoteFunction(context: ScriptingContext, id: string) {
-  let boundary = getReferenceMap(context);
-  let fn = (...args) =>
+  const referencesMap = getReferenceMap(context);
+  const fn = (...args) =>
     evalFunctionBody(
       context,
       args => {
@@ -36,16 +36,16 @@ function createRemoteFunction(context: ScriptingContext, id: string) {
         references: { fn: { id } }
       })
     );
-  boundary.set(fn, id);
+  referencesMap.set(fn, id);
   return fn;
 }
 
 export function environmentFromJSON(context: ScriptingContext, environment: EnvironmentBase): Environment {
-  let boundaryEnv = getReferenceMap(context);
-  let values = environment.values || {};
+  const referencesMap = getReferenceMap(context);
+  const values = environment.values || {};
   if (environment.references) {
     outer: for (let [key, { id }] of pairs(environment.references)) {
-      for (let [value, boundaryId] of boundaryEnv.entries()) {
+      for (let [value, boundaryId] of referencesMap.entries()) {
         // Special case for "undefined" id. It's a hack to transfer `undefined` value, not possible in JSON.
         if (id === "undefined") {
           values[key] = void 0;
@@ -65,17 +65,17 @@ export function environmentFromJSON(context: ScriptingContext, environment: Envi
 }
 
 export function environmentToJSON(context: ScriptingContext, environment: EnvironmentBase): EnvironmentBase {
-  let boundaryEnv = getReferenceMap(context);
-  let references: { [key: string]: { id: string } } = {};
-  let values = {};
+  const referencesMap = getReferenceMap(context);
+  const references: { [key: string]: { id: string } } = {};
+  const values = {};
 
   for (let [k, v] of pairs(environment.values)) {
     if (k) {
       if (typeof v === "function" || typeof v === "object") {
-        if (!boundaryEnv.has(v)) {
-          boundaryEnv.set(v, Math.random() + "");
+        if (!referencesMap.has(v)) {
+          referencesMap.set(v, Math.random() + "");
         }
-        references[k] = { id: boundaryEnv.get(v)! };
+        references[k] = { id: referencesMap.get(v)! };
 
         // add here whatever there is as a value, it'll be serialized to json
         if (typeof v === "object") {

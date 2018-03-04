@@ -7,8 +7,10 @@ import { Environment } from "../../../lib/environment";
 describe("Messages", () => {
   describe("Environment", () => {
     let context: ScriptingContext;
+    let context2: ScriptingContext;
     before(() => {
       context = consoleLoggingMetaesContext();
+      context2 = consoleLoggingMetaesContext();
     });
 
     it("should properly serialize/deserialize primitive values in enviromnent", () => {
@@ -24,6 +26,18 @@ describe("Messages", () => {
       let envBack = environmentFromJSON(context, json);
 
       assert.deepEqual(env, envBack);
+    });
+
+    it("should properly serialize/deserialize object values in enviromnent with multiple contexts", () => {
+      [context, context2].forEach(context => {
+        function fn() {}
+        const obj = { fn };
+        const env: Environment = { values: { fn, obj } };
+        let json = environmentToJSON(context, env);
+        let envBack = environmentFromJSON(context, json);
+
+        assert.deepEqual(env, envBack);
+      });
     });
   });
 });
