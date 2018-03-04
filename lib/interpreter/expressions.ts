@@ -1,12 +1,6 @@
 import { apply, evaluate, evaluateArray } from "../applyEval";
-import {
-  Continuation,
-  ErrorContinuation,
-  EvaluationConfig,
-  NotImplementedException,
-  LocatedError,
-  ensureException
-} from "../types";
+import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
+import { NotImplementedException, LocatedError, ensureException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import { callInterceptor, Environment, getReference, getValue, setValueAndCallAfterInterceptor } from "../environment";
 import { IfStatement } from "./statements";

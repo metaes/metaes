@@ -1,4 +1,5 @@
-import { EvaluationConfig, OnSuccess, MetaesFunction, OnError, NotImplementedException, LocatedError } from "./types";
+import { EvaluationConfig, OnSuccess, MetaesFunction, OnError } from "./types";
+import { NotImplementedException } from "./exceptions";
 import { evaluate } from "./applyEval";
 import { callInterceptor, Environment } from "./environment";
 import { FunctionNode } from "./nodeTypes";

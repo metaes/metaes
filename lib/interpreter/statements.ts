@@ -1,6 +1,7 @@
 import { evaluate, evaluateArray, evaluateArrayAsync } from "../applyEval";
 import { callInterceptor, getValue, setValue, setValueAndCallAfterInterceptor } from "../environment";
-import { EvaluationConfig, LocatedException, LocatedError, NotImplementedException, MetaesException } from "../types";
+import { EvaluationConfig, MetaesException } from "../types";
+import { NotImplementedException, LocatedError, LocatedException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import {
   BlockStatement as BlockStatement_,
