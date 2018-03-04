@@ -1,8 +1,8 @@
 import { describe, it } from "mocha";
-import { metaesEval } from "../../lib/metaes";
+import { assert } from "chai";
+import { metaesEval, MetaesContext, evalFunctionBody } from "../../lib/metaes";
 
-describe("Continuations and returns", () => {
-  // TODO: use shortcut functions, evaluatePromisified
+describe("Evaluation", () => {
   it("success continuation should be called", () => new Promise(resolve => metaesEval("2", resolve)));
 
   it("error continuation should be called", () => new Promise(resolve => metaesEval("throw 1;", null, resolve)));
@@ -39,4 +39,16 @@ describe("Continuations and returns", () => {
         console.log("caught and ignored:", e);
       }
     }));
+
+  it("should correctly execute scripting context", async () => {
+    const context = new MetaesContext(undefined, undefined, { values: global });
+    assert.equal(await evalFunctionBody(context, a => a * 2, { values: { a: 1 } }), 2);
+  });
+
+  it("should correctly execute cooperatively", async () => {
+    const context = new MetaesContext(undefined, undefined, { values: global });
+    [1, 2, 3, 4, 5, 6].forEach(async i => {
+      assert.equal(await evalFunctionBody(context, a => a * 2, { values: { a: i } }), i * 2);
+    });
+  });
 });

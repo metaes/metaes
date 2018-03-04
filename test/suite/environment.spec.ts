@@ -1,7 +1,7 @@
 import { beforeEach, describe, it } from "mocha";
 import { assert } from "chai";
 import { environmentToJSON, environmentFromJSON, getReferenceMap } from "../../lib/remote";
-import { ScriptingContext, consoleLoggingMetaesContext, MetaesContext, evalFunctionBody } from "../../lib/metaes";
+import { ScriptingContext, consoleLoggingMetaesContext,  } from "../../lib/metaes";
 import { Environment, mergeValues } from "../../lib/environment";
 
 describe("Environment", () => {
@@ -39,16 +39,7 @@ describe("Environment", () => {
       assert.equal(getReferenceMap(context).size, 2);
     });
   });
-  it("should correctly execute scripting context", async () => {
-    const context = new MetaesContext(undefined, undefined, { values: global });
-    assert.equal(await evalFunctionBody(context, a => a * 2, { values: { a: 1 } }), 2);
-  });
-  it("should correctly execute cooperatively", async () => {
-    const context = new MetaesContext(undefined, undefined, { values: global });
-    [1, 2, 3, 4, 5, 6].forEach(async i => {
-      assert.equal(await evalFunctionBody(context, a => a * 2, { values: { a: i } }), i * 2);
-    });
-  });
+  
   it("should properly add values to existing environment", () => {
     const env = { values: { a: 1 } };
     const env2 = mergeValues({ b: 2 }, env);
