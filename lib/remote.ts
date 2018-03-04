@@ -12,7 +12,7 @@ function pairs(o: object) {
   return result;
 }
 
-const getReferenceMap = (context: ScriptingContext) => {
+export const getReferenceMap = (context: ScriptingContext) => {
   let env = referencesMaps.get(context);
   if (!env) {
     referencesMaps.set(context, (env = new Map()));

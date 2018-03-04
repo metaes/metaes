@@ -1,6 +1,5 @@
 import { describe, it } from "mocha";
 import { metaesEval } from "../../lib/metaes";
-import { assert } from "chai";
 
 describe("Continuations and returns", () => {
   // TODO: use shortcut functions, evaluatePromisified

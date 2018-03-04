@@ -1,7 +1,8 @@
-import { Continuation, ErrorContinuation, EvaluationConfig, NotImplementedException } from "./types";
+import { Continuation, ErrorContinuation, EvaluationConfig} from "./types";
 import { tokens } from "./interpreters";
 import { ASTNode } from "./nodes/nodes";
 import { callInterceptor, Environment } from "./environment";
+import {NotImplementedException} from "./exceptions";
 
 if (typeof window !== "undefined") {
   window.addEventListener("unhandledrejection", event => console.log(event));
