@@ -8,7 +8,7 @@ const W3CWebSocket = require("websocket").w3cwebsocket;
 
 // TODO: merge it with `evaluation` tests and run first with "normal" context, then with remote
 // behind websockets
-describe.skip("Remote websocket messaging", () => {
+describe("Remote websocket messaging", () => {
   let connection;
   before(async () => {
     await createTestServer(8083);
