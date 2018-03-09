@@ -11,9 +11,9 @@ describe("Evaluation", () => {
 
   it("error continuation should be called", () => new Promise(resolve => context.evaluate("throw 1;", null, resolve)));
 
-  it("should not throw in current callstack", () =>{
-    expect(()=>context.evaluate("throw 1;")).to.not.throw()
-  })
+  it("should not throw in current callstack", () => {
+    expect(() => context.evaluate("throw 1;")).to.not.throw();
+  });
 
   it("should be notified once about async error", () =>
     new Promise(resolve => {

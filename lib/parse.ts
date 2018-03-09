@@ -2,7 +2,7 @@ import * as esprima from "esprima";
 import { Range } from "./types";
 import { Program } from "./nodeTypes";
 
-export type Parser = (source: string) => Program;
+export type Parser = (source: string, options?: ParserOptions) => Program;
 
 interface EsprimaError {
   message: string;
@@ -18,15 +18,29 @@ export class ParseError extends Error {
   }
 }
 
-export const parse: Parser = (source: string): Program => {
+type ParserOptions = {
+  range?: boolean;
+  comment?: boolean;
+  attachComment?: boolean;
+  loc?: boolean;
+  source?: boolean;
+};
+
+export const parse: Parser = (source: string, options: ParserOptions = {}): Program => {
   try {
-    return esprima.parse(source, {
-      range: true,
-      comment: true,
-      attachComment: true,
-      loc: true,
-      source: true
-    });
+    return esprima.parse(
+      source,
+      Object.assign(
+        {
+          range: true,
+          comment: true,
+          attachComment: true,
+          loc: true,
+          source: true
+        },
+        options
+      )
+    );
   } catch (e) {
     throw new ParseError(e);
   }

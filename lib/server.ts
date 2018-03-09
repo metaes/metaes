@@ -43,12 +43,12 @@ export const runWSServer = (port: number = config.port) =>
     const webSocketServer = new WebSocket.Server({ server });
 
     webSocketServer.on("connection", connection => {
-      const remoteContext: ScriptingContext = {
+      const clientContext: ScriptingContext = {
         // TODO: should return a promise too
         evaluate: (input: Source, c?: OnSuccess, cerr?: OnError, environment?: Environment) => {
           const message = {
             source: input,
-            env: environmentToJSON(localContext, mergeValues({}, environment))
+            env: environmentToJSON(clientContext, mergeValues({}, environment))
           };
           // console.log("[server sending message]");
           // console.log(JSON.stringify(message));
@@ -57,9 +57,10 @@ export const runWSServer = (port: number = config.port) =>
       };
 
       connection.on("message", async message => {
+        let environment;
         try {
           const { source, env } = assertMessage(JSON.parse(message)) as Message;
-          const environment = env ? environmentFromJSON(localContext, env) : { values: {} };
+          environment = env ? environmentFromJSON(localContext, env) : { values: {} };
           console.log("[Server: got raw message]:");
           console.log(message);
           console.log("[Server: environmentFromJSON]");
@@ -68,14 +69,17 @@ export const runWSServer = (port: number = config.port) =>
           let result = await evalToPromise(localContext, source, environment);
           console.log("[Server: result]");
           console.log(result);
-          remoteContext.evaluate(
+          clientContext.evaluate(
             `c(result)`,
             environment.values.c,
             environment.values.cerr,
             mergeValues({ result }, environment)
           );
         } catch (e) {
-          remoteContext.evaluate(`cerr(error)`, null, null, {
+          console.log("[Server: caught error]", e.message);
+          console.log(environment);
+          console.log(environmentToJSON(clientContext, environment));
+          clientContext.evaluate(`cerr(error)`, null, null, {
             values: { error: { message: (e.originalError || e).message } }
           });
         }

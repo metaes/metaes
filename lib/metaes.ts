@@ -72,7 +72,7 @@ export class MetaesContext implements ScriptingContext {
 export const evalToPromise = (context: ScriptingContext, source: Source | Function, environment?: EnvironmentBase) =>
   new Promise((resolve, reject) => context.evaluate(source, resolve, reject, environment));
 
-const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")");
+const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")", { loc: false, range: false });
 
 /**
  * Function params are igonred, they are used only to satisfy linters/compilers on client code.
