@@ -1,6 +1,6 @@
 import { beforeEach, describe, it } from "mocha";
 import { assert } from "chai";
-import { environmentToJSON, environmentFromJSON, getReferenceMap } from "../../lib/remote";
+import { environmentToJSON, environmentFromJSON, getReferencesMap } from "../../lib/remote";
 import { ScriptingContext, consoleLoggingMetaesContext,  } from "../../lib/metaes";
 import { Environment, mergeValues } from "../../lib/environment";
 
@@ -33,10 +33,10 @@ describe("Environment", () => {
       const obj = { fn };
       const env: Environment = { values: { fn, obj } };
       const json = environmentToJSON(context, env);
-      assert.equal(getReferenceMap(context).size, 2);
+      assert.equal(getReferencesMap(context).size, 2);
       const envBack = environmentFromJSON(context, json);
       assert.deepEqual(env, envBack);
-      assert.equal(getReferenceMap(context).size, 2);
+      assert.equal(getReferencesMap(context).size, 2);
     });
   });
   

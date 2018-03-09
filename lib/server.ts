@@ -60,13 +60,13 @@ export const runWSServer = (port: number = config.port) =>
         try {
           const { source, env } = assertMessage(JSON.parse(message)) as Message;
           const environment = env ? environmentFromJSON(localContext, env) : { values: {} };
-          console.log("[server got message]:");
+          console.log("[Server: got raw message]:");
           console.log(message);
-          console.log("[environment]");
+          console.log("[Server: environmentFromJSON]");
           console.log(environment);
 
           let result = await evalToPromise(localContext, source, environment);
-          console.log("[result]");
+          console.log("[Server: result]");
           console.log(result);
           remoteContext.evaluate(
             `c(result)`,
@@ -82,12 +82,12 @@ export const runWSServer = (port: number = config.port) =>
       });
 
       connection.on("error", e => console.log(e));
-      connection.on("close", () => console.log("closed ws connection with browser."));
+      connection.on("close", () => console.log("[Server: closed ws connection with browser.]"));
     });
 
     server.on("request", app);
     server.listen(port, () => {
-      console.log("Listening on " + server.address().port);
+      console.log("[Server: Listening on " + server.address().port + "]");
       resolve(server);
     });
   });

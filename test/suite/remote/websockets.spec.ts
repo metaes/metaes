@@ -23,6 +23,11 @@ describe("Remote websocket messaging", () => {
     assert.equal(2, await evalToPromise(connection, "1+1"));
   });
 
+  it("should correctly deliver primitive success value using environment in multiple simultaneous contexts", async () => {
+    assert.equal(4, await evalToPromise(connection, "a+b", { values: { a: 1, b: 3 } }));
+    assert.equal(2, await evalToPromise(connection, "a-b", { values: { a: 4, b: 2 } }));
+  });
+
   it("should correctly deliver primitive success value using continuation", () =>
     new Promise((resolve, reject) => {
       connection.evaluate("2+2", value => {
@@ -36,9 +41,9 @@ describe("Remote websocket messaging", () => {
       });
     }));
 
-  it("should correctly behave when c and cerr are not defined and result is correct", () => connection.evaluate("2+2"));
+  it("should not throw when c and cerr are not defined and result is correct", () => connection.evaluate("2+2"));
 
-  it("should correctly behave (do not forward throwing) when cerr is not defined, evaluation is synchronous and result is incorrect", async () => {
+  it("should not throw when cerr is not defined, evaluation is synchronous and result is incorrect", async () => {
     connection.evaluate("throw 1;");
   });
 
@@ -71,8 +76,9 @@ describe("Remote websocket messaging", () => {
     assert.equal(true, flag);
   });
 
+  // TODO: change save file location and fix gitignore
   it("should write a file to disk correctly", async () => {
-    let contents = "Hello Node2.js";
+    let contents = "" + Math.random();
     await evalFunctionBody(
       connection,
       fs => {
@@ -88,6 +94,4 @@ describe("Remote websocket messaging", () => {
       await evalFunctionBody(connection, child_process => child_process.execSync("cat message.txt").toString())
     );
   });
-
-  it("should correctly call local stub for remote function and get result", async () => {});
 });

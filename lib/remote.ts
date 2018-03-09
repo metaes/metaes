@@ -12,7 +12,7 @@ function pairs(o: object) {
   return result;
 }
 
-export const getReferenceMap = (context: ScriptingContext) => {
+export const getReferencesMap = (context: ScriptingContext) => {
   let env = referencesMaps.get(context);
   if (!env) {
     referencesMaps.set(context, (env = new Map()));
@@ -24,7 +24,7 @@ export const getReferenceMap = (context: ScriptingContext) => {
 export type Message = { source: Source; env?: EnvironmentBase };
 
 function createRemoteFunction(context: ScriptingContext, id: string) {
-  const referencesMap = getReferenceMap(context);
+  const referencesMap = getReferencesMap(context);
   const fn = (...args) =>
     evalFunctionBody(
       context,
@@ -41,15 +41,12 @@ function createRemoteFunction(context: ScriptingContext, id: string) {
 }
 
 export function environmentFromJSON(context: ScriptingContext, environment: EnvironmentBase): Environment {
-  const referencesMap = getReferenceMap(context);
+  const referencesMap = getReferencesMap(context);
   const values = environment.values || {};
   if (environment.references) {
     outer: for (let [key, { id }] of pairs(environment.references)) {
       for (let [value, boundaryId] of referencesMap.entries()) {
-        // Special case for "undefined" id. It's a hack to transfer `undefined` value, not possible in JSON.
-        if (id === "undefined") {
-          values[key] = void 0;
-        } else if (boundaryId === id) {
+        if (boundaryId === id) {
           values[key] = value;
           continue outer;
         }
@@ -57,6 +54,7 @@ export function environmentFromJSON(context: ScriptingContext, environment: Envi
       // TODO: don't know yet if it's function or object. Solve this ambiguity
       // Set value only if nothing in values dict was provided.
       if (!values[key]) {
+        //        console.log("Creating remote funciton", { key, id, context });
         values[key] = createRemoteFunction(context, id);
       }
     }
@@ -65,27 +63,23 @@ export function environmentFromJSON(context: ScriptingContext, environment: Envi
 }
 
 export function environmentToJSON(context: ScriptingContext, environment: EnvironmentBase): EnvironmentBase {
-  const referencesMap = getReferenceMap(context);
+  const referencesMap = getReferencesMap(context);
   const references: { [key: string]: { id: string } } = {};
   const values = {};
 
   for (let [k, v] of pairs(environment.values)) {
-    if (k) {
-      if (typeof v === "function" || typeof v === "object") {
-        if (!referencesMap.has(v)) {
-          referencesMap.set(v, Math.random() + "");
-        }
-        references[k] = { id: referencesMap.get(v)! };
+    if (typeof v === "function" || typeof v === "object") {
+      if (!referencesMap.has(v)) {
+        referencesMap.set(v, Math.random() + "");
+      }
+      references[k] = { id: referencesMap.get(v)! };
 
-        // add here whatever there is as a value, it'll be serialized to json
-        if (typeof v === "object") {
-          values[k] = v;
-        }
-      } else if (typeof v === "undefined") {
-        references[k] = { id: "undefined" };
-      } else {
+      // add here whatever there is as a value, it'll be serialized to json
+      if (typeof v === "object") {
         values[k] = v;
       }
+    } else {
+      values[k] = v;
     }
   }
   return Object.keys(references).length ? { references, values } : { values };
@@ -107,7 +101,11 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
       const client = new WebSocketConstructor(connectionString);
       let context: ScriptingContext;
 
-      const send = (message: Message) => client.send(JSON.stringify(assertMessage(message)));
+      const send = (message: Message) => {
+        const stringified = JSON.stringify(assertMessage(message));
+        console.log("[Client: sending message]", stringified);
+        client.send(stringified);
+      };
 
       client.addEventListener("close", () => {
         setTimeout(connect, 5000);
@@ -117,19 +115,20 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
           const message = assertMessage(JSON.parse(e.data) as Message);
           if (message.env) {
             const env = environmentFromJSON(context, message.env);
-            console.log("[connector]");
-            console.log("[raw message]");
+            console.log("[Client: raw message]");
             console.log(e.data);
-            console.log("[message]");
+            console.log("[Client: message]");
             console.log(message);
-            console.log("[env is]");
+            console.log("[Client: env is]");
             console.log(env);
-            metaesEval(message.source, env.values.c, env.values.cerr, env, { onError: console.log });
+            metaesEval(message.source, env.values.c, env.values.cerr, env, {
+              onError: e => console.log("[Client: metaesEval/onError:]", e)
+            });
           } else {
-            console.debug("ignored message without env:", message);
+            console.debug("[Client: ignored message without env:]", message);
           }
         } catch (e) {
-          console.log(e);
+          console.log("[Client: receiving message error]", e);
         }
       });
       client.addEventListener("error", reject);
@@ -151,6 +150,7 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
               if (cerr) {
                 cerr(e);
               }
+              console.log("[Client: Sending message error]", e);
             }
           }
         };

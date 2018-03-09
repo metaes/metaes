@@ -1,5 +1,5 @@
 import { describe, it, beforeEach } from "mocha";
-import { assert } from "chai";
+import { assert, expect } from "chai";
 import { MetaesContext, evalFunctionBody, ScriptingContext } from "../../lib/metaes";
 
 describe("Evaluation", () => {
@@ -11,16 +11,9 @@ describe("Evaluation", () => {
 
   it("error continuation should be called", () => new Promise(resolve => context.evaluate("throw 1;", null, resolve)));
 
-  it("should not throw in current callstack", () =>
-    new Promise((resolve, reject) => {
-      let didThrow = false;
-      try {
-        context.evaluate("throw 1;");
-      } catch (e) {
-        didThrow = true;
-      }
-      setTimeout(() => (didThrow ? reject() : resolve()), 0);
-    }));
+  it("should not throw in current callstack", () =>{
+    expect(()=>context.evaluate("throw 1;")).to.not.throw()
+  })
 
   it("should be notified once about async error", () =>
     new Promise(resolve => {
