@@ -1,6 +1,7 @@
 import { ScriptingContext, metaesEval, evalFunctionBody } from "./metaes";
 import { EnvironmentBase, Environment, mergeValues } from "./environment";
 import { OnSuccess, OnError, Source, EvaluationConfig } from "./types";
+import { log } from "./logging";
 
 const referencesMaps = new Map<ScriptingContext, Map<object | Function, string>>();
 
@@ -54,7 +55,6 @@ export function environmentFromJSON(context: ScriptingContext, environment: Envi
       // TODO: don't know yet if it's function or object. Solve this ambiguity
       // Set value only if nothing in values dict was provided.
       if (!values[key]) {
-        //        console.log("Creating remote funciton", { key, id, context });
         values[key] = createRemoteFunction(context, id);
       }
     }
@@ -103,7 +103,7 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
 
       const send = (message: Message) => {
         const stringified = JSON.stringify(assertMessage(message));
-        console.log("[Client: sending message]", stringified);
+        log("[Client: sending message]", stringified);
         client.send(stringified);
       };
 
@@ -115,20 +115,17 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
           const message = assertMessage(JSON.parse(e.data) as Message);
           if (message.env) {
             const env = environmentFromJSON(context, message.env);
-            console.log("[Client: raw message]");
-            console.log(e.data);
-            console.log("[Client: message]");
-            console.log(message);
-            console.log("[Client: env is]");
-            console.log(env);
+            log("[Client: raw message]", e.data);
+            log("[Client: message]", message);
+            log("[Client: env is]", env);
             metaesEval(message.source, env.values.c, env.values.cerr, env, {
-              onError: e => console.log("[Client: metaesEval/onError:]", e)
+              onError: e => log("[Client: metaesEval/onError:]", e)
             });
           } else {
-            console.debug("[Client: ignored message without env:]", message);
+            log("[Client: ignored message without env:]", message);
           }
         } catch (e) {
-          console.log("[Client: receiving message error]", e);
+          log("[Client: receiving message error]", e);
         }
       });
       client.addEventListener("error", reject);
@@ -150,7 +147,7 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
               if (cerr) {
                 cerr(e);
               }
-              console.log("[Client: Sending message error]", e);
+              log("[Client: Sending message error]", e);
             }
           }
         };

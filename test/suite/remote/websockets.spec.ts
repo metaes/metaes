@@ -64,7 +64,7 @@ describe("Remote websocket messaging", () => {
     );
   });
 
-  it.only("should throw reference error", async () => {
+  it("should throw reference error", async () => {
     let flag = false;
     try {
       await evalFunctionBody(connection, window => window); // window is undefined on nodejs

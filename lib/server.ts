@@ -7,6 +7,7 @@ import * as express from "express";
 import * as http from "http";
 import * as helmet from "helmet";
 import * as bodyParser from "body-parser";
+import { log } from "./logging";
 
 const config = {
   port: 8082
@@ -46,12 +47,12 @@ export const runWSServer = (port: number = config.port) =>
       const clientContext: ScriptingContext = {
         // TODO: should return a promise too
         evaluate: (input: Source, c?: OnSuccess, cerr?: OnError, environment?: Environment) => {
+          log("[Server: in evaluate/environment", environment);
           const message = {
             source: input,
             env: environmentToJSON(clientContext, mergeValues({}, environment))
           };
-          // console.log("[server sending message]");
-          // console.log(JSON.stringify(message));
+          log("[Server sending message]", JSON.stringify(message));
           connection.send(JSON.stringify(assertMessage(message)));
         }
       };
@@ -60,15 +61,14 @@ export const runWSServer = (port: number = config.port) =>
         let environment;
         try {
           const { source, env } = assertMessage(JSON.parse(message)) as Message;
-          environment = env ? environmentFromJSON(localContext, env) : { values: {} };
-          console.log("[Server: got raw message]:");
-          console.log(message);
-          console.log("[Server: environmentFromJSON]");
-          console.log(environment);
+          environment = env ? environmentFromJSON(clientContext, env) : { values: {} };
+          log("[Server: got raw message]:", message);
+
+          log("[Server: client environmentFromJSON]", environment);
 
           let result = await evalToPromise(localContext, source, environment);
-          console.log("[Server: result]");
-          console.log(result);
+          log("[Server: result]", result);
+
           clientContext.evaluate(
             `c(result)`,
             environment.values.c,
@@ -76,22 +76,25 @@ export const runWSServer = (port: number = config.port) =>
             mergeValues({ result }, environment)
           );
         } catch (e) {
-          console.log("[Server: caught error]", e.message);
-          console.log(environment);
-          console.log(environmentToJSON(clientContext, environment));
-          clientContext.evaluate(`cerr(error)`, null, null, {
-            values: { error: { message: (e.originalError || e).message } }
-          });
+          log("[Server: caught error]", e.message);
+          log("[Server: client environment]", environment);
+          log("[Server: client environmentToJSON]", environmentToJSON(clientContext, environment));
+          clientContext.evaluate(
+            `cerr(error)`,
+            null,
+            null,
+            mergeValues({ error: { message: (e.originalError || e).message } }, environment)
+          );
         }
       });
 
       connection.on("error", e => console.log(e));
-      connection.on("close", () => console.log("[Server: closed ws connection with browser.]"));
+      connection.on("close", () => log("[Server: closed ws connection with browser.]"));
     });
 
     server.on("request", app);
     server.listen(port, () => {
-      console.log("[Server: Listening on " + server.address().port + "]");
+      log("[Server: Listening on " + server.address().port + "]");
       resolve(server);
     });
   });
