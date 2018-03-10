@@ -64,16 +64,17 @@ describe("Remote websocket messaging", () => {
     );
   });
 
-  it("should throw reference error", async () => {
-    let flag = false;
+  it("should throw an exception", async () => {
+    let thrown = false;
     try {
       await evalFunctionBody(connection, window => window); // window is undefined on nodejs
     } catch (e) {
+      console.log("thrown", e);
       if (e) {
-        flag = true;
+        thrown = true;
       }
     }
-    assert.equal(true, flag);
+    assert.equal(true, thrown);
   });
 
   // TODO: change save file location and fix gitignore
