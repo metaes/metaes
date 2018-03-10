@@ -31,7 +31,6 @@ describe("Remote websocket messaging", () => {
   it("should correctly deliver primitive success value using continuation", () =>
     new Promise((resolve, reject) => {
       connection.evaluate("2+2", value => {
-        console.log("value ok", { value });
         try {
           assert.equal(value, 4);
           resolve();
@@ -69,7 +68,6 @@ describe("Remote websocket messaging", () => {
     try {
       await evalFunctionBody(connection, window => window); // window is undefined on nodejs
     } catch (e) {
-      console.log("thrown", e);
       if (e) {
         thrown = true;
       }
