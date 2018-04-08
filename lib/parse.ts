@@ -6,7 +6,7 @@ export type Parser = (source: string, options?: ParserOptions) => Program;
 
 interface EsprimaError {
   message: string;
-  line: number;
+  lineNumber: number;
   description: string;
   index: number;
   column: number;
