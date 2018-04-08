@@ -220,6 +220,7 @@ export function ReturnStatement(e: ReturnStatement, env, config, _c, cerr) {
   }
 }
 
+// TODO: don't use try/catch here, use cerr directly instead
 export function FunctionDeclaration(e: FunctionDeclaration, env, config, c, cerr) {
   try {
     c(createMetaFunction(e, env, config));

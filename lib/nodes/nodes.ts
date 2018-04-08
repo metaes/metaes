@@ -12,32 +12,28 @@ export type ASTNode = NodeBase & {
   type: any;
 };
 
-export function keyValueLooksLikeAnASTNode(astNode: ASTNode, key) {
-  var value = astNode[key];
-  return key !== "range" && value && (Array.isArray(value) || (typeof value === "object" && "type" in value));
-}
+const isNode = (node: ASTNode, key: string) => {
+  const value = node[key];
+  return (
+    key !== "range" &&
+    value &&
+    (Array.isArray(value) || (typeof value === "object" && "type" in value))
+  );
+};
 
-export function getNodeChildrenNames(astNode: ASTNode): string[] {
-  return Object.keys(astNode).filter(keyValueLooksLikeAnASTNode.bind(null, astNode));
-}
+export const getNodeChildren = (node: ASTNode) =>
+  Object.keys(node)
+    .filter(isNode.bind(null, node))
+    .map(name => ({ key: name, value: node[name] }));
 
-export function walkAst(ast: ASTNode, visitor: (node: ASTNode) => void) {
-  function walkAstInner(ast: ASTNode) {
-    if (Array.isArray(ast)) {
-      for (var i = 0; i < ast.length; i++) {
-        var childAst = ast[i];
-        walkAstInner(childAst);
-      }
+export const walkTree = (node: ASTNode, visitor: (node: ASTNode) => void) =>
+  (function _walkTree(node) {
+    if (Array.isArray(node)) {
+      node.forEach(_walkTree);
     } else {
-      visitor(ast);
-      if (typeof ast === "object") {
-        let names = getNodeChildrenNames(ast);
-        for (var i = 0; i < names.length; i++) {
-          walkAstInner(ast[names[i]]);
-        }
+      visitor(node);
+      if (typeof node === "object") {
+        getNodeChildren(node).forEach(({ value }) => _walkTree(value));
       }
     }
-  }
-
-  walkAstInner(ast);
-}
+  })(node);
