@@ -32,7 +32,9 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
       val => c && c(val, node),
       exception => {
         if (cerr) {
-          exception.location = node;
+          if (!exception.location) {
+            exception.location = node;
+          }
           cerr(exception);
         }
       }

@@ -41,7 +41,12 @@ function hoistDeclarations(e: Statement[], env, config, c, cerr) {
 
 export function BlockStatement(e: BlockStatement_ | Program, env, config, c, cerr) {
   const errorHandler = exception =>
-    exception.type === "ThrowStatement" || exception.type === "ReturnStatement" ? cerr(exception) : c(exception);
+    exception.type === "NotImplemented" ||
+    exception.type === "ThrowStatement" ||
+    exception.type === "ReturnStatement" ||
+    exception.type === "ReferenceError"
+      ? cerr(exception)
+      : c(exception);
 
   hoistDeclarations(
     e.body,
@@ -170,7 +175,6 @@ export function ExpressionStatement(e: ExpressionStatement, env, config, c, cerr
 export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, cerr) {
   evaluate(e.block, env, config, c, exception => {
     if (exception.type === "ThrowStatement") {
-      exception.location = e.block;
       config.onError && config.onError(exception);
       evaluate(
         e.handler,
@@ -188,7 +192,7 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
 }
 
 export function ThrowStatement(e: ThrowStatement, env, config, _c, cerr) {
-  evaluate(e.argument, env, config, value => cerr({ type: "ThrowStatement", value }), cerr);
+  evaluate(e.argument, env, config, value => cerr({ type: "ThrowStatement", value, location: e }), cerr);
 }
 
 export function CatchClause(e: CatchClause, env, config, c, cerr) {

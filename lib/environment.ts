@@ -123,7 +123,6 @@ function _getValue(
         break;
       }
     }
-    // TODO: TS shouldn't complain here, no?
     if (name in <any>_env.values) {
       let value = _env.values[name];
 
@@ -132,7 +131,7 @@ function _getValue(
     }
   } while ((_env = _env.prev));
 
-  cerr(new ReferenceError(`"${name}" is not defined.`));
+  cerr({ type: "ReferenceError", value: new ReferenceError(`"${name}" is not defined.`) });
 }
 
 export const getValue = (env: Environment, name: string, c: Continuation, cerr: ErrorContinuation) =>

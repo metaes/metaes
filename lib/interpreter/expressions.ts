@@ -89,7 +89,8 @@ export function CallExpression(
             config,
             callee => {
               try {
-                getValue(env, "this", thisValue => c(apply(calleeNode, callee, args, config, thisValue)), cerr);
+                const cnt = thisValue => c(apply(calleeNode, callee, args, config, thisValue));
+                getValue(env, "this", cnt, () => cnt(undefined));
               } catch (error) {
                 cerr(ensureException(error, calleeNode));
               }
@@ -100,7 +101,8 @@ export function CallExpression(
         default:
           cerr({
             type: "NotImplemented",
-            message: `This kind of callee node ('${calleeNode.type}') is not supported yet.`
+            message: `This kind of callee node ('${calleeNode.type}') is not supported yet.`,
+            location: calleeNode
           });
       }
     },

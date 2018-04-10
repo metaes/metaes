@@ -7,7 +7,7 @@
       "esprima": ["node_modules/esprima/dist/esprima"]
     },
     "module": "commonjs",
-    "target": "es6",
+    "target": "es2017",
     "sourceMap": true,
     "strictNullChecks": true,
     "noUnusedLocals": true,

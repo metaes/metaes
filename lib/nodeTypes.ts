@@ -232,6 +232,7 @@ export interface FunctionDeclaration extends NodeBase, FunctionParams {
   type: "FunctionDeclaration";
   id: Identifier;
   body: BlockStatement;
+  async: boolean;
 }
 
 export interface ArrowFunctionExpression extends NodeBase, FunctionParams {

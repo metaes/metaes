@@ -58,10 +58,12 @@ export const evaluateMetaFunction = (
             c(exception.value);
             break;
           default:
-            exception.location = e;
+            if (!exception.location) {
+              exception.location = e;
+            }
             cerr(exception);
-            // TODO: needed?
-            throw exception.value;
+            // TODO: if running inside metaes, would be good not to use JavaScript errors, but rather exceptions only
+            throw exception.value || exception;
         }
         _interceptorAfter(e, exception.value, env);
       }
@@ -80,7 +82,7 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) =>
       metaFunction,
       r => (result = r),
       exception => {
-        error = exception.value;
+        error = exception.value || exception;
         config && config.onError && config.onError(exception);
       },
       this,

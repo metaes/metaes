@@ -1,8 +1,8 @@
-import { Continuation, ErrorContinuation, EvaluationConfig} from "./types";
+import { Continuation, ErrorContinuation, EvaluationConfig } from "./types";
 import { tokens } from "./interpreters";
 import { ASTNode } from "./nodes/nodes";
 import { callInterceptor, Environment } from "./environment";
-import {NotImplementedException} from "./exceptions";
+import { NotImplementedException } from "./exceptions";
 
 if (typeof window !== "undefined") {
   window.addEventListener("unhandledrejection", event => console.log(event));
@@ -40,7 +40,10 @@ export function evaluate(
               cerr(exception);
               break;
             default:
-              exception.location = e;
+              if (!exception.location) {
+                exception.location = e;
+              }
+
               cerr(exception);
               break;
           }
@@ -130,7 +133,9 @@ export function apply(e: ASTNode, fn: Function, args: any[], _config: Evaluation
   try {
     result = fn.apply(thisObj, args);
   } catch (error) {
-    error.location = e;
+    if (!error.location) {
+      error.location = e;
+    }
     throw error;
   }
   return result;
