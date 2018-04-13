@@ -56,10 +56,7 @@ export function evaluate(
   } else if (!e) {
     cerr({ type: "EmptyNode" });
   } else {
-    const exception = NotImplementedException(
-      `"${e.type}" token interpreter is not defined yet. Stopped evaluation.`,
-      e
-    );
+    const exception = NotImplementedException(`"${e.type}" token interpreter is not defined yet.`, e);
     config.onError && config.onError(exception);
     cerr(exception);
   }

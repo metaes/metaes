@@ -40,19 +40,11 @@ function hoistDeclarations(e: Statement[], env, config, c, cerr) {
 }
 
 export function BlockStatement(e: BlockStatement_ | Program, env, config, c, cerr) {
-  const errorHandler = exception =>
-    exception.type === "NotImplemented" ||
-    exception.type === "ThrowStatement" ||
-    exception.type === "ReturnStatement" ||
-    exception.type === "ReferenceError"
-      ? cerr(exception)
-      : c(exception);
-
   hoistDeclarations(
     e.body,
     env,
     config,
-    () => evaluateArray(e.body, env, config, blockValues => c(blockValues[blockValues.length - 1]), errorHandler),
+    () => evaluateArray(e.body, env, config, blockValues => c(blockValues[blockValues.length - 1]), cerr),
     cerr
   );
 }
@@ -174,7 +166,9 @@ export function ExpressionStatement(e: ExpressionStatement, env, config, c, cerr
 
 export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, cerr) {
   evaluate(e.block, env, config, c, exception => {
-    if (exception.type === "ThrowStatement") {
+    if (exception.type === "ReturnStatement") {
+      cerr(exception);
+    } else {
       config.onError && config.onError(exception);
       evaluate(
         e.handler,
@@ -185,8 +179,6 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
         () => (e.finalizer ? evaluate(e.finalizer, env, config, c, cerr) : c()),
         cerr
       );
-    } else {
-      cerr(exception);
     }
   });
 }
@@ -332,14 +324,7 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
 
 export function WhileStatement(e: WhileStatement, env, config, c, cerr) {
   (function loop() {
-    evaluate(
-      e.test,
-      env,
-      config,
-      test =>
-        test ? evaluate(e.body, env, config, val => (errorShouldBeForwarded(val) ? cerr(val) : loop()), cerr) : c(),
-      cerr
-    );
+    evaluate(e.test, env, config, test => (test ? evaluate(e.body, env, config, c, cerr) : c()), cerr);
   })();
 }
 
