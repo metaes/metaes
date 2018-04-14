@@ -196,63 +196,63 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
             env,
             config,
             object => {
-              function doAssign(object, propertyName, right) {
+              function doAssign(object, key, value) {
                 switch (e.operator) {
                   case "=":
-                    c((object[propertyName] = right));
+                    c((object[key] = value));
                     break;
                   case "+=":
-                    c((object[propertyName] += right));
+                    c((object[key] += value));
                     break;
                   case "-=":
-                    c((object[propertyName] -= right));
+                    c((object[key] -= value));
                     break;
                   case "*=":
-                    c((object[propertyName] *= right));
+                    c((object[key] *= value));
                     break;
                   case "/=":
-                    c((object[propertyName] /= right));
+                    c((object[key] /= value));
                     break;
                   case "%=":
-                    c((object[propertyName] %= right));
+                    c((object[key] %= value));
                     break;
                   case "<<=":
-                    c((object[propertyName] <<= right));
+                    c((object[key] <<= value));
                     break;
                   case ">>=":
-                    c((object[propertyName] >>= right));
+                    c((object[key] >>= value));
                     break;
                   case ">>>=":
-                    c((object[propertyName] >>>= right));
+                    c((object[key] >>>= value));
                     break;
                   case "&=":
-                    c((object[propertyName] &= right));
+                    c((object[key] &= value));
                     break;
                   case "|=":
-                    c((object[propertyName] |= right));
+                    c((object[key] |= value));
                     break;
                   case "^=":
-                    c((object[propertyName] ^= right));
+                    c((object[key] ^= value));
                     break;
                   default:
-                    cerr(NotImplementedException(e.type + " not implemented " + e.operator));
+                    cerr(NotImplementedException(e.type + "has not implemented " + e.operator));
                 }
               }
 
-              let propertyName;
-              if (left.property.type === "Identifier") {
-                propertyName = left.property.name;
-                doAssign(object, propertyName, right);
-              } else {
+              if (left.computed) {
                 evaluate(
                   left.property,
                   env,
                   config,
-                  propertyName => {
-                    doAssign(object, propertyName, right);
+                  key => {
+                    doAssign(object, key, right);
                   },
                   cerr
                 );
+              } else if (left.property.type === "Identifier") {
+                doAssign(object, left.property.name, right);
+              } else {
+                cerr(NotImplementedException("This kind of assignment is not implemented yet.", left.property));
               }
             },
             cerr
