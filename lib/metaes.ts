@@ -67,7 +67,7 @@ export class MetaesContext implements ScriptingContext {
     if (environment) {
       env = Object.assign({ prev: this.environment }, environment);
     }
-    return metaesEval(source, c || this.c, cerr || this.cerr, env, config || this.config);
+    metaesEval(source, c || this.c, cerr || this.cerr, env, config || this.config);
   }
 }
 
