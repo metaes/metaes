@@ -66,7 +66,7 @@ export const runWSServer = (port: number = config.port) =>
 
           log("[Server: client environmentFromJSON]", environment);
 
-          let result = await evalToPromise(localContext, source, environment);
+          const result = await evalToPromise(localContext, source, environment);
           log("[Server: result]", result);
 
           clientContext.evaluate(
