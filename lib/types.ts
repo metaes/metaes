@@ -50,6 +50,7 @@ export interface EvaluationConfig {
 
   // if true, the interceptor will receive Reference object for Identifiers, not a bare JavaScript values.
   // It's following ECMAScript reference naming guidelines
+  // TODO: it's not tested/not used anywhere yet. Remains here for historical reasons, should be cleaned up.
   useReferences?: boolean;
 
   // used to catch errors outside of the callstack

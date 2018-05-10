@@ -417,11 +417,12 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
             callee => {
               if (typeof callee !== "function") {
                 cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
-              }
-              try {
-                c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
-              } catch (error) {
-                cerr(ensureException(error, e));
+              } else {
+                try {
+                  c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
+                } catch (error) {
+                  cerr(ensureException(error, e));
+                }
               }
             },
             cerr
