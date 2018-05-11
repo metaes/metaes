@@ -28,6 +28,7 @@ export interface Evaluation {
   env: Environment;
   type: EvaluationType;
   timestamp: number;
+  scriptId: string;
 }
 
 export type Source = string | ASTNode;
@@ -47,6 +48,9 @@ export interface Interceptor {
 // TODO: will be used to add properties while transfering RemoteValues
 export interface EvaluationConfig {
   interceptor?: Interceptor;
+
+  // Per context unique id of running script.
+  scriptId?: string;
 
   // if true, the interceptor will receive Reference object for Identifiers, not a bare JavaScript values.
   // It's following ECMAScript reference naming guidelines

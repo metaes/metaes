@@ -92,7 +92,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
             let cnt = (_exception?: MetaesException) => {
               // undefined as value, because Identifier at this point doesn't represent a Reference.
               // It does after VariableDeclarator finishes.
-              callInterceptor(e.id, config, undefined, env, "exit");
+              callInterceptor(e.id, config, env, "exit");
               c(v);
             };
             evaluate(e.id, env, config, cnt, cnt);
@@ -105,7 +105,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
           init: undefined
         };
         const cnt = () => {
-          callInterceptor(e.id, config, undefined, env, "exit");
+          callInterceptor(e.id, config, env, "exit");
           c(value);
         };
         evaluate(e.id, env, config, cnt, cnt);
@@ -128,7 +128,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
                   results.push({ id: key, init: init[key] });
                   break;
                 default:
-                  cerr(NotImplementedException(`'${id.key.type}' in '${e.type}' is not supported yet.`));
+                  return cerr(NotImplementedException(`'${id.key.type}' in '${e.type}' is not supported yet.`));
               }
             }
             c(results);

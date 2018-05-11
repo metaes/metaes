@@ -33,14 +33,14 @@ export const evaluateMetaFunction = (
           throw error;
       }
     }
-    config && callInterceptor(e, config, metaFunction, env, "enter");
+    config && callInterceptor(e, config, env, "enter", metaFunction);
     let _calledAfterInterceptor = false;
 
     function _interceptorAfter(e, value, env) {
       if (_calledAfterInterceptor) {
         return;
       }
-      config && callInterceptor(e, config, value, env, "exit");
+      config && callInterceptor(e, config, env, "exit", value);
       _calledAfterInterceptor = true;
     }
 

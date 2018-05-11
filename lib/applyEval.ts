@@ -16,14 +16,14 @@ export function evaluate(
   cerr: ErrorContinuation
 ) {
   if (e.type in tokens) {
-    callInterceptor(e, config, undefined, env, "enter");
+    callInterceptor(e, config, env, "enter");
     try {
       tokens[e.type](
         e,
         env,
         config,
         value => {
-          callInterceptor(e, config, value, env, "exit");
+          callInterceptor(e, config, env, "exit", value);
           c(value);
         },
         exception => {
@@ -36,7 +36,7 @@ export function evaluate(
               });
               break;
             case "ReturnStatement":
-              callInterceptor(e, config, exception.value, env, "exit");
+              callInterceptor(e, config, env, "exit", exception.value);
               cerr(exception);
               break;
             default:

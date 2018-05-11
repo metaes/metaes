@@ -4,7 +4,7 @@ import { metaesEval } from "../../lib/metaes";
 import { Evaluation } from "../../lib/types";
 
 describe("Interceptor", () => {
-  it("should be called", () => {
+  it("should be called specific amount of times", () => {
     let evaluations: Evaluation[] = [];
     function onError(e) {
       console.log(e);

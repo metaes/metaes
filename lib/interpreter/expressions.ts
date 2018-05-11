@@ -59,7 +59,8 @@ export function CallExpression(
                 property =>
                   typeof property === "function"
                     ? c(apply(e, property as Function, args, config, object))
-                    : cerr(new TypeError(typeof property + " is not a function")),
+                    : // TODO: use exceptions
+                      cerr(new TypeError(typeof property + " is not a function")),
                 cerr
               ),
             cerr
@@ -143,9 +144,10 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
               switch (e.property.type) {
                 case "Identifier":
                   // just call interceptors, don't evaluate the Identifier which is not a Reference
+                  // TODO: add tests/refactor
                   let _config = Object.assign({}, config, { useReferences: false });
-                  callInterceptor(e.property, _config, undefined, env, "enter");
-                  callInterceptor(e.property, _config, undefined, env, "exit");
+                  callInterceptor(e.property, _config, env, "enter");
+                  callInterceptor(e.property, _config, env, "exit");
 
                   c(object[e.property.name]);
                   break;
@@ -190,7 +192,7 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
     right => {
       switch (e.left.type) {
         case "MemberExpression":
-          let left = e.left;
+          const left = e.left;
           evaluate(
             e.left.object,
             env,

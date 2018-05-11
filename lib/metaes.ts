@@ -11,6 +11,8 @@ export interface ScriptingContext {
   evaluate: Evaluate;
 }
 
+let scriptsConter = 0;
+
 export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config = {}) => {
   try {
     const node: ASTNode =
@@ -25,6 +27,9 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
       };
     }
 
+    if (!config.scriptId) {
+      config.scriptId = "" + scriptsConter++;
+    }
     evaluate(
       node,
       env,
@@ -67,7 +72,13 @@ export class MetaesContext implements ScriptingContext {
     if (environment) {
       env = Object.assign({ prev: this.environment }, environment);
     }
-    metaesEval(source, c || this.c, cerr || this.cerr, env, config || this.config);
+    metaesEval(
+      source,
+      c || this.c,
+      cerr || this.cerr,
+      env,
+      Object.assign({}, config || this.config, { scriptId: null })
+    );
   }
 }
 
