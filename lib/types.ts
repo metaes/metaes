@@ -18,7 +18,7 @@ export type OnError = (e: MetaesException) => void;
  * enter - before ASTNode was evaluated
  * exit - after ASTNode was evaluated
  */
-export type EvaluationType = "enter" | "exit";
+export type EvaluationTag = { phase: "enter" | "exit"; propertyKey?: string };
 
 export type EvaluationValue = any | Reference;
 
@@ -26,7 +26,7 @@ export interface Evaluation {
   e: ASTNode;
   value: EvaluationValue;
   env: Environment;
-  type: EvaluationType;
+  tag: EvaluationTag;
   timestamp: number;
   scriptId: string;
 }

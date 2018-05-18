@@ -1,4 +1,4 @@
-import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationType } from "./types";
+import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationTag } from "./types";
 import { Identifier } from "./nodeTypes";
 import { ASTNode } from "./nodes/nodes";
 
@@ -17,13 +17,13 @@ export interface Environment extends EnvironmentBase {
   internal?: Environment;
 }
 
-export function callInterceptor(e: ASTNode, config: EvaluationConfig, env: Environment, type: EvaluationType, value?) {
+export function callInterceptor(e: ASTNode, config: EvaluationConfig, env: Environment, tag: EvaluationTag, value?) {
   config.interceptor &&
     config.interceptor({
       e,
       value: e.type === "Identifier" ? getValueOrReference((e as Identifier).name, env, config, value) : value,
       env,
-      type,
+      tag,
       timestamp: new Date().getTime(),
       scriptId: config.scriptId || ""
     });

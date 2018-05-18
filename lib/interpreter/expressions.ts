@@ -146,8 +146,8 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
                   // just call interceptors, don't evaluate the Identifier which is not a Reference
                   // TODO: add tests/refactor
                   let _config = Object.assign({}, config, { useReferences: false });
-                  callInterceptor(e.property, _config, env, "enter");
-                  callInterceptor(e.property, _config, env, "exit");
+                  callInterceptor(e.property, _config, env, { phase: "enter" });
+                  callInterceptor(e.property, _config, env, { phase: "exit" });
 
                   c(object[e.property.name]);
                   break;

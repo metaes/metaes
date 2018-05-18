@@ -8,6 +8,30 @@ if (typeof window !== "undefined") {
   window.addEventListener("unhandledrejection", event => console.log(event));
 }
 
+export const evaluateProperty = (
+  propertyKey: string,
+  e: ASTNode,
+  env: Environment,
+  config: EvaluationConfig,
+  c: Continuation,
+  cerr: ErrorContinuation
+) => {
+  callInterceptor(e, config, env, { phase: "enter", propertyKey });
+  evaluate(
+    e[propertyKey],
+    env,
+    config,
+    value => {
+      callInterceptor(e, config, env, { phase: "exit", propertyKey }, value);
+      c(value);
+    },
+    exception => {
+      callInterceptor(e, config, env, { phase: "exit", propertyKey }, exception.value);
+      cerr(exception);
+    }
+  );
+};
+
 export function evaluate(
   e: ASTNode,
   env: Environment,
@@ -16,14 +40,14 @@ export function evaluate(
   cerr: ErrorContinuation
 ) {
   if (e.type in tokens) {
-    callInterceptor(e, config, env, "enter");
+    callInterceptor(e, config, env, { phase: "enter" });
     try {
       tokens[e.type](
         e,
         env,
         config,
         value => {
-          callInterceptor(e, config, env, "exit", value);
+          callInterceptor(e, config, env, { phase: "exit" }, value);
           c(value);
         },
         exception => {
@@ -36,14 +60,13 @@ export function evaluate(
               });
               break;
             case "ReturnStatement":
-              callInterceptor(e, config, env, "exit", exception.value);
+              callInterceptor(e, config, env, { phase: "exit" }, exception.value);
               cerr(exception);
               break;
             default:
               if (!exception.location) {
                 exception.location = e;
               }
-
               cerr(exception);
               break;
           }
