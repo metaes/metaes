@@ -1,4 +1,4 @@
-import { apply, evaluate, evaluateArray } from "../applyEval";
+import { apply, evaluate, evaluateProp, evaluateArray } from "../applyEval";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { NotImplementedException, LocatedError, ensureException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
@@ -38,8 +38,9 @@ export function CallExpression(
   c: Continuation,
   cerr: ErrorContinuation
 ) {
-  evaluateArray(
-    e.arguments,
+  evaluateProp(
+    "arguments",
+    e,
     env,
     config,
     args => {
@@ -47,8 +48,9 @@ export function CallExpression(
 
       switch (calleeNode.type) {
         case "MemberExpression":
-          evaluate(
-            calleeNode.object,
+          evaluateProp(
+            "object",
+            calleeNode,
             env,
             config,
             object =>
@@ -69,8 +71,9 @@ export function CallExpression(
         case "Identifier":
         case "FunctionExpression":
         case "CallExpression":
-          evaluate(
-            calleeNode,
+          evaluateProp(
+            "callee",
+            e,
             env,
             config,
             callee => {
@@ -84,8 +87,9 @@ export function CallExpression(
           );
           break;
         case "ArrowFunctionExpression":
-          evaluate(
-            calleeNode,
+          evaluateProp(
+            "callee",
+            e,
             env,
             config,
             callee => {
@@ -112,14 +116,16 @@ export function CallExpression(
 }
 
 export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
-  evaluate(
-    e.object,
+  evaluateProp(
+    "object",
+    e,
     env,
     config,
     object => {
       if (e.computed) {
-        evaluate(
-          e.property,
+        evaluateProp(
+          "property",
+          e,
           env,
           config,
           property => {
@@ -131,8 +137,9 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
         switch (e.property.type) {
           case "Identifier":
             if (e.computed) {
-              evaluate(
-                e.property,
+              evaluateProp(
+                "property",
+                e,
                 env,
                 config,
                 value => {
@@ -157,7 +164,7 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
             }
             break;
           case "Literal":
-            evaluate(e.property, { values: object }, config, c, cerr);
+            evaluateProp("property", e, { values: object }, config, c, cerr);
             break;
           default:
             cerr(NotImplementedException("This kind of member expression is not supported yet."));
@@ -313,13 +320,15 @@ export function Property(e: Property, env, config, c, cerr) {
 }
 
 export function BinaryExpression(e: BinaryExpression, env, config, c, cerr) {
-  evaluate(
-    e.left,
+  evaluateProp(
+    "left",
+    e,
     env,
     config,
     left => {
-      evaluate(
-        e.right,
+      evaluateProp(
+        "right",
+        e,
         env,
         config,
         right => {

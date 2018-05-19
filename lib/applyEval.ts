@@ -8,7 +8,7 @@ if (typeof window !== "undefined") {
   window.addEventListener("unhandledrejection", event => console.log(event));
 }
 
-export const evaluateProperty = (
+export const evaluateProp = (
   propertyKey: string,
   e: ASTNode,
   env: Environment,
@@ -17,19 +17,17 @@ export const evaluateProperty = (
   cerr: ErrorContinuation
 ) => {
   callInterceptor(e, config, env, { phase: "enter", propertyKey });
-  evaluate(
-    e[propertyKey],
-    env,
-    config,
-    value => {
-      callInterceptor(e, config, env, { phase: "exit", propertyKey }, value);
-      c(value);
-    },
-    exception => {
-      callInterceptor(e, config, env, { phase: "exit", propertyKey }, exception.value);
-      cerr(exception);
-    }
-  );
+
+  const value = e[propertyKey];
+  const _c = value => {
+    callInterceptor(e, config, env, { phase: "exit", propertyKey });
+    c(value);
+  };
+  const _cerr = exception => {
+    callInterceptor(e, config, env, { phase: "exit", propertyKey });
+    cerr(exception);
+  };
+  Array.isArray(value) ? evaluateArray(value, env, config, _c, _cerr) : evaluate(value, env, config, _c, _cerr);
 };
 
 export function evaluate(

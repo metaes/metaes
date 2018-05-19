@@ -64,7 +64,7 @@ export const setValueAndCallAfterInterceptor = (
     value,
     isDeclaration,
     value => {
-      callInterceptor(e, config, env, "exit", getValueOrReference(name, env, config, value));
+      callInterceptor(e, config, env, { phase: "exit" }, getValueOrReference(name, env, config, value));
       c(value);
     },
     cerr

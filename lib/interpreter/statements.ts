@@ -1,4 +1,4 @@
-import { evaluate, evaluateArray, evaluateArrayAsync } from "../applyEval";
+import { evaluate, evaluateProp, evaluateArray, evaluateArrayAsync } from "../applyEval";
 import { callInterceptor, getValue, setValue, setValueAndCallAfterInterceptor } from "../environment";
 import { EvaluationConfig, MetaesException } from "../types";
 import { NotImplementedException, LocatedError, LocatedException } from "../exceptions";
@@ -79,8 +79,9 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
   switch (e.id.type) {
     case "Identifier":
       if (e.init) {
-        evaluate(
-          e.init,
+        evaluateProp(
+          "init",
+          e,
           env,
           config,
           init => {
@@ -112,8 +113,9 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
       }
       break;
     case "ObjectPattern":
-      evaluate(
-        e.init,
+      evaluateProp(
+        "init",
+        e,
         env,
         config,
         init => {
@@ -143,15 +145,16 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
 }
 
 export function IfStatement(e: IfStatement | ConditionalExpression, env, config, c, cerr) {
-  evaluate(
-    e.test,
+  evaluateProp(
+    "test",
+    e,
     env,
     config,
     test => {
       if (test) {
-        evaluate(e.consequent, env, config, c, cerr);
+        evaluateProp("consequent", e, env, config, c, cerr);
       } else if (e.alternate) {
-        evaluate(e.alternate, env, config, c, cerr);
+        evaluateProp("alternate", e, env, config, c, cerr);
       } else {
         c();
       }
@@ -161,7 +164,7 @@ export function IfStatement(e: IfStatement | ConditionalExpression, env, config,
 }
 
 export function ExpressionStatement(e: ExpressionStatement, env, config, c, cerr) {
-  evaluate(e.expression, env, config, c, cerr);
+  evaluateProp("expression", e, env, config, c, cerr);
 }
 
 export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, cerr) {
