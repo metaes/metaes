@@ -30,6 +30,29 @@ export const evaluateProp = (
   Array.isArray(value) ? evaluateArray(value, env, config, _c, _cerr) : evaluate(value, env, config, _c, _cerr);
 };
 
+// TODO: DRY
+export const evaluatePropWrap = (
+  propertyKey: string,
+  body: (c: Continuation, cerr: ErrorContinuation) => void,
+  e: ASTNode,
+  env: Environment,
+  config: EvaluationConfig,
+  c: Continuation,
+  cerr: ErrorContinuation
+) => {
+  callInterceptor(e, config, env, { phase: "enter", propertyKey });
+
+  const _c = value => {
+    callInterceptor(e, config, env, { phase: "exit", propertyKey });
+    c(value);
+  };
+  const _cerr = exception => {
+    callInterceptor(e, config, env, { phase: "exit", propertyKey });
+    cerr(exception);
+  };
+  body(_c, _cerr);
+};
+
 export function evaluate(
   e: ASTNode,
   env: Environment,

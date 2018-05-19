@@ -1,4 +1,4 @@
-import { apply, evaluate, evaluateProp, evaluateArray } from "../applyEval";
+import { apply, evaluate, evaluateProp, evaluatePropWrap, evaluateArray } from "../applyEval";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { NotImplementedException, LocatedError, ensureException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
@@ -49,16 +49,17 @@ export function CallExpression(
       switch (calleeNode.type) {
         case "MemberExpression":
           evaluateProp(
-            "object",
-            calleeNode,
+            "callee",
+            e,
             env,
             config,
-            object =>
-              evaluate(
+            property =>
+              evaluateProp(
+                "object",
                 calleeNode,
                 env,
                 config,
-                property =>
+                object =>
                   typeof property === "function"
                     ? c(apply(e, property as Function, args, config, object))
                     : // TODO: use exceptions
@@ -67,6 +68,7 @@ export function CallExpression(
               ),
             cerr
           );
+
           break;
         case "Identifier":
         case "FunctionExpression":
@@ -123,40 +125,32 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
     config,
     object => {
       if (e.computed) {
-        evaluateProp(
-          "property",
-          e,
-          env,
-          config,
-          property => {
-            c(object[property]);
-          },
-          cerr
-        );
+        evaluateProp("property", e, env, config, property => c(object[property]), cerr);
       } else {
         switch (e.property.type) {
           case "Identifier":
             if (e.computed) {
-              evaluateProp(
-                "property",
-                e,
-                env,
-                config,
-                value => {
-                  c(object[value]);
-                },
-                cerr
-              );
+              evaluateProp("property", e, env, config, value => c(object[value]), cerr);
             } else {
               switch (e.property.type) {
                 case "Identifier":
-                  // just call interceptors, don't evaluate the Identifier which is not a Reference
-                  // TODO: add tests/refactor
-                  let _config = Object.assign({}, config, { useReferences: false });
-                  callInterceptor(e.property, _config, env, { phase: "enter" });
-                  callInterceptor(e.property, _config, env, { phase: "exit" });
-
-                  c(object[e.property.name]);
+                  const propertyNode = e.property;
+                  evaluatePropWrap(
+                    "property",
+                    (c, _cerr) => {
+                      // just call interceptors, don't evaluate the Identifier which is not a Reference
+                      // TODO: add tests/refactor
+                      let _config = Object.assign({}, config, { useReferences: false });
+                      callInterceptor(e.property, _config, env, { phase: "enter" });
+                      callInterceptor(e.property, _config, env, { phase: "exit" });
+                      c(object[propertyNode.name]);
+                    },
+                    e,
+                    env,
+                    config,
+                    c,
+                    cerr
+                  );
                   break;
                 default:
                   cerr(NotImplementedException(`Not implemented ${e.property["type"]} property type of ${e.type}`));
@@ -175,7 +169,7 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
   );
 }
 
-export function ArrowFunctionExpression(e: ArrowFunctionExpression, env, config, c, cerr) {
+function _createMetaFunction(e: ArrowFunctionExpression | FunctionExpression, env, config, c, cerr) {
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
@@ -183,12 +177,12 @@ export function ArrowFunctionExpression(e: ArrowFunctionExpression, env, config,
   }
 }
 
+export function ArrowFunctionExpression(e: ArrowFunctionExpression, env, config, c, cerr) {
+  _createMetaFunction(e, env, config, c, cerr);
+}
+
 export function FunctionExpression(e: FunctionExpression, env, config, c, cerr) {
-  try {
-    c(createMetaFunction(e, env, config));
-  } catch (error) {
-    cerr(LocatedError(error, e));
-  }
+  _createMetaFunction(e, env, config, c, cerr);
 }
 
 export function AssignmentExpression(e: AssignmentExpression, env, config, c, cerr) {
@@ -247,17 +241,8 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
                     cerr(NotImplementedException(e.type + "has not implemented " + e.operator));
                 }
               }
-
               if (left.computed) {
-                evaluate(
-                  left.property,
-                  env,
-                  config,
-                  key => {
-                    doAssign(object, key, right);
-                  },
-                  cerr
-                );
+                evaluate(left.property, env, config, key => doAssign(object, key, right), cerr);
               } else if (left.property.type === "Identifier") {
                 doAssign(object, left.property.name, right);
               } else {
@@ -308,15 +293,7 @@ export function Property(e: Property, env, config, c, cerr) {
       cerr(NotImplementedException("This type or property is not supported yet."));
       return;
   }
-  evaluate(
-    e.value,
-    env,
-    config,
-    value => {
-      c({ key, value });
-    },
-    cerr
-  );
+  evaluate(e.value, env, config, value => c({ key, value }), cerr);
 }
 
 export function BinaryExpression(e: BinaryExpression, env, config, c, cerr) {
@@ -408,7 +385,7 @@ export function BinaryExpression(e: BinaryExpression, env, config, c, cerr) {
 }
 
 export function ArrayExpression(e: ArrayExpression, env, config, c, cerr) {
-  evaluateArray(e.elements, env, config, c, cerr);
+  evaluateProp("elements", e, env, config, c, cerr);
 }
 
 export function NewExpression(e: NewExpression, env, config, c, cerr) {
@@ -566,13 +543,7 @@ export function UnaryExpression(e: UnaryExpression, env: Environment, config, c,
           cerr(NotImplementedException("not implemented " + e.operator));
       }
     },
-    error => {
-      if (error.value instanceof ReferenceError && e.operator === "typeof") {
-        c("undefined");
-      } else {
-        cerr(error);
-      }
-    }
+    error => (error.value instanceof ReferenceError && e.operator === "typeof" ? c("undefined") : cerr(error))
   );
 }
 
