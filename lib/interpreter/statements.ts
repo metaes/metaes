@@ -58,7 +58,7 @@ type VariableDeclaratorValue = { id: string; init: any };
 export function VariableDeclaration(e: VariableDeclaration, env, config, c, cerr) {
   evaluateArrayAsync(
     e.declarations,
-    (declarator: VariableDeclarator, c, cerr) => {
+    (declarator: VariableDeclarator, c, cerr) =>
       evaluate(
         declarator,
         env,
@@ -68,8 +68,7 @@ export function VariableDeclaration(e: VariableDeclaration, env, config, c, cerr
           setValue(env, id, init, true, c, cerr);
         },
         cerr
-      );
-    },
+      ),
     c,
     cerr
   );
@@ -93,7 +92,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
             let cnt = (_exception?: MetaesException) => {
               // undefined as value, because Identifier at this point doesn't represent a Reference.
               // It does after VariableDeclarator finishes.
-              callInterceptor(e.id, config, env, "exit");
+              callInterceptor(e.id, config, env, { phase: "exit" });
               c(v);
             };
             evaluate(e.id, env, config, cnt, cnt);
@@ -106,7 +105,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
           init: undefined
         };
         const cnt = () => {
-          callInterceptor(e.id, config, env, "exit");
+          callInterceptor(e.id, config, env, { phase: "exit" });
           c(value);
         };
         evaluate(e.id, env, config, cnt, cnt);

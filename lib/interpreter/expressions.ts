@@ -186,75 +186,88 @@ export function FunctionExpression(e: FunctionExpression, env, config, c, cerr) 
 }
 
 export function AssignmentExpression(e: AssignmentExpression, env, config, c, cerr) {
-  evaluate(
-    e.right,
+  evaluateProp(
+    "right",
+    e,
     env,
     config,
     right => {
-      switch (e.left.type) {
+      const leftNode = e.left;
+      switch (leftNode.type) {
         case "MemberExpression":
-          const left = e.left;
-          evaluate(
-            e.left.object,
+          evaluatePropWrap(
+            "left",
+            (c, cerr) => {
+              evaluateProp(
+                "object",
+                e.left,
+                env,
+                config,
+                object => {
+                  function doAssign(object, key, value) {
+                    switch (e.operator) {
+                      case "=":
+                        c((object[key] = value));
+                        break;
+                      case "+=":
+                        c((object[key] += value));
+                        break;
+                      case "-=":
+                        c((object[key] -= value));
+                        break;
+                      case "*=":
+                        c((object[key] *= value));
+                        break;
+                      case "/=":
+                        c((object[key] /= value));
+                        break;
+                      case "%=":
+                        c((object[key] %= value));
+                        break;
+                      case "<<=":
+                        c((object[key] <<= value));
+                        break;
+                      case ">>=":
+                        c((object[key] >>= value));
+                        break;
+                      case ">>>=":
+                        c((object[key] >>>= value));
+                        break;
+                      case "&=":
+                        c((object[key] &= value));
+                        break;
+                      case "|=":
+                        c((object[key] |= value));
+                        break;
+                      case "^=":
+                        c((object[key] ^= value));
+                        break;
+                      default:
+                        cerr(NotImplementedException(e.type + "has not implemented " + e.operator));
+                    }
+                  }
+                  if (leftNode.computed) {
+                    evaluate(leftNode.property, env, config, key => doAssign(object, key, right), cerr);
+                  } else if (leftNode.property.type === "Identifier") {
+                    doAssign(object, leftNode.property.name, right);
+                  } else {
+                    cerr(NotImplementedException("This kind of assignment is not implemented yet.", leftNode.property));
+                  }
+                },
+                cerr
+              );
+            },
+            e.left,
             env,
             config,
-            object => {
-              function doAssign(object, key, value) {
-                switch (e.operator) {
-                  case "=":
-                    c((object[key] = value));
-                    break;
-                  case "+=":
-                    c((object[key] += value));
-                    break;
-                  case "-=":
-                    c((object[key] -= value));
-                    break;
-                  case "*=":
-                    c((object[key] *= value));
-                    break;
-                  case "/=":
-                    c((object[key] /= value));
-                    break;
-                  case "%=":
-                    c((object[key] %= value));
-                    break;
-                  case "<<=":
-                    c((object[key] <<= value));
-                    break;
-                  case ">>=":
-                    c((object[key] >>= value));
-                    break;
-                  case ">>>=":
-                    c((object[key] >>>= value));
-                    break;
-                  case "&=":
-                    c((object[key] &= value));
-                    break;
-                  case "|=":
-                    c((object[key] |= value));
-                    break;
-                  case "^=":
-                    c((object[key] ^= value));
-                    break;
-                  default:
-                    cerr(NotImplementedException(e.type + "has not implemented " + e.operator));
-                }
-              }
-              if (left.computed) {
-                evaluate(left.property, env, config, key => doAssign(object, key, right), cerr);
-              } else if (left.property.type === "Identifier") {
-                doAssign(object, left.property.name, right);
-              } else {
-                cerr(NotImplementedException("This kind of assignment is not implemented yet.", left.property));
-              }
-            },
+            c,
             cerr
           );
+
           break;
         case "Identifier":
           callInterceptor(e.left, config, right, env, "enter");
-          setValueAndCallAfterInterceptor(e.left, env, config, e.left.name, right, false, c, cerr);
+          setValueAndCallAfterInterceptor(e.left, env, config, leftNode.name, right, false, c, cerr);
           break;
         default:
           cerr(NotImplementedException("This assignment is not supported yet."));
