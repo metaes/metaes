@@ -44,7 +44,7 @@ export function BlockStatement(e: BlockStatement_ | Program, env, config, c, cer
     e.body,
     env,
     config,
-    () => evaluateArray(e.body, env, config, blockValues => c(blockValues[blockValues.length - 1]), cerr),
+    () => evaluateProp("body", e, env, config, blockValues => c(blockValues[blockValues.length - 1]), cerr),
     cerr
   );
 }
@@ -167,18 +167,19 @@ export function ExpressionStatement(e: ExpressionStatement, env, config, c, cerr
 }
 
 export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, cerr) {
-  evaluate(e.block, env, config, c, exception => {
+  evaluateProp("block", e, env, config, c, exception => {
     if (exception.type === "ReturnStatement") {
       cerr(exception);
     } else {
       config.onError && config.onError(exception);
-      evaluate(
-        e.handler,
+      evaluateProp(
+        "handler",
+        e,
         // Use name which is illegal JavaScript identifier.
         // It will disallow collision with user names.
         { values: { "/exception": exception.value }, prev: env },
         config,
-        () => (e.finalizer ? evaluate(e.finalizer, env, config, c, cerr) : c()),
+        () => (e.finalizer ? evaluateProp("finalizer", e, env, config, c, cerr) : c()),
         cerr
       );
     }
@@ -186,7 +187,7 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
 }
 
 export function ThrowStatement(e: ThrowStatement, env, config, _c, cerr) {
-  evaluate(e.argument, env, config, value => cerr({ type: "ThrowStatement", value, location: e }), cerr);
+  evaluateProp("argument", e, env, config, value => cerr({ type: "ThrowStatement", value, location: e }), cerr);
 }
 
 export function CatchClause(e: CatchClause, env, config, c, cerr) {
@@ -195,8 +196,9 @@ export function CatchClause(e: CatchClause, env, config, c, cerr) {
     "/exception",
     error => {
       let name = e.param.name;
-      evaluate(
-        e.body,
+      evaluateProp(
+        "body",
+        e,
         {
           values: { [name]: error },
           prev: env
@@ -212,7 +214,7 @@ export function CatchClause(e: CatchClause, env, config, c, cerr) {
 
 export function ReturnStatement(e: ReturnStatement, env, config, _c, cerr) {
   if (e.argument) {
-    evaluate(e.argument, env, config, value => cerr({ type: "ReturnStatement", value }), cerr);
+    evaluateProp("argument", e, env, config, value => cerr({ type: "ReturnStatement", value }), cerr);
   } else {
     cerr({ type: "ReturnStatement" });
   }

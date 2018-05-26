@@ -45,7 +45,6 @@ export const runWSServer = (port: number = config.port) =>
 
     webSocketServer.on("connection", connection => {
       const clientContext: ScriptingContext = {
-        // TODO: should return a promise too
         evaluate: (input: Source, c?: OnSuccess, cerr?: OnError, environment?: Environment) => {
           log("[Server: in evaluate/environment", environment);
           const message = {
