@@ -61,7 +61,7 @@ export class MetaesContext implements ScriptingContext {
     public c?: OnSuccess,
     public cerr?: OnError,
     public environment: Environment = { values: {} },
-    public config: EvaluationConfig = { onError: log }
+    public config: Partial<EvaluationConfig> = { onError: log }
   ) {}
 
   evaluate(

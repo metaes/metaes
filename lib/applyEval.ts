@@ -16,6 +16,11 @@ export const evaluateProp = (
   c: Continuation,
   cerr: ErrorContinuation
 ) => {
+  const _config = Object.assign({}, config, {
+    interceptor(e) {
+      config.interceptor(e);
+    }
+  });
   callInterceptor(e, config, env, { phase: "enter", propertyKey });
 
   const value = e[propertyKey];
