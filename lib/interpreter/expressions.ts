@@ -79,10 +79,14 @@ export function CallExpression(
             env,
             config,
             callee => {
-              try {
-                c(apply(e, callee, args, config));
-              } catch (error) {
-                cerr(ensureException(error, calleeNode));
+              if (typeof callee === "function") {
+                try {
+                  c(apply(e, callee, args, config));
+                } catch (error) {
+                  cerr(ensureException(error, calleeNode));
+                }
+              } else {
+                cerr(new TypeError(callee + " is not a function"));
               }
             },
             cerr

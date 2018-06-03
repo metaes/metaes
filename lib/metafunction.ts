@@ -33,14 +33,14 @@ export const evaluateMetaFunction = (
           throw error;
       }
     }
-    config && callInterceptor(e, config, env, "enter", metaFunction);
+    config && callInterceptor(e, config, env, { phase: "enter" }, metaFunction);
     let _calledAfterInterceptor = false;
 
     function _interceptorAfter(e, value, env) {
       if (_calledAfterInterceptor) {
         return;
       }
-      config && callInterceptor(e, config, env, "exit", value);
+      config && callInterceptor(e, config, env, { phase: "exit" }, value);
       _calledAfterInterceptor = true;
     }
 
@@ -62,8 +62,8 @@ export const evaluateMetaFunction = (
               exception.location = e;
             }
             cerr(exception);
-            // TODO: if running inside metaes, would be good not to use JavaScript errors, but rather exceptions only
-            throw exception.value || exception;
+          // TODO: if running inside metaes, would be good not to use JavaScript errors, but rather exceptions only
+          // throw exception.value || exception;
         }
         _interceptorAfter(e, exception.value, env);
       }
@@ -75,7 +75,6 @@ export const evaluateMetaFunction = (
 
 export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) =>
   function(this: any, ...args) {
-    const config = metaFunction.config;
     let result;
     let error;
     evaluateMetaFunction(
@@ -83,7 +82,6 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) =>
       r => (result = r),
       exception => {
         error = exception.value || exception;
-        config && config.onError && config.onError(exception);
       },
       this,
       args

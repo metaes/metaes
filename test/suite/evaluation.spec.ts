@@ -16,18 +16,21 @@ describe("Evaluation", () => {
   });
 
   it("should be notified once about async error", () =>
-    new Promise(resolve => {
+    new Promise((resolve, reject) => {
       try {
         context.evaluate(
-          "setTimeout(()=>console())", // should throw, `console` is not a function
+          "setTimeout(()=>console())",
           null,
           null,
           { setTimeout, console },
           {
             // FIX: this handler should be called only once.
             onError(e) {
+              console.log("got it");
               if (e instanceof TypeError) {
                 resolve();
+              } else {
+                reject();
               }
             }
           }

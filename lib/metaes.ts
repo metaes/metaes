@@ -14,6 +14,9 @@ export interface ScriptingContext {
 let scriptsConter = 0;
 
 export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config = {}) => {
+  if (!config.interceptor) {
+    config.interceptor = function noop() {};
+  }
   try {
     const node: ASTNode =
       typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source);
@@ -33,7 +36,7 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
     evaluate(
       node,
       env,
-      config,
+      config as EvaluationConfig,
       val => c && c(val, node),
       exception => {
         if (cerr) {

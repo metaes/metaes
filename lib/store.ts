@@ -14,7 +14,7 @@ type InterceptorProxy = {
 
 export type ScriptTracking = { root: FlameNode; path: FlameNode[] };
 type RootValue = "_context";
-type FlameNode = { value: Evaluation | RootValue; children: FlameNode[]; size?: any };
+type FlameNode = { value: Evaluation | RootValue; children: FlameNode[] };
 type Tracker = (evaluation: Evaluation, tracking: ScriptTracking) => void;
 type TrackingMap = { [key: string]: ScriptTracking };
 
@@ -30,7 +30,6 @@ export const createFlameInterceptor = (trackingMap: TrackingMap) => (evaluation:
     };
   }
   if (evaluation.tag.phase === "enter") {
-    evaluation.timestamp = window.performance.now();
     const node: FlameNode = {
       value: evaluation,
       children: []
@@ -43,14 +42,7 @@ export const createFlameInterceptor = (trackingMap: TrackingMap) => (evaluation:
     }
   } else {
     // exit
-    const enterNode = tracking.path.pop();
-    if (tracking.path.length === 0) {
-      //delete tracking.root;
-    }
-    if (enterNode) {
-      //console.log(enterNode.value.e.type, evaluation.e.type)
-      enterNode.size = [enterNode.value.timestamp, window.performance.now()];
-    }
+    tracking.path.pop();
   }
 };
 
@@ -60,7 +52,7 @@ export class MetaesStore<T> {
   private _proxies: InterceptorProxy[] = [];
   private _tracking: TrackingMap = {};
 
-  constructor(private store: T, initialTrap?: InterceptorTrap) {
+  constructor(private _store: T, initialTrap?: InterceptorTrap) {
     const flameInterceptor = createFlameInterceptor(this._tracking);
     const config = {
       interceptor: e => {
@@ -71,12 +63,16 @@ export class MetaesStore<T> {
     this._context = new MetaesContext(
       this.c.bind(this),
       this.cerr.bind(this),
-      { values: { store: this.store, console } },
+      { values: { store: this._store, console } },
       config
     );
     if (initialTrap) {
-      this._proxies.push({ trap: initialTrap, target: store });
+      this._proxies.push({ trap: initialTrap, target: _store });
     }
+  }
+
+  getStore() {
+    return this._store;
   }
 
   addTracker(tracker: Tracker) {
@@ -87,7 +83,7 @@ export class MetaesStore<T> {
     function pathIncludes(type, path: FlameNode[]) {
       for (let i = path.length - 1; i >= 0; i--) {
         const element = path[i];
-        if (element.value && element.value.e.type === type) {
+        if (element.value !== "_context" && element.value && element.value.e.type === type) {
           console.log("has");
         }
       }
@@ -104,7 +100,7 @@ export class MetaesStore<T> {
   }
 
   async evaluate(source: ((store: T, ...rest) => void), ...args: any[]) {
-    return (await evalToPromise(this._context, source)).apply(null, [this.store].concat(args));
+    return (await evalToPromise(this._context, source)).apply(null, [this._store].concat(args));
   }
 
   c(e) {
