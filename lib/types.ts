@@ -41,9 +41,14 @@ export type Evaluate = (
   config?: Partial<EvaluationConfig>
 ) => void;
 
-type InterceptorArgs = [ASTNode, EvaluationValue, Environment, EvaluationTag, number, string];
-
-export type Interceptor = (...args: InterceptorArgs) => void;
+export type Interceptor = (
+  e: ASTNode,
+  value: EvaluationValue,
+  env: Environment,
+  tag: EvaluationTag,
+  timestamp: number,
+  scriptId: string
+) => void;
 
 // TODO: will be used to add properties while transfering RemoteValues
 export interface EvaluationConfig {
