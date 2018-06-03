@@ -17,8 +17,8 @@ export const evaluateProp = (
   cerr: ErrorContinuation
 ) => {
   const _config = Object.assign({}, config, {
-    interceptor(e) {
-      config.interceptor(e);
+    interceptor() {
+      config.interceptor.apply(null, arguments);
     }
   });
   callInterceptor(e, config, env, { phase: "enter", propertyKey });

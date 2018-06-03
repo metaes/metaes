@@ -18,15 +18,15 @@ export interface Environment extends EnvironmentBase {
 }
 
 export const callInterceptor = (e: ASTNode, config: EvaluationConfig, env: Environment, tag: EvaluationTag, value?) =>
-  config.interceptor({
+  config.interceptor(
     e,
-    value: e.type === "Identifier" ? getValueOrReference((e as Identifier).name, env, config, value) : value,
+    e.type === "Identifier" ? getValueOrReference((e as Identifier).name, env, config, value) : value,
     env,
     tag,
-    timestamp: new Date().getTime(),
-    scriptId: config.scriptId || ""
-  });
-  
+    new Date().getTime(),
+    config.scriptId || ""
+  );
+
 export function mergeValues(values: object, environment?: Environment): EnvironmentBase {
   if (environment) {
     for (let k of Object.keys(values)) {

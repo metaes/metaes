@@ -1,6 +1,6 @@
 import { ASTNode } from "./nodes/nodes";
 import { Environment, Reference } from "./environment";
-import { FunctionNode, JavaScriptASTNode } from "./nodeTypes";
+import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
   type?: "Error" | "ReturnStatement" | "EmptyNode" | "NotImplemented" | "ThrowStatement" | "ReferenceError";
@@ -20,8 +20,6 @@ export type OnError = (e: MetaesException) => void;
  */
 export type EvaluationTag = { phase: "enter" | "exit"; propertyKey?: string };
 
-export type EvaluationValue = any | Reference;
-
 export interface Evaluation {
   e: ASTNode;
   value: EvaluationValue;
@@ -30,6 +28,8 @@ export interface Evaluation {
   timestamp: number;
   scriptId: string;
 }
+
+export type EvaluationValue = any | Reference;
 
 export type Source = string | ASTNode;
 
@@ -41,7 +41,9 @@ export type Evaluate = (
   config?: Partial<EvaluationConfig>
 ) => void;
 
-export type Interceptor = (evaluation: Evaluation) => void;
+type InterceptorArgs = [ASTNode, EvaluationValue, Environment, EvaluationTag, number, string];
+
+export type Interceptor = (...args: InterceptorArgs) => void;
 
 // TODO: will be used to add properties while transfering RemoteValues
 export interface EvaluationConfig {
@@ -71,7 +73,7 @@ type Interpreter<T extends ASTNode> = (
 ) => void;
 
 export type interpretersMap = {
-  [key: string]: Interpreter<JavaScriptASTNode>;
+  [key: string]: Interpreter<any>;
 };
 
 export type MetaesFunction = {
