@@ -19,10 +19,10 @@ type Tracker = (evaluation: Evaluation, tracking: ScriptTracking) => void;
 type TrackingMap = { [key: string]: ScriptTracking };
 
 export const createFlameInterceptor: (TrackingMap) => Interceptor = (trackingMap: TrackingMap) => (
+  tag,
   e,
   value,
   env,
-  tag,
   timestamp,
   scriptId
 ) => {
@@ -86,7 +86,7 @@ export class MetaesStore<T> {
     this._trackers.push(tracker);
   }
 
-  interceptor(e, value, env, tag, timestamp, scriptId) {
+  interceptor(tag, e, value, env, timestamp, scriptId) {
     function pathIncludes(type, path: FlameNode[]) {
       for (let i = path.length - 1; i >= 0; i--) {
         const element = path[i];
@@ -103,7 +103,7 @@ export class MetaesStore<T> {
         pathIncludes("AssignmentExpression", tracking.path);
       }
     }
-    this._trackers.forEach(tracker => tracker({ e, value, env, tag, timestamp, scriptId }, tracking));
+    this._trackers.forEach(tracker => tracker({ tag, e, value, env, timestamp, scriptId }, tracking));
   }
 
   async evaluate(source: ((store: T, ...rest) => void), ...args: any[]) {

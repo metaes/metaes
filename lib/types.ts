@@ -42,10 +42,10 @@ export type Evaluate = (
 ) => void;
 
 export type Interceptor = (
+  tag: EvaluationTag,
   e: ASTNode,
   value: EvaluationValue,
   env: Environment,
-  tag: EvaluationTag,
   timestamp: number,
   scriptId: string
 ) => void;
