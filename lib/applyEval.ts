@@ -16,15 +16,15 @@ export const evaluateProp = (
   c: Continuation,
   cerr: ErrorContinuation
 ) => {
-  callInterceptor({ phase: "enter", propertyKey }, e, config, env);
+  callInterceptor({ phase: "enter", propertyKey }, config, e, env);
 
   const value = e[propertyKey];
   const _c = value => {
-    callInterceptor({ phase: "exit", propertyKey }, e, config, env);
+    callInterceptor({ phase: "exit", propertyKey }, config, e, env);
     c(value);
   };
   const _cerr = exception => {
-    callInterceptor({ phase: "exit", propertyKey }, e, config, env);
+    callInterceptor({ phase: "exit", propertyKey }, config, e, env);
     cerr(exception);
   };
   Array.isArray(value) ? evaluateArray(value, env, config, _c, _cerr) : evaluate(value, env, config, _c, _cerr);
@@ -40,14 +40,14 @@ export const evaluatePropWrap = (
   c: Continuation,
   cerr: ErrorContinuation
 ) => {
-  callInterceptor({ phase: "enter", propertyKey }, e, config, env);
+  callInterceptor({ phase: "enter", propertyKey }, config, e, env);
 
   const _c = value => {
-    callInterceptor({ phase: "exit", propertyKey }, e, config, env);
+    callInterceptor({ phase: "exit", propertyKey }, config, e, env);
     c(value);
   };
   const _cerr = exception => {
-    callInterceptor({ phase: "exit", propertyKey }, e, config, env);
+    callInterceptor({ phase: "exit", propertyKey }, config, e, env);
     cerr(exception);
   };
   body(_c, _cerr);
@@ -61,14 +61,14 @@ export function evaluate(
   cerr: ErrorContinuation
 ) {
   if (e.type in tokens) {
-    callInterceptor({ phase: "enter" }, e, config, env);
+    callInterceptor({ phase: "enter" }, config, e, env);
     try {
       tokens[e.type](
         e,
         env,
         config,
         value => {
-          callInterceptor({ phase: "exit" }, e, config, env, value);
+          callInterceptor({ phase: "exit" }, config, e, env, value);
           c(value);
         },
         exception => {
@@ -81,7 +81,7 @@ export function evaluate(
               });
               break;
             case "ReturnStatement":
-              callInterceptor({ phase: "exit" }, e, config, env, exception.value);
+              callInterceptor({ phase: "exit" }, config, e, env, exception.value);
               cerr(exception);
               break;
             default:

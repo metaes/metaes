@@ -145,8 +145,8 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
                       // just call interceptors, don't evaluate the Identifier which is not a Reference
                       // TODO: add tests/refactor
                       let _config = Object.assign({}, config, { useReferences: false });
-                      callInterceptor({ phase: "enter" }, e.property, _config, env);
-                      callInterceptor({ phase: "exit" }, e.property, _config, env);
+                      callInterceptor({ phase: "enter" }, _config, e.property, env);
+                      callInterceptor({ phase: "exit" }, _config, e.property, env);
                       c(object[propertyNode.name]);
                     },
                     e,
@@ -270,7 +270,7 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
 
           break;
         case "Identifier":
-          callInterceptor({ phase: "enter" }, e.left, config, right, env);
+          callInterceptor({ phase: "enter" }, config, e.left, right, env);
           setValueAndCallAfterInterceptor(e.left, env, config, leftNode.name, right, false, c, cerr);
           break;
         default:

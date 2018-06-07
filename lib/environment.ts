@@ -17,7 +17,7 @@ export interface Environment extends EnvironmentBase {
   internal?: Environment;
 }
 
-export const callInterceptor = (tag: EvaluationTag, e: ASTNode, config: EvaluationConfig, env: Environment, value?) =>
+export const callInterceptor = (tag: EvaluationTag, config: EvaluationConfig, e: ASTNode, env: Environment, value?) =>
   config.interceptor(
     tag,
     e,
@@ -62,7 +62,7 @@ export const setValueAndCallAfterInterceptor = (
     value,
     isDeclaration,
     value => {
-      callInterceptor({ phase: "exit" }, e, config, env, getValueOrReference(name, env, config, value));
+      callInterceptor({ phase: "exit" }, config, e, env, getValueOrReference(name, env, config, value));
       c(value);
     },
     cerr

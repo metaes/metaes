@@ -92,7 +92,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
             let cnt = (_exception?: MetaesException) => {
               // undefined as value, because Identifier at this point doesn't represent a Reference.
               // It does after VariableDeclarator finishes.
-              callInterceptor({ phase: "exit" }, e.id, config, env);
+              callInterceptor({ phase: "exit" }, config, e.id, env);
               c(v);
             };
             evaluate(e.id, env, config, cnt, cnt);
@@ -105,7 +105,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
           init: undefined
         };
         const cnt = () => {
-          callInterceptor({ phase: "exit" }, e.id, config, env);
+          callInterceptor({ phase: "exit" }, config, e.id, env);
           c(value);
         };
         evaluate(e.id, env, config, cnt, cnt);
