@@ -206,7 +206,28 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
                 env,
                 config,
                 object => {
-                  function doAssign(object, key, value) {
+                  const property = leftNode.property;
+                  if (leftNode.computed) {
+                    evaluateProp("property", leftNode, env, config, key => evalAssignment(object, key, right), cerr);
+                  } else if (property.type === "Identifier") {
+                    evaluatePropWrap(
+                      "property",
+                      (c, _cerr) => {
+                        const value = property.name;
+                        callInterceptor({ phase: "enter" }, config, property, env);
+                        callInterceptor({ phase: "exit" }, config, property, env, value);
+                        c(null);
+                      },
+                      leftNode,
+                      env,
+                      config,
+                      () => evalAssignment(object, property.name, right),
+                      cerr
+                    );
+                  } else {
+                    cerr(NotImplementedException("This kind of assignment is not implemented yet.", property));
+                  }
+                  function evalAssignment(object, key, value) {
                     switch (e.operator) {
                       case "=":
                         c((object[key] = value));
@@ -247,13 +268,6 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
                       default:
                         cerr(NotImplementedException(e.type + "has not implemented " + e.operator));
                     }
-                  }
-                  if (leftNode.computed) {
-                    evaluate(leftNode.property, env, config, key => doAssign(object, key, right), cerr);
-                  } else if (leftNode.property.type === "Identifier") {
-                    doAssign(object, leftNode.property.name, right);
-                  } else {
-                    cerr(NotImplementedException("This kind of assignment is not implemented yet.", leftNode.property));
                   }
                 },
                 cerr
