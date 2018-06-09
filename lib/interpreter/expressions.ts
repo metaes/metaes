@@ -142,12 +142,10 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
                   evaluatePropWrap(
                     "property",
                     (c, _cerr) => {
-                      // just call interceptors, don't evaluate the Identifier which is not a Reference
-                      // TODO: add tests/refactor
-                      let _config = Object.assign({}, config, { useReferences: false });
-                      callInterceptor({ phase: "enter" }, _config, e.property, env);
-                      callInterceptor({ phase: "exit" }, _config, e.property, env);
-                      c(object[propertyNode.name]);
+                      const value = object[propertyNode.name];
+                      callInterceptor({ phase: "enter" }, config, e.property, env);
+                      callInterceptor({ phase: "exit" }, config, e.property, env, value);
+                      c(value);
                     },
                     e,
                     env,

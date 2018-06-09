@@ -26,8 +26,8 @@ describe("Interceptor", () => {
       results.push([...args]);
     }
     function noop() {}
-    const source = "2+2; a.b";
-    metaesEval(source, noop, noop, { a: { b: 2 } }, { interceptor, onError });
+    const source = "2+2; a.b; console.log";
+    metaesEval(source, noop, console.log, { a: { b: 2 }, console }, { interceptor, onError });
 
     let level = 0;
     results.forEach(([a, b, value]) => {
