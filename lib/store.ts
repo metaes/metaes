@@ -12,11 +12,16 @@ type InterceptorProxy = {
   trap: InterceptorTrap;
 };
 
-export type ScriptTracking = { root: FlameNode; path: FlameNode[] };
+export type ScriptHistory = { root: TrackingNode; path: TrackingNode[] };
+
 type RootValue = "_context";
-type FlameNode = { value: Evaluation | RootValue; children: FlameNode[] };
-type Tracker = (evaluation: Evaluation, tracking: ScriptTracking) => void;
-type TrackingMap = { [key: string]: ScriptTracking };
+type TrackingNode = {
+  evaluation: Evaluation | RootValue | string;
+  children: TrackingNode[];
+  namedChildren: { [key: string]: TrackingNode | TrackingNode[] };
+};
+type Tracker = (evaluation: Evaluation, tracking: ScriptHistory) => void;
+type TrackingMap = { [key: string]: ScriptHistory };
 
 export const createFlameInterceptor: (TrackingMap) => Interceptor = (trackingMap: TrackingMap) => (
   tag,
@@ -32,18 +37,25 @@ export const createFlameInterceptor: (TrackingMap) => Interceptor = (trackingMap
       path: [],
       root: {
         children: [],
-        value: "_context"
+        namedChildren: {},
+        evaluation: "_context"
       }
     };
   }
   if (tag.phase === "enter") {
-    const node: FlameNode = {
-      value: { e, value, env, tag, timestamp, scriptId },
+    const node: TrackingNode = {
+      evaluation: tag.propertyKey ? tag.propertyKey : { e, value, env, tag, timestamp, scriptId },
+      namedChildren: {},
       children: []
     };
     tracking.path.push(node);
     if (tracking.path.length > 1) {
-      tracking.path[tracking.path.length - 2].children.push(node);
+      const parent = tracking.path[tracking.path.length - 2];
+      parent.children.push(node);
+      if (typeof parent.evaluation === "string" && tracking.path.length > 2) {
+        const grandParent = tracking.path[tracking.path.length - 3];
+        grandParent.namedChildren[parent.evaluation] = node;
+      }
     } else {
       tracking.root.children.push(node);
     }
@@ -87,10 +99,10 @@ export class MetaesStore<T> {
   }
 
   interceptor(tag, e, value, env, timestamp, scriptId) {
-    function pathIncludes(type, path: FlameNode[]) {
+    function pathIncludes(type, path: TrackingNode[]) {
       for (let i = path.length - 1; i >= 0; i--) {
         const element = path[i];
-        if (element.value !== "_context" && element.value && element.value.e.type === type) {
+        if (typeof element.evaluation === "object" && element.evaluation.e.type === type) {
           console.log("has");
         }
       }
