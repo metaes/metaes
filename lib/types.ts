@@ -21,10 +21,10 @@ export type OnError = (e: MetaesException) => void;
 export type EvaluationTag = { phase: "enter" | "exit"; propertyKey?: string };
 
 export interface Evaluation {
+  tag: EvaluationTag;
   e: ASTNode;
   value: EvaluationValue;
   env: Environment;
-  tag: EvaluationTag;
   timestamp: number;
   scriptId: string;
 }

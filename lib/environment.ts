@@ -1,5 +1,4 @@
 import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationTag } from "./types";
-import { Identifier } from "./nodeTypes";
 import { ASTNode } from "./nodes/nodes";
 
 export class EnvNotFoundError extends Error {}
@@ -18,14 +17,7 @@ export interface Environment extends EnvironmentBase {
 }
 
 export const callInterceptor = (tag: EvaluationTag, config: EvaluationConfig, e: ASTNode, env: Environment, value?) =>
-  config.interceptor(
-    tag,
-    e,
-    e.type === "Identifier" ? getValueOrReference((e as Identifier).name, env, config, value) : value,
-    env,
-    new Date().getTime(),
-    config.scriptId || ""
-  );
+  config.interceptor(tag, e, value, env, new Date().getTime(), config.scriptId || "");
 
 export function mergeValues(values: object, environment?: Environment): EnvironmentBase {
   if (environment) {

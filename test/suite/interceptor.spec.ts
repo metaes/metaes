@@ -13,6 +13,37 @@ describe("Interceptor", () => {
     }
     function noop() {}
     metaesEval("2", noop, noop, {}, { interceptor, onError });
-    assert.equal(results.length, 6);
+    assert.equal(results.length, 10);
+  });
+
+  it.only("should pass values of MemberExpression", () => {
+    let results: any[] = [];
+
+    function onError(e) {
+      console.log(e);
+    }
+    function interceptor(...args) {
+      results.push([...args]);
+    }
+    function noop() {}
+    const source = "2+2; a.b";
+    metaesEval(source, noop, noop, { a: { b: 2 } }, { interceptor, onError });
+
+    let level = 0;
+    results.forEach(([a, b, value]) => {
+      if (a.phase === "exit") {
+        level--;
+      }
+      const padding = "".padEnd(level, "  ");
+      if (a.propertyKey) {
+        console.log(padding, `(${a.phase === "exit" ? "/" : ""}${a.propertyKey})`);
+      } else {
+        console.log(padding, `"${source.substring(...b.range)}"`, b.type + ":", value);
+      }
+
+      if (a.phase === "enter") {
+        level++;
+      }
+    });
   });
 });

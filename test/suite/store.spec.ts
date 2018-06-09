@@ -5,12 +5,17 @@ import { expect } from "chai";
 
 describe("MetaesStore", () => {
   it("should execute code inside store", async () => {
-    const store = new MetaesStore({});
+    const store = new MetaesStore(
+      {},
+      {
+        set: (store, key, value) => {
+          console.log(key, value);
+        }
+      }
+    );
 
     store.addTracker((evaluation, path) => {
       if (evaluation.e.type === "Program" && evaluation.tag.phase === "exit") {
-        console.log(JSON.stringify(path.root, null, 2));
-
         expect(path.root.evaluation).to.equal("_context");
         const Program = path.root.children[0];
 
