@@ -1,35 +1,74 @@
 import { describe, it } from "mocha";
-import { assert } from "chai";
+import { assert, expect } from "chai";
 import { metaesEval } from "../../lib/metaes";
 
 describe("Interceptor", () => {
-  it("should be called specific amount of times", () => {
-    let results: any[] = [];
-    function onError(e) {
-      console.log(e);
-    }
-    function interceptor(e) {
-      results.push(e);
-    }
-    function noop() {}
-    metaesEval("2", noop, noop, {}, { interceptor, onError });
-    assert.equal(results.length, 10);
-  });
-
-  it.only("should pass values of MemberExpression", () => {
-    let results: any[] = [];
+  function getEvaluationsOf(script: string, env) {
+    let evaluations: any[] = [];
 
     function onError(e) {
       console.log(e);
     }
     function interceptor(...args) {
-      results.push([...args]);
+      evaluations.push([...args]);
     }
+
     function noop() {}
+    metaesEval(script, noop, console.log, env, { interceptor, onError });
+    return evaluations;
+  }
+
+  it("should be called specific amount of times", () => {
+    assert.equal(getEvaluationsOf("2", {}).length, 10);
+  });
+
+  it("should pass values of MemberExpression", () => {
+    expect(
+      getEvaluationsOf("a.b", { a: { b: 2 } })
+        .map(([a]) => a.propertyKey)
+        .filter(Boolean)
+    ).to.eql(["body", "expression", "object", "object", "property", "property", "expression", "body"]);
+
+    expect(
+      getEvaluationsOf("a.b", { a: { b: 2 } })
+        .map(([a, b]) => a.propertyKey || b.type)
+        .filter(Boolean)
+    ).to.eql([
+      "Program",
+      "body",
+      "ExpressionStatement",
+      "expression",
+      "MemberExpression",
+      "object",
+      "Identifier",
+      "Identifier",
+      "object",
+      "property",
+      "Identifier",
+      "Identifier",
+      "property",
+      "MemberExpression",
+      "expression",
+      "ExpressionStatement",
+      "body",
+      "Program"
+    ]);
+    expect(
+      getEvaluationsOf("a.b", { a: { b: 2 } })
+        .map(([a, b, value]) => (value ? [a.propertyKey || b.type, value] : null))
+        .filter(Boolean)
+    ).to.eql([
+      ["Identifier", { b: 2 }],
+      ["Identifier", 2],
+      ["MemberExpression", 2],
+      ["ExpressionStatement", 2],
+      ["Program", 2]
+    ]);
     const source = "a.b; a.c=2; a['d']=4;";
-    metaesEval(source, noop, console.log, { a: { b: 2 }, console }, { interceptor, onError });
+    let results = getEvaluationsOf(source, { a: { b: 2 } });
 
     let level = 0;
+
     results.forEach(([a, b, value]) => {
       if (a.phase === "exit") {
         level--;
