@@ -5,22 +5,29 @@ import { expect } from "chai";
 
 describe("MetaesStore", () => {
   it("should execute code inside store", async () => {
-    const store = new MetaesStore(
-      {},
-      {
-        set: (store, key, value) => {
-          console.log(key, value);
-        }
+    const value = {};
+    let called = false;
+    const store = new MetaesStore(value, {
+      set: (store, key, value) => {
+        called = true;
+        expect(store).to.equal(value);
+        expect(key).to.equal("foo");
+        expect(value).to.equal("bar");
       }
-    );
+    });
 
-    store.addTracker((evaluation, path) => {
-      if (evaluation.e.type === "Program" && evaluation.tag.phase === "exit") {
-        expect(path.root.evaluation).to.equal("_context");
-        const Program = path.root.children[0];
+    store.addListener((evaluation, path) => {
+      if (evaluation.tag.phase === "exit") {
+        if (evaluation.e.type === "Program") {
+          expect(path.root.evaluation).to.equal("_context");
+          const Program = path.root.children[0];
 
-        expect((Program.evaluation as any).e.type).to.equal("Program");
-        expect(Program.namedChildren).to.have.all.keys(["body"]);
+          expect((Program.evaluation as any).e.type).to.equal("Program");
+          expect(Program.namedChildren).to.have.all.keys(["body"]);
+        }
+
+        if (evaluation.e.type === "AssignmentExpression") {
+        }
       }
     });
 
@@ -29,5 +36,6 @@ describe("MetaesStore", () => {
     });
 
     expect(store.getStore()["foo"]).to.equal("bar");
+    expect(called).to.be.true;
   });
 });

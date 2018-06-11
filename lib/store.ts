@@ -1,78 +1,39 @@
 import { evalToPromise, MetaesContext } from "./metaes";
 import { Evaluation, Interceptor } from "./types";
+import { ASTNode } from "./nodes/nodes";
 
-type InterceptorTrap = {
+type MetaesProxyHandler = {
   apply?: (target: object, methodName: string, args: any[]) => void;
   get?: (target: object, key: string, value: any) => void;
   set?: (target: object, key: string, args: any) => void;
 };
 
-type InterceptorProxy = {
+type MetaesProxy = {
   target: any;
-  trap: InterceptorTrap;
+  handler: MetaesProxyHandler;
 };
 
-export type ScriptHistory = { root: TrackingNode; path: TrackingNode[] };
+export type FlameGraph = { root: ExecutionNode; executionStack: ExecutionNode[] };
 
 type RootValue = "_context";
-type TrackingNode = {
-  evaluation: Evaluation | RootValue | string;
-  children: TrackingNode[];
-  namedChildren: { [key: string]: TrackingNode | TrackingNode[] };
-};
-type Tracker = (evaluation: Evaluation, tracking: ScriptHistory) => void;
-type TrackingMap = { [key: string]: ScriptHistory };
 
-export const createFlameInterceptor: (TrackingMap) => Interceptor = (trackingMap: TrackingMap) => (
-  tag,
-  e,
-  value,
-  env,
-  timestamp,
-  scriptId
-) => {
-  let tracking = trackingMap[scriptId];
-  if (!tracking) {
-    tracking = trackingMap[scriptId] = {
-      path: [],
-      root: {
-        children: [],
-        namedChildren: {},
-        evaluation: "_context"
-      }
-    };
-  }
-  if (tag.phase === "enter") {
-    const node: TrackingNode = {
-      evaluation: tag.propertyKey ? tag.propertyKey : { e, value, env, tag, timestamp, scriptId },
-      namedChildren: {},
-      children: []
-    };
-    tracking.path.push(node);
-    if (tracking.path.length > 1) {
-      const parent = tracking.path[tracking.path.length - 2];
-      parent.children.push(node);
-      if (typeof parent.evaluation === "string" && tracking.path.length > 2) {
-        const grandParent = tracking.path[tracking.path.length - 3];
-        grandParent.namedChildren[parent.evaluation] = node;
-      }
-    } else {
-      tracking.root.children.push(node);
-    }
-  } else {
-    // exit
-    tracking.path.pop();
-  }
+type ExecutionNode = ASTNode & {
+  evaluation: Evaluation | RootValue | string;
+  children: ExecutionNode[];
+  namedChildren: { [key: string]: ExecutionNode | ExecutionNode[] };
 };
+
+type EvaluationListener = (evaluation: Evaluation, flameGraph: FlameGraph) => void;
+type FlameGraphs = { [key: string]: FlameGraph };
 
 export class MetaesStore<T> {
   private _context: MetaesContext;
-  private _trackers: Tracker[] = [];
-  private _proxies: InterceptorProxy[] = [];
-  private _tracking: TrackingMap = {};
+  private _listeners: EvaluationListener[] = [];
+  private _proxies: MetaesProxy[] = [];
+  private _flameGraphs: FlameGraphs = {};
 
-  constructor(private _store: T, initialTrap?: InterceptorTrap) {
-    const flameInterceptor = createFlameInterceptor(this._tracking);
+  constructor(private _store: T, rootValueHandler?: MetaesProxyHandler) {
+    const flameInterceptor = createFlameInterceptor(this._flameGraphs);
     const config = {
       interceptor: (...args) => {
         flameInterceptor.apply(null, args);
@@ -85,8 +46,8 @@ export class MetaesStore<T> {
       { values: { store: this._store, console } },
       config
     );
-    if (initialTrap) {
-      this._proxies.push({ trap: initialTrap, target: _store });
+    if (rootValueHandler) {
+      this._proxies.push({ handler: rootValueHandler, target: _store });
     }
   }
 
@@ -94,12 +55,12 @@ export class MetaesStore<T> {
     return this._store;
   }
 
-  addTracker(tracker: Tracker) {
-    this._trackers.push(tracker);
+  addListener(listener: EvaluationListener) {
+    this._listeners.push(listener);
   }
 
   interceptor(tag, e, value, env, timestamp, scriptId) {
-    function pathIncludes(type, path: TrackingNode[]) {
+    function pathIncludes(type, path: ExecutionNode[]) {
       for (let i = path.length - 1; i >= 0; i--) {
         const element = path[i];
         if (typeof element.evaluation === "object" && element.evaluation.e.type === type) {
@@ -107,15 +68,15 @@ export class MetaesStore<T> {
         }
       }
     }
-    const tracking = this._tracking[scriptId];
+    const tree = this._flameGraphs[scriptId];
     for (let i = 0; i < this._proxies.length; i++) {
       const proxy = this._proxies[i];
       if (proxy.target === value) {
-        console.log(tracking);
-        pathIncludes("AssignmentExpression", tracking.path);
+        console.log(tree);
+        pathIncludes("AssignmentExpression", tree.executionStack);
       }
     }
-    this._trackers.forEach(tracker => tracker({ tag, e, value, env, timestamp, scriptId }, tracking));
+    this._listeners.forEach(interceptor => interceptor({ tag, e, value, env, timestamp, scriptId }, tree));
   }
 
   async evaluate(source: ((store: T, ...rest) => void), ...args: any[]) {
@@ -129,4 +90,41 @@ export class MetaesStore<T> {
   cerr(exception) {
     console.log("exception:", exception);
   }
+}
+
+export function createFlameInterceptor(flameGraphs: FlameGraphs) {
+  return (tag, e, value, env, timestamp, scriptId) => {
+    let flameGraph = flameGraphs[scriptId];
+    if (!flameGraph) {
+      flameGraph = flameGraphs[scriptId] = {
+        executionStack: [],
+        root: {
+          children: [],
+          namedChildren: {},
+          evaluation: "_context"
+        }
+      };
+    }
+    if (tag.phase === "enter") {
+      const node: ExecutionNode = {
+        evaluation: tag.propertyKey ? tag.propertyKey : { e, value, env, tag, timestamp, scriptId },
+        namedChildren: {},
+        children: []
+      };
+      flameGraph.executionStack.push(node);
+      if (flameGraph.executionStack.length > 1) {
+        const parent = flameGraph.executionStack[flameGraph.executionStack.length - 2];
+        parent.children.push(node);
+        if (typeof parent.evaluation === "string" && flameGraph.executionStack.length > 2) {
+          const grandParent = flameGraph.executionStack[flameGraph.executionStack.length - 3];
+          grandParent.namedChildren[parent.evaluation] = node;
+        }
+      } else {
+        flameGraph.root.children.push(node);
+      }
+    } else {
+      // exit
+      flameGraph.executionStack.pop();
+    }
+  };
 }
