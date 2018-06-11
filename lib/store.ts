@@ -1,5 +1,5 @@
 import { evalToPromise, MetaesContext } from "./metaes";
-import { Evaluation, Interceptor } from "./types";
+import { Evaluation } from "./types";
 import { ASTNode } from "./nodes/nodes";
 
 type MetaesProxyHandler = {
@@ -15,10 +15,8 @@ type MetaesProxy = {
 
 export type FlameGraph = { root: ExecutionNode; executionStack: ExecutionNode[] };
 
-type RootValue = "_context";
-
 type ExecutionNode = ASTNode & {
-  evaluation: Evaluation | RootValue | string;
+  evaluation: Evaluation | string;
   children: ExecutionNode[];
   namedChildren: { [key: string]: ExecutionNode | ExecutionNode[] };
 };
@@ -33,7 +31,7 @@ export class MetaesStore<T> {
   private _flameGraphs: FlameGraphs = {};
 
   constructor(private _store: T, rootValueHandler?: MetaesProxyHandler) {
-    const flameInterceptor = createFlameInterceptor(this._flameGraphs);
+    const flameInterceptor = this._createFlameGraphBuilder();
     const config = {
       interceptor: (...args) => {
         flameInterceptor.apply(null, args);
@@ -60,23 +58,14 @@ export class MetaesStore<T> {
   }
 
   interceptor(tag, e, value, env, timestamp, scriptId) {
-    function pathIncludes(type, path: ExecutionNode[]) {
-      for (let i = path.length - 1; i >= 0; i--) {
-        const element = path[i];
-        if (typeof element.evaluation === "object" && element.evaluation.e.type === type) {
-          console.log("has");
-        }
-      }
-    }
     const tree = this._flameGraphs[scriptId];
     for (let i = 0; i < this._proxies.length; i++) {
       const proxy = this._proxies[i];
       if (proxy.target === value) {
         console.log(tree);
-        pathIncludes("AssignmentExpression", tree.executionStack);
       }
     }
-    this._listeners.forEach(interceptor => interceptor({ tag, e, value, env, timestamp, scriptId }, tree));
+    this._listeners.forEach(listener => listener({ tag, e, value, env, timestamp, scriptId }, tree));
   }
 
   async evaluate(source: ((store: T, ...rest) => void), ...args: any[]) {
@@ -90,41 +79,41 @@ export class MetaesStore<T> {
   cerr(exception) {
     console.log("exception:", exception);
   }
-}
 
-export function createFlameInterceptor(flameGraphs: FlameGraphs) {
-  return (tag, e, value, env, timestamp, scriptId) => {
-    let flameGraph = flameGraphs[scriptId];
-    if (!flameGraph) {
-      flameGraph = flameGraphs[scriptId] = {
-        executionStack: [],
-        root: {
-          children: [],
+  private _createFlameGraphBuilder() {
+    return (tag, e, value, env, timestamp, scriptId) => {
+      let flameGraph = this._flameGraphs[scriptId];
+      if (!flameGraph) {
+        flameGraph = this._flameGraphs[scriptId] = {
+          executionStack: [],
+          root: {
+            children: [],
+            namedChildren: {},
+            evaluation: "script" + scriptId
+          }
+        };
+      }
+      if (tag.phase === "enter") {
+        const node: ExecutionNode = {
+          evaluation: tag.propertyKey ? tag.propertyKey : { e, value, env, tag, timestamp, scriptId },
           namedChildren: {},
-          evaluation: "_context"
-        }
-      };
-    }
-    if (tag.phase === "enter") {
-      const node: ExecutionNode = {
-        evaluation: tag.propertyKey ? tag.propertyKey : { e, value, env, tag, timestamp, scriptId },
-        namedChildren: {},
-        children: []
-      };
-      flameGraph.executionStack.push(node);
-      if (flameGraph.executionStack.length > 1) {
-        const parent = flameGraph.executionStack[flameGraph.executionStack.length - 2];
-        parent.children.push(node);
-        if (typeof parent.evaluation === "string" && flameGraph.executionStack.length > 2) {
-          const grandParent = flameGraph.executionStack[flameGraph.executionStack.length - 3];
-          grandParent.namedChildren[parent.evaluation] = node;
+          children: []
+        };
+        flameGraph.executionStack.push(node);
+        if (flameGraph.executionStack.length > 1) {
+          const parent = flameGraph.executionStack[flameGraph.executionStack.length - 2];
+          parent.children.push(node);
+          if (typeof parent.evaluation === "string" && flameGraph.executionStack.length > 2) {
+            const grandParent = flameGraph.executionStack[flameGraph.executionStack.length - 3];
+            grandParent.namedChildren[parent.evaluation] = node;
+          }
+        } else {
+          flameGraph.root.children.push(node);
         }
       } else {
-        flameGraph.root.children.push(node);
+        // exit
+        flameGraph.executionStack.pop();
       }
-    } else {
-      // exit
-      flameGraph.executionStack.pop();
-    }
-  };
+    };
+  }
 }
