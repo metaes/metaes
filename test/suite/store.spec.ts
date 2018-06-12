@@ -16,17 +16,18 @@ describe("MetaesStore", () => {
       }
     });
 
-    store.addListener((evaluation, path) => {
+    store.addListener((evaluation, flameGraph) => {
       if (evaluation.tag.phase === "exit") {
         if (evaluation.e.type === "Program") {
-          expect(path.root.evaluation).to.equal("_context");
-          const Program = path.root.children[0];
+          expect(flameGraph.root.value).to.include("script");
+          const Program = flameGraph.root.children[0];
 
-          expect((Program.evaluation as any).e.type).to.equal("Program");
+          expect((Program.value as any).e.type).to.equal("Program");
           expect(Program.namedChildren).to.have.all.keys(["body"]);
         }
 
-        if (evaluation.e.type === "AssignmentExpression") {
+        if (!evaluation.tag.propertyKey && evaluation.e.type === "AssignmentExpression") {
+          console.log(flameGraph.executionStack[flameGraph.executionStack.length - 1]);
         }
       }
     });

@@ -1,5 +1,5 @@
 import { evalToPromise, MetaesContext } from "./metaes";
-import { Evaluation } from "./types";
+import { EvaluationTag, Evaluation } from "./types";
 import { ASTNode } from "./nodes/nodes";
 
 type MetaesProxyHandler = {
@@ -15,13 +15,14 @@ type MetaesProxy = {
 
 export type FlameGraph = { root: ExecutionNode; executionStack: ExecutionNode[] };
 
-type ExecutionNode = ASTNode & {
-  evaluation: Evaluation | string;
+export type ExecutionNode = {
+  e: ASTNode;
+  value: any;
   children: ExecutionNode[];
   namedChildren: { [key: string]: ExecutionNode | ExecutionNode[] };
 };
 
-type EvaluationListener = (evaluation: Evaluation, flameGraph: FlameGraph) => void;
+type EvaluationListener = (node: Evaluation, flameGraph: FlameGraph) => void;
 type FlameGraphs = { [key: string]: FlameGraph };
 
 export class MetaesStore<T> {
@@ -31,11 +32,18 @@ export class MetaesStore<T> {
   private _flameGraphs: FlameGraphs = {};
 
   constructor(private _store: T, rootValueHandler?: MetaesProxyHandler) {
-    const flameInterceptor = this._createFlameGraphBuilder();
+    const flameBuilderEnterPhase = this._createFlameGraphBuilder("enter");
+    const flameBuilderExitPhase = this._createFlameGraphBuilder("exit");
     const config = {
       interceptor: (...args) => {
-        flameInterceptor.apply(null, args);
-        this.interceptor.apply(this, args);
+        flameBuilderEnterPhase.apply(null, args);
+        try {
+          this.interceptor.apply(this, args);
+        } catch (e) {
+          // TODO: use logger
+          console.log(e);
+        }
+        flameBuilderExitPhase.apply(null, args);
       }
     };
     this._context = new MetaesContext(
@@ -62,10 +70,11 @@ export class MetaesStore<T> {
     for (let i = 0; i < this._proxies.length; i++) {
       const proxy = this._proxies[i];
       if (proxy.target === value) {
-        console.log(tree);
+        // console.log(tree);
       }
     }
-    this._listeners.forEach(listener => listener({ tag, e, value, env, timestamp, scriptId }, tree));
+    const evaluation = { tag, e, value, env, timestamp, scriptId };
+    this._listeners.forEach(listener => listener(evaluation, tree));
   }
 
   async evaluate(source: ((store: T, ...rest) => void), ...args: any[]) {
@@ -80,7 +89,7 @@ export class MetaesStore<T> {
     console.log("exception:", exception);
   }
 
-  private _createFlameGraphBuilder() {
+  private _createFlameGraphBuilder(phase: string) {
     return (tag, e, value, env, timestamp, scriptId) => {
       let flameGraph = this._flameGraphs[scriptId];
       if (!flameGraph) {
@@ -89,13 +98,13 @@ export class MetaesStore<T> {
           root: {
             children: [],
             namedChildren: {},
-            evaluation: "script" + scriptId
+            value: "script" + scriptId
           }
         };
       }
-      if (tag.phase === "enter") {
+      if (tag.phase === phase) {
         const node: ExecutionNode = {
-          evaluation: tag.propertyKey ? tag.propertyKey : { e, value, env, tag, timestamp, scriptId },
+          value: tag.propertyKey ? tag.propertyKey : { e, value, env, tag, timestamp, scriptId },
           namedChildren: {},
           children: []
         };
@@ -103,9 +112,9 @@ export class MetaesStore<T> {
         if (flameGraph.executionStack.length > 1) {
           const parent = flameGraph.executionStack[flameGraph.executionStack.length - 2];
           parent.children.push(node);
-          if (typeof parent.evaluation === "string" && flameGraph.executionStack.length > 2) {
+          if (typeof parent.value === "string" && flameGraph.executionStack.length > 2) {
             const grandParent = flameGraph.executionStack[flameGraph.executionStack.length - 3];
-            grandParent.namedChildren[parent.evaluation] = node;
+            grandParent.namedChildren[parent.value] = node;
           }
         } else {
           flameGraph.root.children.push(node);
