@@ -4,6 +4,13 @@ import { MetaesStore } from "../../lib/store";
 import { expect } from "chai";
 
 describe("MetaesStore", () => {
+  it("should correctly build tree structure of children", async () => {
+    const value = {};
+    const store = new MetaesStore(value);
+    await store.evaluate(store => (store["foo"] = "bar"));
+
+    expect(value["foo"]).to.equal("bar");
+  });
   it("should execute code inside store", async () => {
     const value = {};
     let called = false;

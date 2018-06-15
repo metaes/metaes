@@ -20,14 +20,6 @@ export type OnError = (e: MetaesException) => void;
  */
 export type EvaluationTag = { phase: "enter" | "exit"; propertyKey?: string };
 
-export interface Evaluation {
-  tag: EvaluationTag;
-  e: ASTNode;
-  value: EvaluationValue;
-  env: Environment;
-  timestamp: number;
-  scriptId: string;
-}
 
 export type EvaluationValue = any | Reference;
 
@@ -41,12 +33,21 @@ export type Evaluate = (
   config?: Partial<EvaluationConfig>
 ) => void;
 
+export interface Evaluation {
+  scriptId: string;
+  e: ASTNode;
+  value: EvaluationValue;
+  tag: EvaluationTag;
+  timestamp: number;
+  env: Environment;
+}
+
 export type Interceptor = (
   scriptId: string,
   e?: ASTNode, // should be a position instead? To make payload smaller
+  value?: EvaluationValue,
   tag?: EvaluationTag,
   timestamp?: number,
-  value?: EvaluationValue,
   env?: Environment,
 ) => void;
 
