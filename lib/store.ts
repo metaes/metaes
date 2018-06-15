@@ -1,5 +1,5 @@
 import { evalToPromise, MetaesContext } from "./metaes";
-import { EvaluationTag, Evaluation } from "./types";
+import { Evaluation } from "./types";
 import { ASTNode } from "./nodes/nodes";
 
 type MetaesProxyHandler = {

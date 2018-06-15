@@ -16,8 +16,8 @@ export interface Environment extends EnvironmentBase {
   internal?: Environment;
 }
 
-export const callInterceptor = (tag: EvaluationTag, config: EvaluationConfig, e: ASTNode, env: Environment, value?) =>
-  config.interceptor(tag, e, value, env, new Date().getTime(), config.scriptId || "");
+export const callInterceptor = (tag: EvaluationTag, config: EvaluationConfig, e: ASTNode, env?: Environment, value?) =>
+  config.interceptor({ scriptId: config.scriptId, e, tag, value, timestamp: new Date().getTime(), env });
 
 export function mergeValues(values: object, environment?: Environment): EnvironmentBase {
   if (environment) {

@@ -1,16 +1,17 @@
 import { describe, it } from "mocha";
 import { assert, expect } from "chai";
 import { metaesEval } from "../../lib/metaes";
+import { Evaluation } from "../../lib/types";
 
 describe("Interceptor", () => {
   function getEvaluationsOf(script: string, env) {
-    let evaluations: any[] = [];
+    let evaluations: Evaluation[] = [];
 
     function onError(e) {
       console.log(e);
     }
-    function interceptor(...args) {
-      evaluations.push([...args]);
+    function interceptor(evaluation) {
+      evaluations.push(evaluation);
     }
 
     function noop() {}
@@ -25,13 +26,13 @@ describe("Interceptor", () => {
   it("should pass values of MemberExpression", () => {
     expect(
       getEvaluationsOf("a.b", { a: { b: 2 } })
-        .map(([a]) => a.propertyKey)
+        .map(({ tag }) => tag.propertyKey)
         .filter(Boolean)
     ).to.eql(["body", "expression", "object", "object", "property", "property", "expression", "body"]);
 
     expect(
       getEvaluationsOf("a.b", { a: { b: 2 } })
-        .map(([a, b]) => a.propertyKey || b.type)
+        .map(({ e, tag }) => tag.propertyKey || e.type)
         .filter(Boolean)
     ).to.eql([
       "Program",
@@ -55,7 +56,7 @@ describe("Interceptor", () => {
     ]);
     expect(
       getEvaluationsOf("a.b", { a: { b: 2 } })
-        .map(([a, b, value]) => (value ? [a.propertyKey || b.type, value] : null))
+        .map(({ e, value, tag }) => (value ? [tag.propertyKey || e.type, value] : null))
         .filter(Boolean)
     ).to.eql([
       ["Identifier", { b: 2 }],
@@ -69,18 +70,18 @@ describe("Interceptor", () => {
 
     let level = 0;
 
-    results.forEach(([a, b, value]) => {
-      if (a.phase === "exit") {
+    results.forEach(({ tag, value, e }) => {
+      if (tag.phase === "exit") {
         level--;
       }
       const padding = "".padEnd(level, "  ");
-      if (a.propertyKey) {
-        console.log(padding, `(${a.phase === "exit" ? "/" : ""}${a.propertyKey})`);
+      if (tag.propertyKey) {
+        console.log(padding, `(${tag.phase === "exit" ? "/" : ""}${tag.propertyKey})`);
       } else {
-        console.log(padding, `"${source.substring(...b.range)}"`, b.type + ":", value);
+        console.log(padding, `"${source.substring(...e.range)}"`, e.type + ":", value);
       }
 
-      if (a.phase === "enter") {
+      if (tag.phase === "enter") {
         level++;
       }
     });

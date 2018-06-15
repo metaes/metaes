@@ -14,15 +14,6 @@ export type Range = [number, number];
 export type OnSuccess = (value: any, node?: ASTNode) => void;
 export type OnError = (e: MetaesException) => void;
 
-/**
- * enter - before ASTNode was evaluated
- * exit - after ASTNode was evaluated
- */
-export type EvaluationTag = { phase: "enter" | "exit"; propertyKey?: string };
-
-
-export type EvaluationValue = any | Reference;
-
 export type Source = string | ASTNode;
 
 export type Evaluate = (
@@ -33,30 +24,31 @@ export type Evaluate = (
   config?: Partial<EvaluationConfig>
 ) => void;
 
+/**
+ * enter - before ASTNode was evaluated
+ * exit - after ASTNode was evaluated
+ */
+export type EvaluationTag = { phase: "enter" | "exit"; propertyKey?: string };
+
+export type EvaluationValue = any | Reference;
+
 export interface Evaluation {
   scriptId: string;
   e: ASTNode;
   value: EvaluationValue;
   tag: EvaluationTag;
   timestamp: number;
-  env: Environment;
+  env?: Environment;
 }
 
-export type Interceptor = (
-  scriptId: string,
-  e?: ASTNode, // should be a position instead? To make payload smaller
-  value?: EvaluationValue,
-  tag?: EvaluationTag,
-  timestamp?: number,
-  env?: Environment,
-) => void;
+export type Interceptor = (evaluation: Evaluation) => void;
 
 // TODO: will be used to add properties while transfering RemoteValues
 export interface EvaluationConfig {
   interceptor: Interceptor;
 
   // Per context unique id of running script.
-  scriptId?: string;
+  scriptId: string;
 
   // if true, the interceptor will receive Reference object for Identifiers, not a bare JavaScript values.
   // It's following ECMAScript reference naming guidelines
