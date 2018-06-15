@@ -42,12 +42,12 @@ export type Evaluate = (
 ) => void;
 
 export type Interceptor = (
-  tag: EvaluationTag,
-  e: ASTNode,
-  value: EvaluationValue,
-  env: Environment,
-  timestamp: number,
-  scriptId: string
+  scriptId: string,
+  e?: ASTNode, // should be a position instead? To make payload smaller
+  tag?: EvaluationTag,
+  timestamp?: number,
+  value?: EvaluationValue,
+  env?: Environment,
 ) => void;
 
 // TODO: will be used to add properties while transfering RemoteValues
