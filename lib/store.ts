@@ -1,6 +1,6 @@
-import { evalToPromise, MetaesContext } from "./metaes";
-import { Evaluation, Source } from "./types";
-import { ASTNode } from "./nodes/nodes";
+import {evalToPromise, MetaesContext} from "./metaes";
+import {Evaluation, Source} from "./types";
+import {ASTNode} from "./nodes/nodes";
 
 type MetaesProxyHandler = {
   apply?: (target: object, methodName: string, args: any[]) => void;
@@ -49,11 +49,11 @@ export class MetaesStore<T> {
     this._context = new MetaesContext(
       this.c.bind(this),
       this.cerr.bind(this),
-      { values: { store: this._store, console } },
+      {values: {store: this._store, console}},
       config
     );
     if (rootValueHandler) {
-      this._proxies.push({ handler: rootValueHandler, target: _store });
+      this._proxies.push({handler: rootValueHandler, target: _store});
     }
   }
 
@@ -88,7 +88,7 @@ export class MetaesStore<T> {
   }
 
   _mainInterceptor(evaluation: Evaluation) {
-    const { scriptId } = evaluation;
+    const {scriptId} = evaluation;
     const flameGraph = this._flameGraphs[scriptId];
     const getValue = e => flameGraph.values.get(e);
 
@@ -126,6 +126,20 @@ export class MetaesStore<T> {
         }
       }
     }
+
+    // handler.apply
+    if (evaluation.tag.phase === "exit" && evaluation.e.type === "CallExpression") {
+      const call = evaluation.e;
+      const object = getValue(call.callee.object);
+      const property = getValue(call.callee.property);
+      const args = call.arguments.map(getValue);
+      for (let i = 0; i < this._proxies.length; i++) {
+        const proxy = this._proxies[i];
+        if (proxy.target === object && proxy.handler.apply) {
+          proxy.handler.apply(object, property, args);
+        }
+      }
+    }
     this._listeners.forEach(listener => listener(evaluation, flameGraph));
   }
 
@@ -138,8 +152,8 @@ export class MetaesStore<T> {
     return typeof source === "function"
       ? (await evalToPromise(this._context, source)).apply(null, [this._store].concat(args))
       : await evalToPromise(this._context, source, {
-          values: { store: this._store }
-        });
+        values: {store: this._store}
+      });
   }
 
   c(e) {
@@ -151,7 +165,7 @@ export class MetaesStore<T> {
   }
 
   private _flameGraphBuilder(phase: "before" | "after", evaluation: Evaluation) {
-    const { tag, scriptId } = evaluation;
+    const {tag, scriptId} = evaluation;
     const flameGraph =
       this._flameGraphs[scriptId] ||
       (this._flameGraphs[scriptId] = {

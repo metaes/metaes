@@ -81,14 +81,17 @@ describe("MetaesStore", () => {
   });
 
   it("should collect trap results of method call", async () => {
-    const value = { array: [] };
+    const value = [];
     let called = false;
     const store = new MetaesStore(value, {
       apply(target, methodName, args) {
+        expect(target).to.equal(value);
+        expect(methodName).to.equal(value.push);
+        expect(args).to.eql([1]);
         called = true;
       }
     });
-    const source = `store.array.push(1)`;
+    const source = `store.push(1)`;
     await store.evaluate(source);
 
     expect(called).to.be.true;
