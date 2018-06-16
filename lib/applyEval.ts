@@ -16,17 +16,13 @@ export const evaluateProp = (
   c: Continuation,
   cerr: ErrorContinuation
 ) => {
-  callInterceptor({ phase: "enter", propertyKey }, config, e, env);
+  callInterceptor({ phase: "enter", propertyKey }, config, e);
 
   const value = e[propertyKey];
-  const _c = value => {
-    callInterceptor({ phase: "exit", propertyKey }, config, e, env);
-    c(value);
-  };
-  const _cerr = exception => {
-    callInterceptor({ phase: "exit", propertyKey }, config, e, env);
-    cerr(exception);
-  };
+  const createContinuation = (phase, cnt) => value => (callInterceptor({ phase, propertyKey }, config, e), cnt(value));
+  const _c = createContinuation("exit", c);
+  const _cerr = createContinuation("exit", cerr);
+
   Array.isArray(value) ? evaluateArray(value, env, config, _c, _cerr) : evaluate(value, env, config, _c, _cerr);
 };
 

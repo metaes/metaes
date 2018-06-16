@@ -1,8 +1,8 @@
-import {describe, it} from "mocha";
-import {ExecutionNode, MetaesStore} from "../../lib/store";
+import { describe, it } from "mocha";
+import { EvaluationNode, MetaesStore } from "../../lib/store";
 
-import {expect} from "chai";
-import {Evaluation} from "../../lib/types";
+import { expect } from "chai";
+import { Evaluation } from "../../lib/types";
 
 describe("MetaesStore", () => {
   it("should correctly build tree structure of children", async () => {
@@ -13,7 +13,7 @@ describe("MetaesStore", () => {
     expect(value["foo"]).to.equal("bar");
   });
 
-  it.only("should execute code inside store", async () => {
+  it("should execute code inside store", async () => {
     const value = {};
     let called = false;
     const store = new MetaesStore(value, {
@@ -30,8 +30,8 @@ describe("MetaesStore", () => {
           const root = flameGraph.root;
           const Program = root.children[0];
 
-          expect(root.payload).to.include("script");
-          expect((Program.payload as Evaluation).e.type).to.equal("Program");
+          expect(root.evaluation).to.include("script");
+          expect((Program.evaluation as Evaluation).e.type).to.equal("Program");
           expect(Program.namedChildren).to.have.all.keys(["body"]);
         }
 
@@ -42,14 +42,14 @@ describe("MetaesStore", () => {
           // );
           const node = flameGraph.executionStack[flameGraph.executionStack.length - 1];
 
-          console.log('l,r', node.namedChildren.left, node.namedChildren.right);
+          console.log("l,r", node.namedChildren.left, node.namedChildren.right);
 
-          function show(node: ExecutionNode, padding: number) {
+          function show(node: EvaluationNode, padding: number) {
             const paddingString = "".padEnd(padding, "  ");
-            if (typeof node.payload === "object") {
-              console.log(paddingString, node.payload.e.type);
+            if (typeof node.evaluation === "object") {
+              console.log(paddingString, node.evaluation.e.type);
             } else {
-              console.log(paddingString, node.payload);
+              console.log(paddingString, node.evaluation);
             }
 
             Object.entries(node.namedChildren).forEach(([k, v]) => {
