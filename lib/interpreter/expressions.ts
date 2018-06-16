@@ -194,8 +194,9 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
     env,
     config,
     right => {
-      const leftNode = e.left;
-      switch (leftNode.type) {
+      const e_left = e.left;
+
+      switch (e_left.type) {
         case "MemberExpression":
           evaluatePropWrap(
             "left",
@@ -206,9 +207,9 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
                 env,
                 config,
                 object => {
-                  const property = leftNode.property;
-                  if (leftNode.computed) {
-                    evaluateProp("property", leftNode, env, config, key => evalAssignment(object, key, right), cerr);
+                  const property = e_left.property;
+                  if (e_left.computed) {
+                    evaluateProp("property", e_left, env, config, key => evalAssignment(object, key, right), cerr);
                   } else if (property.type === "Identifier") {
                     evaluatePropWrap(
                       "property",
@@ -218,7 +219,7 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
                         callInterceptor({ phase: "exit" }, config, property, env, value);
                         c(null);
                       },
-                      leftNode,
+                      e_left,
                       env,
                       config,
                       () => evalAssignment(object, property.name, right),
@@ -283,7 +284,7 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
           break;
         case "Identifier":
           callInterceptor({ phase: "enter" }, config, e.left, right, env);
-          setValueAndCallAfterInterceptor(e.left, env, config, leftNode.name, right, false, c, cerr);
+          setValueAndCallAfterInterceptor(e.left, env, config, e_left.name, right, false, c, cerr);
           break;
         default:
           cerr(NotImplementedException("This assignment is not supported yet."));
