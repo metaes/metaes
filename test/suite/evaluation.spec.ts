@@ -26,7 +26,6 @@ describe("Evaluation", () => {
           {
             // FIX: this handler should be called only once.
             onError(e) {
-              console.log("got it");
               if (e instanceof TypeError) {
                 resolve();
               } else {

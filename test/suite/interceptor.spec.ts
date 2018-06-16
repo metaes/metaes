@@ -101,25 +101,5 @@ describe("Interceptor", () => {
       ["ExpressionStatement", 2],
       ["Program", 2]
     ]);
-    const source = "a['d']=4;";
-    let results = getEvaluationsOf(source, { a: { b: 2 } });
-
-    let level = 0;
-
-    results.forEach(({ tag, value, e }) => {
-      if (tag.phase === "exit") {
-        level--;
-      }
-      const padding = "".padEnd(level, "  ");
-      if (tag.propertyKey) {
-        console.log(padding, `(${tag.phase === "exit" ? "/" : ""}${tag.propertyKey})`);
-      } else {
-        console.log(padding, `"${source.substring(...e.range)}"`, e.type + ":", value);
-      }
-
-      if (tag.phase === "enter") {
-        level++;
-      }
-    });
   });
 });
