@@ -1,5 +1,6 @@
-import { evalToPromise, MetaesContext } from "./metaes";
-import { Evaluation, Source } from "./types";
+import {evalToPromise, MetaesContext} from "./metaes";
+import {Evaluation, Source} from "./types";
+import {ASTNode} from "./nodes/nodes";
 
 type MetaesProxyHandler = {
   apply?: (target: object, methodName: string, args: any[]) => void;
@@ -12,10 +13,10 @@ type MetaesProxy = {
   handler: MetaesProxyHandler;
 };
 
-export type FlameGraph = { root: EvaluationNode[]; executionStack: EvaluationNode[] };
+export type FlameGraph = { root: EvaluationNode[]; executionStack: EvaluationNode[]; values: Map<ASTNode, any> };
 
 export type EvaluationNode = {
-  evaluation: Evaluation; // string is used only for script root, use different idea?
+  evaluation: Evaluation;
   children: EvaluationNode[];
 };
 
@@ -29,32 +30,27 @@ export class MetaesStore<T> {
   private _flameGraphs: FlameGraphs = {};
 
   constructor(private _store: T, rootValueHandler?: MetaesProxyHandler) {
-    const flameBuilderEnterPhase = this._createFlameGraphBuilder("enter");
-    const flameBuilderExitPhase = this._createFlameGraphBuilder("exit");
+
     const config = {
       interceptor: (evaluation: Evaluation) => {
-        if (evaluation.tag.phase === "enter") {
-          flameBuilderEnterPhase(evaluation);
-        }
+        this._flameGraphBuilder("before", evaluation);
         try {
           this.interceptor(evaluation);
         } catch (e) {
           // TODO: use logger
           console.log(e);
         }
-        if (evaluation.tag.phase === "exit") {
-          flameBuilderExitPhase(evaluation);
-        }
+        this._flameGraphBuilder("after", evaluation);
       }
     };
     this._context = new MetaesContext(
       this.c.bind(this),
       this.cerr.bind(this),
-      { values: { store: this._store, console } },
+      {values: {store: this._store, console}},
       config
     );
     if (rootValueHandler) {
-      this._proxies.push({ handler: rootValueHandler, target: _store });
+      this._proxies.push({handler: rootValueHandler, target: _store});
     }
   }
 
@@ -67,16 +63,25 @@ export class MetaesStore<T> {
   }
 
   interceptor(evaluation) {
-    const { value, scriptId } = evaluation;
-    const tree = this._flameGraphs[scriptId];
-    for (let i = 0; i < this._proxies.length; i++) {
-      const proxy = this._proxies[i];
-      if (proxy.target === value) {
-        // console.log(tree);
+    const {scriptId} = evaluation;
+    const flameGraph = this._flameGraphs[scriptId];
+
+    if (evaluation.tag.phase === "exit" && evaluation.e.type === "AssignmentExpression") {
+      const getValue = e => flameGraph.values.get(e);
+      const assignment = evaluation.e as any;
+      const left = getValue(assignment.left.object);
+      if (left) {
+        for (let i = 0; i < this._proxies.length; i++) {
+          const proxy = this._proxies[i];
+          if (proxy.target === left && proxy.handler.set) {
+            proxy.handler.set(left, getValue(assignment.left.property), getValue(assignment.right))
+          }
+        }
       }
     }
 
-    this._listeners.forEach(listener => listener(evaluation, tree));
+
+    this._listeners.forEach(listener => listener(evaluation, flameGraph));
   }
 
   /**
@@ -88,8 +93,8 @@ export class MetaesStore<T> {
     return typeof source === "function"
       ? (await evalToPromise(this._context, source)).apply(null, [this._store].concat(args))
       : await evalToPromise(this._context, source, {
-          values: { store: this._store }
-        });
+        values: {store: this._store}
+      });
   }
 
   c(e) {
@@ -100,68 +105,34 @@ export class MetaesStore<T> {
     console.log("exception:", exception);
   }
 
-  private _createFlameGraphBuilder(phase: string) {
-    return (evaluation: Evaluation) => {
-      const { tag, scriptId } = evaluation;
-      const flameGraph =
-        this._flameGraphs[scriptId] ||
-        (this._flameGraphs[scriptId] = {
-          executionStack: [],
-          root: {
-            children: [],
-            namedChildren: {},
-            evaluation: "script" + scriptId
-          }
-        });
-      const stack = flameGraph.executionStack;
+  private _flameGraphBuilder(phase: "before" | "after", evaluation: Evaluation) {
+    const {tag, scriptId} = evaluation;
+    const flameGraph =
+      this._flameGraphs[scriptId] ||
+      (this._flameGraphs[scriptId] = {
+        executionStack: [],
+        values: new Map(),
+        root: []
+      });
+    const stack = flameGraph.executionStack;
 
-      if (phase === "enter" && tag.phase === phase) {
-        // enter
+    if (phase === "before") {
+      if (tag.phase === "enter") {
         const node: EvaluationNode = {
-          evaluation: evaluation.tag && evaluation.tag.propertyKey ? evaluation.tag.propertyKey : evaluation,
-          namedChildren: {},
+          evaluation,
           children: []
         };
-
-        console.log(
-          stack.map(s => {
-            const pl = typeof s.evaluation === "string" ? s.evaluation : s.evaluation.e.type;
-            return pl + ",";
-          })
-        );
-        if (stack.length > 1) {
-          const parent = stackAt(stack, 0);
+        const parent = stack[stack.length - 1];
+        if (parent) {
           parent.children.push(node);
-          if (typeof parent.evaluation === "string") {
-            const grandParent = stackAt(stack, 1);
-            const key = parent.evaluation;
-            const namedChildren = grandParent.namedChildren;
-            const values = namedChildren[key];
-            console.log(node.evaluation.e || node.evaluation, "add at", key);
-            if (values) {
-              if (Array.isArray(values)) {
-                values.push(node);
-              } else {
-                namedChildren[key] = [values, node];
-              }
-            } else {
-              namedChildren[key] = node;
-            }
-          }
-        } else {
-          flameGraph.root.children.push(node);
         }
         stack.push(node);
+      } else {
+        flameGraph.values.set(evaluation.e, evaluation.value);
       }
-      if (phase === "exit" && tag.phase === phase) {
-        // exit
-        stack.pop();
-      }
-    };
+    }
+    if (phase === "after" && tag.phase === "exit") {
+      stack.pop();
+    }
   }
-}
-
-function stackAt(stack: EvaluationNode[], position: number) {
-  const length = stack.length;
-  return stack[length - 1 - position];
 }

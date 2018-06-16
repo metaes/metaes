@@ -31,8 +31,32 @@ describe("Interceptor", () => {
     assert.equal(evaluations.length, 24);
     const values = evaluations.map(({ tag, e }) => tag.propertyKey || e.type).filter(Boolean);
 
-    console.log(values);
-    expect(values).to.eql(["body", "expression", "object", "object", "property", "property", "expression", "body"]);
+    expect(values).to.eql([
+      "Program",
+      "body",
+      "ExpressionStatement",
+      "expression",
+      "AssignmentExpression",
+      "right",
+      "Literal",
+      "Literal",
+      "right",
+      "left",
+      "object",
+      "Identifier",
+      "Identifier",
+      "object",
+      "property",
+      "Literal",
+      "Literal",
+      "property",
+      "left",
+      "AssignmentExpression",
+      "expression",
+      "ExpressionStatement",
+      "body",
+      "Program"
+    ]);
   });
 
   it("should pass values of MemberExpression", () => {
