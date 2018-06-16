@@ -6,6 +6,7 @@ type MetaesProxyHandler = {
   apply?: (target: object, methodName: string, args: any[]) => void;
   get?: (target: object, key: string, value: any) => void;
   set?: (target: object, key: string, args: any) => void;
+  didSet?: (target: object, key: string, args: any) => void;
 };
 
 type MetaesProxy = {
@@ -68,6 +69,10 @@ export class MetaesStore<T> {
     this._oneTimeInterceptors.push(fn);
   }
 
+  addProxy(proxy: MetaesProxy) {
+    this._proxies.push(proxy);
+  }
+
   interceptor(evaluation: Evaluation) {
     this._mainInterceptor(evaluation);
     for (let i = 0; i < this._oneTimeInterceptors.length; i++) {
@@ -85,13 +90,13 @@ export class MetaesStore<T> {
   _mainInterceptor(evaluation: Evaluation) {
     const { scriptId } = evaluation;
     const flameGraph = this._flameGraphs[scriptId];
+    const getValue = e => flameGraph.values.get(e);
 
+    // handler.set
     if (evaluation.tag.phase === "enter" && evaluation.e.type === "AssignmentExpression") {
       const assignment = evaluation.e as any;
       this._interceptOnce(evaluation => {
         if (evaluation.tag.phase === "exit" && evaluation.tag.propertyKey === "property") {
-          const getValue = e => flameGraph.values.get(e);
-
           const left = getValue(assignment.left.object);
           if (left) {
             for (let i = 0; i < this._proxies.length; i++) {
@@ -105,6 +110,21 @@ export class MetaesStore<T> {
         }
         return false;
       });
+    }
+
+    // handler.didSet
+    if (evaluation.tag.phase === "exit" && evaluation.e.type === "AssignmentExpression") {
+      const assignment = evaluation.e as any;
+
+      const left = getValue(assignment.left.object);
+      if (left) {
+        for (let i = 0; i < this._proxies.length; i++) {
+          const proxy = this._proxies[i];
+          if (proxy.target === left && proxy.handler.didSet) {
+            proxy.handler.didSet(left, getValue(assignment.left.property), getValue(assignment.right));
+          }
+        }
+      }
     }
     this._listeners.forEach(listener => listener(evaluation, flameGraph));
   }
