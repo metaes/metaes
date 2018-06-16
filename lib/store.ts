@@ -65,7 +65,7 @@ export class MetaesStore<T> {
 
   private _oneTimeInterceptors: InterceptorOnce[] = [];
 
-  findEvaluation(fn: InterceptorOnce) {
+  _interceptOnce(fn: InterceptorOnce) {
     this._oneTimeInterceptors.push(fn);
   }
 
@@ -73,20 +73,23 @@ export class MetaesStore<T> {
     this._mainInterceptor(evaluation);
     for (let i = 0; i < this._oneTimeInterceptors.length; i++) {
       const interceptor = this._oneTimeInterceptors[i];
-      if (interceptor(evaluation)) {
-        this._oneTimeInterceptors.splice(i, 1);
+      try {
+        if (interceptor(evaluation)) {
+          this._oneTimeInterceptors.splice(i, 1);
+        }
+      } catch (e) {
+        console.error(e);
       }
     }
   }
 
   _mainInterceptor(evaluation: Evaluation) {
-    //console.log((evaluation.tag.phase === 'exit' ? '/' : '') + (evaluation.tag.propertyKey || evaluation.e.type));
     const { scriptId } = evaluation;
     const flameGraph = this._flameGraphs[scriptId];
 
     if (evaluation.tag.phase === "enter" && evaluation.e.type === "AssignmentExpression") {
       const assignment = evaluation.e as any;
-      this.findEvaluation(evaluation => {
+      this._interceptOnce(evaluation => {
         if (evaluation.tag.phase === "exit" && evaluation.tag.propertyKey === "property") {
           const getValue = e => flameGraph.values.get(e);
 
