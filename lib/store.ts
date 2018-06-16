@@ -30,6 +30,7 @@ export class MetaesStore<T> {
   private _listeners: EvaluationListener[] = [];
   private _proxies: MetaesProxy[] = [];
   private _flameGraphs: FlameGraphs = {};
+  private _oneTimeInterceptors: InterceptorOnce[] = [];
 
   constructor(private _store: T, rootValueHandler?: MetaesProxyHandler) {
     const config = {
@@ -62,8 +63,6 @@ export class MetaesStore<T> {
   addListener(listener: EvaluationListener) {
     this._listeners.push(listener);
   }
-
-  private _oneTimeInterceptors: InterceptorOnce[] = [];
 
   _interceptOnce(fn: InterceptorOnce) {
     this._oneTimeInterceptors.push(fn);
