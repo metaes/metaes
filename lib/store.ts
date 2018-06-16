@@ -12,12 +12,11 @@ type MetaesProxy = {
   handler: MetaesProxyHandler;
 };
 
-export type FlameGraph = { root: ExecutionNode; executionStack: ExecutionNode[] };
+export type FlameGraph = { root: EvaluationNode[]; executionStack: EvaluationNode[] };
 
-export type ExecutionNode = {
-  payload: Evaluation | string; // string is used only for script root, use different idea?
-  children: ExecutionNode[];
-  namedChildren: { [key: string]: ExecutionNode | ExecutionNode[] };
+export type EvaluationNode = {
+  evaluation: Evaluation; // string is used only for script root, use different idea?
+  children: EvaluationNode[];
 };
 
 type EvaluationListener = (node: Evaluation, flameGraph: FlameGraph) => void;
@@ -111,34 +110,34 @@ export class MetaesStore<T> {
           root: {
             children: [],
             namedChildren: {},
-            payload: "script" + scriptId
+            evaluation: "script" + scriptId
           }
         });
       const stack = flameGraph.executionStack;
 
       if (phase === "enter" && tag.phase === phase) {
         // enter
-        const node: ExecutionNode = {
-          payload: evaluation.tag && evaluation.tag.propertyKey ? evaluation.tag.propertyKey : evaluation,
+        const node: EvaluationNode = {
+          evaluation: evaluation.tag && evaluation.tag.propertyKey ? evaluation.tag.propertyKey : evaluation,
           namedChildren: {},
           children: []
         };
 
         console.log(
           stack.map(s => {
-            const pl = typeof s.payload === "string" ? s.payload : s.payload.e.type;
+            const pl = typeof s.evaluation === "string" ? s.evaluation : s.evaluation.e.type;
             return pl + ",";
           })
         );
         if (stack.length > 1) {
           const parent = stackAt(stack, 0);
           parent.children.push(node);
-          if (typeof parent.payload === "string") {
+          if (typeof parent.evaluation === "string") {
             const grandParent = stackAt(stack, 1);
-            const key = parent.payload;
+            const key = parent.evaluation;
             const namedChildren = grandParent.namedChildren;
             const values = namedChildren[key];
-            console.log(node.payload.e || node.payload, "add at", key);
+            console.log(node.evaluation.e || node.evaluation, "add at", key);
             if (values) {
               if (Array.isArray(values)) {
                 values.push(node);
@@ -162,7 +161,7 @@ export class MetaesStore<T> {
   }
 }
 
-function stackAt(stack: ExecutionNode[], position: number) {
+function stackAt(stack: EvaluationNode[], position: number) {
   const length = stack.length;
   return stack[length - 1 - position];
 }
