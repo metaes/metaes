@@ -47,7 +47,7 @@ describe("Meta functions", () => {
     );
   });
 
-  describe("Differentiate betten call from metaes and from native JS", () => {
+  describe("Differentiate between call from metaes and from native JS", () => {
     it("should pass config when calling form Metaes", () => {
       let fn;
       metaesEval(
