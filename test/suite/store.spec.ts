@@ -92,8 +92,7 @@ describe("MetaesStore", () => {
         called = true;
       }
     });
-    const source = `store.push(1)`;
-    await store.evaluate(source);
+    await store.evaluate(`store.push(1)`);
 
     expect(called).to.be.true;
   });
@@ -120,5 +119,37 @@ describe("MetaesStore", () => {
     expect(called).to.be.true;
   });
 
-  it("should collect trap results of method call when using call or apply", async () => {});
+  it("should collect trap results of method call when using apply", async () => {
+    const value = [];
+    let called = false;
+    const store = new MetaesStore(value, {
+      apply(target, methodName, args) {
+        expect(target).to.equal(value);
+        expect(methodName).to.equal(value.push);
+        expect(args).to.eql([1]);
+        called = true;
+      }
+    });
+
+    await store.evaluate(`store.push.apply(store, [1])`);
+    expect(value.length).to.equal(1);
+    expect(called).to.be.true;
+  });
+
+  it("should collect trap results of method call when using call", async () => {
+    const value = [];
+    let called = false;
+    const store = new MetaesStore(value, {
+      apply(target, methodName, args) {
+        expect(target).to.equal(value);
+        expect(methodName).to.equal(value.push);
+        expect(args).to.eql([1]);
+        called = true;
+      }
+    });
+
+    await store.evaluate(`store.push.call(store, 1)`);
+    expect(value.length).to.equal(1);
+    expect(called).to.be.true;
+  });
 });

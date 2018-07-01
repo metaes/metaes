@@ -132,20 +132,26 @@ export class MetaesStore<T> {
 
       // handler.apply
       if (evaluation.e.type === "CallExpression") {
-        const call = evaluation.e as any;
-        const object = getValue(call.callee.object);
-        const property = getValue(call.callee.property);
-        const args = call.arguments.map(getValue);
+        const callNode = evaluation.e as any;
+        const object = getValue(callNode.callee.object);
+        const property = getValue(callNode.callee.property);
+        const args: any[] = callNode.arguments.map(getValue);
         for (let i = 0; i < this._proxies.length; i++) {
           const proxy = this._proxies[i];
-          if (
-            proxy.handler.apply &&
-            (proxy.target === object ||
+          if (proxy.handler.apply) {
+            if (proxy.target === object) {
+              proxy.handler.apply(object, property, args);
+            } else if (
               // in this case check if function is called using .call or .apply with
               // `this` equal to `proxy.target`
-              (args[0] === proxy.target && (property === apply || property === call)))
-          ) {
-            proxy.handler.apply(object, property, args);
+              args[0] === proxy.target
+            ) {
+              if (property === apply) {
+                proxy.handler.apply(args[0], object, args[1]);
+              } else if (property === call) {
+                proxy.handler.apply(args[0], object, args.slice(1));
+              }
+            }
           }
         }
       }
