@@ -96,4 +96,26 @@ describe("MetaesStore", () => {
 
     expect(called).to.be.true;
   });
+
+  it("should collect trap results of chained method call", async () => {
+    const value = { array: [] };
+    let called = false;
+    const store = new MetaesStore(value);
+    store.addProxy({
+      target: value.array,
+      handler: {
+        apply(target, methodName, args) {
+          expect(target).to.equal(value.array);
+          expect(methodName).to.equal(value.array.push);
+          expect(args).to.eql([1]);
+          called = true;
+        }
+      }
+    });
+    const source = `store.array.push(1)`;
+    await store.evaluate(source);
+    expect(value.array.length).to.equal(1);
+
+    expect(called).to.be.true;
+  });
 });
