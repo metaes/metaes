@@ -14,6 +14,7 @@ describe("MetaesStore", () => {
   it("should execute code inside store", async () => {
     const store = new MetaesStore({});
     await store.evaluate(`store["foo"]="bar"`);
+
     expect(store.getStore()["foo"]).to.equal("bar");
   });
 
@@ -95,5 +96,9 @@ describe("MetaesStore", () => {
     await store.evaluate(source);
 
     expect(called).to.be.true;
+  });
+
+  it("should collect trap results of method call when using call or apply", async () => {
+    
   });
 });
