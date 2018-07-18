@@ -1,6 +1,6 @@
 import { ScriptingContext, metaesEval, evalFunctionBody } from "./metaes";
 import { EnvironmentBase, Environment, mergeValues } from "./environment";
-import { OnSuccess, OnError, Source, EvaluationConfig } from "./types";
+import { Continuation, ErrorContinuation, Source, EvaluationConfig } from "./types";
 import { log } from "./logging";
 
 const referencesMaps = new Map<ScriptingContext, Map<object | Function, string>>();
@@ -133,8 +133,8 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
         context = {
           evaluate: (
             source: Source,
-            c?: OnSuccess,
-            cerr?: OnError,
+            c?: Continuation,
+            cerr?: ErrorContinuation,
             environment?: Environment,
             _config?: EvaluationConfig
           ) => {

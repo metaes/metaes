@@ -11,15 +11,12 @@ export type MetaesException = {
 
 export type Range = [number, number];
 
-export type OnSuccess = (value: any, node?: ASTNode) => void;
-export type OnError = (e: MetaesException) => void;
-
 export type Source = string | ASTNode;
 
 export type Evaluate = (
   source: Source | Function,
-  c?: OnSuccess | null,
-  cerr?: OnError | null,
+  c?: Continuation | null,
+  cerr?: ErrorContinuation | null,
   environment?: Environment | object,
   config?: Partial<EvaluationConfig>
 ) => void;
@@ -56,7 +53,7 @@ export interface EvaluationConfig {
   useReferences?: boolean;
 
   // Inform about asychronous errors
-  onError?: OnError;
+  onError?: ErrorContinuation;
 }
 
 export type Continuation = (value: MetaesException | any) => void;

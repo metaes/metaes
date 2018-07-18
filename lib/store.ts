@@ -3,7 +3,7 @@ import { Evaluation, Source } from "./types";
 import { ASTNode } from "./nodes/nodes";
 
 type MetaesProxyHandler = {
-  apply?: (target: object, methodName: string, args: any[]) => void;
+  apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
   get?: (target: object, key: string, value: any) => void;
   set?: (target: object, key: string, args: any) => void;
   didSet?: (target: object, key: string, args: any) => void;
@@ -133,6 +133,7 @@ export class MetaesStore<T> {
       // handler.apply
       if (evaluation.e.type === "CallExpression") {
         const callNode = evaluation.e as any;
+        const callNodeValue = getValue(callNode);
         const object = getValue(callNode.callee.object);
         const property = getValue(callNode.callee.property);
         const args: any[] = callNode.arguments.map(getValue);
@@ -140,16 +141,16 @@ export class MetaesStore<T> {
           const proxy = this._proxies[i];
           if (proxy.handler.apply) {
             if (proxy.target === object) {
-              proxy.handler.apply(object, property, args);
+              proxy.handler.apply(object, property, args, callNodeValue);
             } else if (
               // in this case check if function is called using .call or .apply with
               // `this` equal to `proxy.target`
               args[0] === proxy.target
             ) {
               if (property === apply) {
-                proxy.handler.apply(args[0], object, args[1]);
+                proxy.handler.apply(args[0], object, args[1], callNodeValue);
               } else if (property === call) {
-                proxy.handler.apply(args[0], object, args.slice(1));
+                proxy.handler.apply(args[0], object, args.slice(1), callNodeValue);
               }
             }
           }
