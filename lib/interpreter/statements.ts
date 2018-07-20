@@ -1,4 +1,4 @@
-import { evaluate, evaluateProp, evaluateArray, evaluateArrayAsync } from "../applyEval";
+import { evaluate, evaluateProp, evaluateArray, visitArray } from "../applyEval";
 import { callInterceptor, getValue, setValue, setValueAndCallAfterInterceptor } from "../environment";
 import { EvaluationConfig, MetaesException } from "../types";
 import { NotImplementedException, LocatedError, LocatedException } from "../exceptions";
@@ -31,7 +31,7 @@ import {
 } from "../nodeTypes";
 
 function hoistDeclarations(e: Statement[], env, config, c, cerr) {
-  evaluateArrayAsync(
+  visitArray(
     e.filter(e => e.type === "FunctionDeclaration") as FunctionDeclaration[],
     (e, c, cerr) => evaluate(e, env, config, value => setValue(env, e.id.name, value, true, c, cerr), cerr),
     c,
@@ -56,7 +56,7 @@ export function Program(e: Program, env, config, c, cerr) {
 type VariableDeclaratorValue = { id: string; init: any };
 
 export function VariableDeclaration(e: VariableDeclaration, env, config, c, cerr) {
-  evaluateArrayAsync(
+  visitArray(
     e.declarations,
     (declarator: VariableDeclarator, c, cerr) =>
       evaluate(
@@ -239,7 +239,7 @@ export function ForInStatement(e: ForInStatement, env, config, c, cerr) {
       if (leftNode.type === "Identifier") {
         let names = Object.keys(right);
 
-        evaluateArrayAsync(
+        visitArray(
           names,
           (name, c, cerr) =>
             setValueAndCallAfterInterceptor(
@@ -293,7 +293,7 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
             loopEnv,
             config,
             (left: VariableDeclaratorValue[]) =>
-              evaluateArrayAsync(
+              visitArray(
                 right,
                 (rightItem, c, cerr) =>
                   // TODO: iterate over declarations in e.left
@@ -348,7 +348,7 @@ export function ClassDeclaration(e: ClassDeclaration, env, config, c, cerr) {
         env,
         config,
         body =>
-          evaluateArrayAsync(
+          visitArray(
             body,
             ({ key, value }, c, cerr) => {
               if (key === "constructor") {
