@@ -59,7 +59,9 @@ describe("Remote websocket messaging", () => {
       require("child_process")
         .execSync("cat tsconfig.json")
         .toString(),
-      await evalFunctionBody(connection, child_process => child_process.execSync("cat tsconfig.json").toString())
+      await evalFunctionBody(connection, (child_process, command) => child_process.execSync(command).toString(), {
+        values: { command: "cat tsconfig.json" }
+      })
     );
   });
 
@@ -73,24 +75,5 @@ describe("Remote websocket messaging", () => {
       }
     }
     assert.equal(true, thrown);
-  });
-
-  // TODO: change save file location and fix gitignore
-  it("should write a file to disk correctly", async () => {
-    let contents = "" + Math.random();
-    await evalFunctionBody(
-      connection,
-      fs => {
-        fs.writeFileSync("message.txt", contents, err => {
-          if (err) throw err;
-        });
-      },
-      { values: { contents } }
-    );
-
-    assert.equal(
-      contents,
-      await evalFunctionBody(connection, child_process => child_process.execSync("cat message.txt").toString())
-    );
   });
 });

@@ -165,15 +165,4 @@ export function evaluateArrayAsync<T>(items: T[], fn: Visitor<T>, c: Continuatio
   loop(items);
 }
 
-export function apply(e: ASTNode, fn: Function, args: any[], _config: EvaluationConfig, thisObj?: Object) {
-  let result;
-  try {
-    result = fn.apply(thisObj, args);
-  } catch (error) {
-    if (!error.location) {
-      error.location = e;
-    }
-    throw error;
-  }
-  return result;
-}
+export const apply = (fn: Function, thisObj: any, args: any[]) => fn.apply(thisObj, args);

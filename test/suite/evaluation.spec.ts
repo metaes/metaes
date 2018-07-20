@@ -17,26 +17,21 @@ describe("Evaluation", () => {
 
   it("should be notified once about async error", () =>
     new Promise((resolve, reject) => {
-      try {
-        context.evaluate(
-          "setTimeout(()=>console())",
-          null,
-          null,
-          { setTimeout, console },
-          {
-            // FIX: this handler should be called only once.
-            onError(e) {
-              if (e instanceof TypeError) {
-                resolve();
-              } else {
-                reject();
-              }
+      context.evaluate(
+        "setTimeout(()=> nonExistingIdentifier())",
+        null,
+        null,
+        { setTimeout },
+        {
+          onError(e) {
+            if (e instanceof ReferenceError) {
+              resolve();
+            } else {
+              reject();
             }
           }
-        );
-      } catch (e) {
-        console.log("caught and ignored:", e);
-      }
+        }
+      );
     }));
 
   it("should correctly execute scripting context", async () => {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, it } from "mocha";
 import { assert } from "chai";
 import { environmentToJSON, environmentFromJSON, getReferencesMap } from "../../lib/remote";
-import { ScriptingContext, consoleLoggingMetaesContext,  } from "../../lib/metaes";
+import { ScriptingContext, consoleLoggingMetaesContext } from "../../lib/metaes";
 import { Environment, mergeValues } from "../../lib/environment";
 
 describe("Environment", () => {
@@ -39,11 +39,11 @@ describe("Environment", () => {
       assert.equal(getReferencesMap(context).size, 2);
     });
   });
-  
+
   it("should properly add values to existing environment", () => {
     const env = { values: { a: 1 } };
     const env2 = mergeValues({ b: 2 }, env);
 
-    console.log(env2)
+    assert.equal(env2.values["a"], 1);
   });
 });

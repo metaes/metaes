@@ -49,7 +49,7 @@ describe("MetaesStore", () => {
         expect(key).to.equal("foo");
         expect(args).to.equal("bar");
 
-        expect(store["foo"]).to.equal("foo");
+        expect(store["foo"]).to.equal("bar");
       }
     });
     const source = `store["foo"]="bar"`;

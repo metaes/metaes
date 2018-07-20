@@ -74,5 +74,5 @@ export type interpretersMap = {
 export type MetaesFunction = {
   e: FunctionNode;
   closure: Environment;
-  config?: EvaluationConfig;
+  config: EvaluationConfig;
 };

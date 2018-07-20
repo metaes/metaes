@@ -1,6 +1,6 @@
 import { apply, evaluate, evaluateProp, evaluatePropWrap, evaluateArray } from "../applyEval";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
-import { NotImplementedException, LocatedError, ensureException } from "../exceptions";
+import { NotImplementedException, LocatedError, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import { callInterceptor, Environment, getValue, setValueAndCallAfterInterceptor } from "../environment";
 import { IfStatement } from "./statements";
@@ -59,16 +59,21 @@ export function CallExpression(
                 calleeNode,
                 env,
                 config,
-                object =>
-                  typeof property === "function"
-                    ? c(apply(e, property as Function, args, config, object))
-                    : // TODO: use exceptions
-                      cerr(new TypeError(typeof property + " is not a function")),
+                object => {
+                  if (typeof property === "function") {
+                    try {
+                      c(apply(property as Function, object, args));
+                    } catch (e) {
+                      cerr({ value: e, location: calleeNode });
+                    }
+                  } else {
+                    cerr({ value: new TypeError(typeof property + " is not a function") });
+                  }
+                },
                 cerr
               ),
             cerr
           );
-
           break;
         case "Identifier":
         case "FunctionExpression":
@@ -81,9 +86,9 @@ export function CallExpression(
             callee => {
               if (typeof callee === "function") {
                 try {
-                  c(apply(e, callee, args, config));
+                  c(apply(callee, undefined, args));
                 } catch (error) {
-                  cerr(ensureException(error, calleeNode));
+                  cerr(toException(error, calleeNode));
                 }
               } else {
                 cerr(new TypeError(callee + " is not a function"));
@@ -100,10 +105,10 @@ export function CallExpression(
             config,
             callee => {
               try {
-                const cnt = thisValue => c(apply(calleeNode, callee, args, config, thisValue));
+                const cnt = thisValue => c(apply(callee, thisValue, args));
                 getValue(env, "this", cnt, () => cnt(undefined));
               } catch (error) {
-                cerr(ensureException(error, calleeNode));
+                cerr(toException(error, calleeNode));
               }
             },
             cerr
@@ -280,7 +285,6 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
             c,
             cerr
           );
-
           break;
         case "Identifier":
           callInterceptor({ phase: "enter" }, config, e.left, right, env);
@@ -439,7 +443,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
                 try {
                   c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
                 } catch (error) {
-                  cerr(ensureException(error, e));
+                  cerr(toException(error, e));
                 }
               }
             },
@@ -457,7 +461,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
                 try {
                   c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
                 } catch (error) {
-                  cerr(ensureException(error, calleeNode));
+                  cerr(toException(error, calleeNode));
                 }
               }
             },
@@ -540,7 +544,6 @@ export function UpdateExpression(e: UpdateExpression, env: Environment, _config,
         },
         cerr
       );
-
       break;
     default:
       cerr(NotImplementedException(`Support of argument of type ${e.argument.type} not implemented yet.`));

@@ -47,49 +47,6 @@ describe("Meta functions", () => {
     );
   });
 
-  describe("Differentiate between call from metaes and from native JS", () => {
-    it("should pass config when calling form Metaes", () => {
-      let fn;
-      metaesEval(
-        c => c(),
-        _fn => {
-          fn = _fn;
-        },
-        e => {
-          console.log("error", e);
-        },
-        { setTimeout }
-      );
-      expect(fn).to.throw();
-    });
-    it("should not pass config when calling form native JS ", () => {
-      let fn;
-      metaesEval(
-        c => c(),
-        _fn => {
-          fn = _fn;
-        },
-        e => {
-          console.log("error", e);
-        },
-        { setTimeout }
-      );
-      metaesEval(
-        "fn()",
-        null,
-        e => {
-          console.log("error", e);
-        },
-        { fn },
-        {
-          onError: e => {
-            console.log("on error", e);
-          }
-        }
-      );
-    });
-  });
-
   it("should throw an receive the same error from external function", () => {
     const message = "A message";
     const errorConstructor = TypeError;

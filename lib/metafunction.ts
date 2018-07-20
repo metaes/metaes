@@ -87,7 +87,11 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) =>
       args
     );
     if (error) {
-      throw error;
+      if (metaFunction.config.onError) {
+        metaFunction.config.onError(error);
+      } else {
+        throw error;
+      }
     }
     return result;
   };
