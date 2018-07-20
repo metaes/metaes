@@ -96,41 +96,30 @@ export function evaluate(
   } else if (!e) {
     cerr({ type: "EmptyNode" });
   } else {
-    const exception = NotImplementedException(`"${e.type}" token interpreter is not defined yet.`, e);
+    const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
     config.onError && config.onError(exception);
     cerr(exception);
   }
 }
 
-// TODO: it's only a sync code. Gradually move to `evaluateArrayAsync`
-export function evaluateArrayParametrized(
-  array: Iterable<ASTNode>,
-  env: Environment,
-  config: EvaluationConfig,
-  c: Continuation,
-  cerr: ErrorContinuation,
-  pre?: (i: number) => void
-) {
-  const results: any[] = [];
-  let stopped;
-  let i = 0;
-  for (let e of array) {
-    pre && pre(i++);
-    evaluate(
-      e,
-      env,
-      config,
-      result => results.push(result),
-      e => {
-        stopped = e;
-        cerr(e);
-      }
-    );
-    if (stopped) {
-      return;
+type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;
+
+export function visitArray<T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) {
+  const accumulated: T[] = [];
+  (function loop(index) {
+    if (index < items.length) {
+      fn(
+        items[index],
+        value => {
+          accumulated.push(value);
+          loop(index + 1);
+        },
+        cerr
+      );
+    } else {
+      c(accumulated);
     }
-  }
-  c(results);
+  })(0);
 }
 
 export const evaluateArray = (
@@ -139,30 +128,6 @@ export const evaluateArray = (
   config: EvaluationConfig,
   c: Continuation,
   cerr: ErrorContinuation
-) => evaluateArrayParametrized(array, env, config, c, cerr);
-
-type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;
-
-export function evaluateArrayAsync<T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) {
-  const accumulated: T[] = [];
-
-  function loop(array: T[]) {
-    if (array.length) {
-      fn(
-        array[0],
-        value => {
-          accumulated.push(value);
-          // TODO: maybe don't slice and use pointer
-          loop(array.slice(1));
-        },
-        cerr
-      );
-    } else {
-      c(accumulated);
-    }
-  }
-
-  loop(items);
-}
+) => visitArray(array, (e, c, cerr) => evaluate(e, env, config, c, cerr), c, cerr);
 
 export const apply = (fn: Function, thisObj: any, args: any[]) => fn.apply(thisObj, args);
