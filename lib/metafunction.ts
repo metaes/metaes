@@ -62,8 +62,6 @@ export const evaluateMetaFunction = (
               exception.location = e;
             }
             cerr(exception);
-          // TODO: if running inside metaes, would be good not to use JavaScript errors, but rather exceptions only
-          // throw exception.value || exception;
         }
         _interceptorAfter(e, exception.value, env);
       }
