@@ -2,7 +2,7 @@ import { apply, evaluate, evaluateProp, evaluatePropWrap, evaluateArray } from "
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { NotImplementedException, LocatedError, ensureException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
-import { callInterceptor, Environment, getReference, getValue, setValueAndCallAfterInterceptor } from "../environment";
+import { callInterceptor, Environment, getValue, setValueAndCallAfterInterceptor } from "../environment";
 import { IfStatement } from "./statements";
 import {
   ArrayExpression,
@@ -497,42 +497,45 @@ export function LogicalExpression(e: LogicalExpression, env, config, c, cerr) {
 export function UpdateExpression(e: UpdateExpression, env: Environment, _config, c, cerr) {
   switch (e.argument.type) {
     case "Identifier":
-      getReference(
+      const propName = e.argument.name;
+      getValue(
         env,
-        e.argument.name,
-        reference => {
-          if (reference.environment && reference.name) {
-            try {
-              let container = reference.environment.values;
-              let propName = reference.name;
-              let value;
-              if (e.prefix) {
-                switch (e.operator) {
-                  case "++":
-                    value = ++container[propName];
-                    break;
-                  case "--":
-                    value = --container[propName];
-                    break;
-                  default:
-                    throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
-                }
-              } else {
-                switch (e.operator) {
-                  case "++":
-                    value = container[propName]++;
-                    break;
-                  case "--":
-                    value = container[propName]--;
-                    break;
-                  default:
-                    throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
-                }
+        propName,
+        _ => {
+          // discard found value
+          // if value is found, there must be an env for that value, don't check for negative case
+          let foundEnv: Environment = env;
+          let value;
+          while (!(propName in foundEnv.values)) {
+            foundEnv = foundEnv.prev!;
+          }
+          try {
+            if (e.prefix) {
+              switch (e.operator) {
+                case "++":
+                  value = ++foundEnv.values[propName];
+                  break;
+                case "--":
+                  value = --foundEnv.values[propName];
+                  break;
+                default:
+                  throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
               }
-              c(value);
-            } catch (e) {
-              cerr(e);
+            } else {
+              switch (e.operator) {
+                case "++":
+                  value = foundEnv.values[propName]++;
+                  break;
+                case "--":
+                  value = foundEnv.values[propName]--;
+                  break;
+                default:
+                  throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
+              }
             }
+            c(value);
+          } catch (e) {
+            cerr(e);
           }
         },
         cerr

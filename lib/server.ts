@@ -45,7 +45,7 @@ export const runWSServer = (port: number = config.port) =>
 
     webSocketServer.on("connection", connection => {
       const clientContext: ScriptingContext = {
-        evaluate: (input: Source, c?: Continuation, cerr?: ErrorContinuation, environment?: Environment) => {
+        evaluate: (input: Source, _c?: Continuation, _cerr?: ErrorContinuation, environment?: Environment) => {
           log("[Server: in evaluate/environment", environment);
           const message = {
             source: input,
