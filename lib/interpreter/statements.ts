@@ -63,10 +63,7 @@ export function VariableDeclaration(e: VariableDeclaration, env, config, c, cerr
         declarator,
         env,
         config,
-        (result: VariableDeclaratorValue) => {
-          const { id, init } = result;
-          setValue(env, id, init, true, c, cerr);
-        },
+        ({ id, init }: VariableDeclaratorValue) => setValue(env, id, init, true, c, cerr),
         cerr
       ),
     c,
@@ -84,12 +81,12 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
           env,
           config,
           init => {
-            let v = {
+            const v = {
               id: (e.id as Identifier).name,
               init
             };
             // TODO: handle _error, it may happen in the future with redeclaration of `let/const` Reference
-            let cnt = (_exception?: MetaesException) => {
+            const cnt = (_exception?: MetaesException) => {
               // undefined as value, because Identifier at this point doesn't represent a Reference.
               // It does after VariableDeclarator finishes.
               callInterceptor({ phase: "exit" }, config, e.id, env);
@@ -167,22 +164,31 @@ export function ExpressionStatement(e: ExpressionStatement, env, config, c, cerr
 }
 
 export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, cerr) {
-  evaluateProp("block", e, env, config, c, exception => {
-    if (exception.type === "ReturnStatement") {
-      cerr(exception);
-    } else {
-      evaluateProp(
-        "handler",
-        e,
-        // Use name which is illegal JavaScript identifier.
-        // It will disallow collision with user names.
-        { values: { "/exception": exception.value }, prev: env },
-        config,
-        () => (e.finalizer ? evaluateProp("finalizer", e, env, config, c, cerr) : c()),
-        cerr
-      );
-    }
-  });
+  evaluateProp(
+    "block",
+    e,
+    env,
+    config,
+    c,
+    exception =>
+      exception.type === "ThrowStatement"
+        ? evaluateProp(
+            "handler",
+            e,
+            {
+              values: {
+                // Use name which is illegal JavaScript identifier.
+                // It will disallow collision with user names.
+                "/exception": exception.value
+              },
+              prev: env
+            },
+            config,
+            () => (e.finalizer ? evaluateProp("finalizer", e, env, config, c, cerr) : c()),
+            cerr
+          )
+        : cerr(exception)
+  );
 }
 
 export function ThrowStatement(e: ThrowStatement, env, config, _c, cerr) {
@@ -193,20 +199,18 @@ export function CatchClause(e: CatchClause, env, config, c, cerr) {
   getValue(
     env,
     "/exception",
-    error => {
-      let name = e.param.name;
+    error =>
       evaluateProp(
         "body",
         e,
         {
-          values: { [name]: error },
+          values: { [e.param.name]: error },
           prev: env
         },
         config,
         c,
         cerr
-      );
-    },
+      ),
     cerr
   );
 }
