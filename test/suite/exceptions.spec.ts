@@ -39,32 +39,36 @@ describe("Exceptions", () => {
     });
 
     it("should continue after try/catch block", async () => {
-      const result = await evalFunctionBody(new MetaesContext(), function() {
-        try {
-          (async () => {
-            throw 1;
-          })();
-        } catch (e) {
-          // ignore
-        }
-        "hello";
-      });
-      assert.equal(result, "hello");
+      assert.equal(
+        await evalFunctionBody(new MetaesContext(), function() {
+          try {
+            (async () => {
+              throw 1;
+            })();
+          } catch (e) {
+            // ignore
+          }
+          "hello";
+        }),
+        "hello"
+      );
     });
 
     it("should catch any error in try statement", async () => {
       // declare variable to stop TypeScript warnings
       let a;
-      const result = await evalFunctionBody(new MetaesContext(), function() {
-        let error;
-        try {
-          a; //
-        } catch (e) {
-          error = e;
-        }
-        error;
-      });
-      assert.isTrue(result instanceof ReferenceError);
+
+      assert.isTrue(
+        (await evalFunctionBody(new MetaesContext(), function() {
+          let error;
+          try {
+            a; //
+          } catch (e) {
+            error = e;
+          }
+          error;
+        })) instanceof ReferenceError
+      );
     });
   });
 });
