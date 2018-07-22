@@ -14,7 +14,7 @@ type MetaesProxy = {
   handler: MetaesProxyHandler;
 };
 
-export type FlameGraph = { root: EvaluationNode[]; executionStack: EvaluationNode[]; values: Map<ASTNode, any> };
+export type FlameGraph = { executionStack: EvaluationNode[]; values: Map<ASTNode, any> };
 
 export type EvaluationNode = {
   evaluation: Evaluation;
@@ -188,8 +188,7 @@ export class MetaesStore<T> {
       this._flameGraphs[scriptId] ||
       (this._flameGraphs[scriptId] = {
         executionStack: [],
-        values: new Map(),
-        root: []
+        values: new Map()
       });
     const stack = flameGraph.executionStack;
 

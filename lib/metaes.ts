@@ -1,27 +1,25 @@
 import { parse } from "./parse";
-import { EvaluationConfig, Evaluate, Source, MetaesException, Continuation, ErrorContinuation } from "./types";
+import { EvaluationConfig, Evaluate, Source, Continuation, ErrorContinuation } from "./types";
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
 import { FunctionNode, ExpressionStatement } from "./nodeTypes";
 import { Environment, EnvironmentBase } from "./environment";
 
-const log = e => console.log(e);
-
 export interface ScriptingContext {
   evaluate: Evaluate;
 }
 
-let scriptsConter = 0;
+let scriptIdsCounter = 0;
 
 export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config = {}) => {
   if (!config.interceptor) {
     config.interceptor = function noop() {};
   }
+
+  let env: Environment;
   try {
     const node: ASTNode =
       typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source);
-    let env: Environment;
-
     if ("values" in environment) {
       env = environment as Environment;
     } else {
@@ -31,22 +29,9 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
     }
 
     if (!config.scriptId) {
-      config.scriptId = "" + scriptsConter++;
+      config.scriptId = "" + scriptIdsCounter++;
     }
-    evaluate(
-      node,
-      env,
-      config as EvaluationConfig,
-      val => c && c(val),
-      exception => {
-        if (cerr) {
-          if (!exception.location) {
-            exception.location = node;
-          }
-          cerr(exception);
-        }
-      }
-    );
+    evaluate(node, env, config as EvaluationConfig, val => c && c(val), exception => cerr && cerr(exception));
   } catch (e) {
     if (cerr) {
       cerr(e);
@@ -61,7 +46,7 @@ export class MetaesContext implements ScriptingContext {
     public c?: Continuation,
     public cerr?: ErrorContinuation,
     public environment: Environment = { values: {} },
-    public config: Partial<EvaluationConfig> = { onError: log }
+    public config: Partial<EvaluationConfig> = {}
   ) {}
 
   evaluate(
@@ -75,13 +60,7 @@ export class MetaesContext implements ScriptingContext {
     if (environment) {
       env = Object.assign({ prev: this.environment }, environment);
     }
-    metaesEval(
-      source,
-      c || this.c,
-      cerr || this.cerr,
-      env,
-      Object.assign({}, config || this.config, { scriptId: null })
-    );
+    metaesEval(source, c || this.c, cerr || this.cerr, env, Object.assign({}, config || this.config));
   }
 }
 
@@ -116,9 +95,6 @@ export const consoleLoggingMetaesContext = (environment: Environment = { values:
     {
       interceptor: evaluation => {
         console.log(evaluation);
-      },
-      onError: (e: MetaesException) => {
-        console.log(e);
       }
     }
   );

@@ -64,7 +64,7 @@ export function VariableDeclaration(e: VariableDeclaration, env, config, c, cerr
         env,
         config,
         (result: VariableDeclaratorValue) => {
-          let { id, init } = result;
+          const { id, init } = result;
           setValue(env, id, init, true, c, cerr);
         },
         cerr
@@ -171,7 +171,6 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
     if (exception.type === "ReturnStatement") {
       cerr(exception);
     } else {
-      config.onError && config.onError(exception);
       evaluateProp(
         "handler",
         e,
@@ -220,7 +219,6 @@ export function ReturnStatement(e: ReturnStatement, env, config, _c, cerr) {
   }
 }
 
-// TODO: don't use try/catch here, use cerr directly instead
 export function FunctionDeclaration(e: FunctionDeclaration, env, config, c, cerr) {
   try {
     c(createMetaFunction(e, env, config));
@@ -235,10 +233,9 @@ export function ForInStatement(e: ForInStatement, env, config, c, cerr) {
     env,
     config,
     right => {
-      let leftNode = e.left;
+      const leftNode = e.left;
       if (leftNode.type === "Identifier") {
-        let names = Object.keys(right);
-
+        const names = Object.keys(right);
         visitArray(
           names,
           (name, c, cerr) =>

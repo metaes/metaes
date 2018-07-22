@@ -14,37 +14,33 @@ describe("Meta functions", () => {
     forms.forEach(form => metaesEval(form, adderFn => assert.equal(adderFn(1, 2), 3)));
   });
 
-  it("should throw an error", () =>
-    new Promise(resolve =>
-      metaesEval(
-        () => {
-          throw new Error("should have happened");
-        },
-        fn => {
-          expect(fn).to.throw();
-          resolve();
-        },
-        e => {
-          console.log(e);
-        },
-        global // global contains constructor for Error
-      )
-    ));
+  it("should throw an error", () => {
+    let _fn;
+    metaesEval(
+      () => {
+        throw new Error("should have happened");
+      },
+      fn => (_fn = fn),
+      undefined,
+      { values: { Error } } // global contains constructor for Error
+    );
+    expect(_fn).to.throw();
+  });
 
   it("should throw an error from external function", () => {
     function thrower() {
       throw new Error();
     }
+    let _fn;
     metaesEval(
       () => thrower(),
-      fn => {
-        expect(fn).to.throw();
-      },
+      fn => (_fn = fn),
       e => {
         console.log("error", e);
       },
       { thrower }
     );
+    expect(_fn).to.throw();
   });
 
   it("should throw an receive the same error from external function", () => {
@@ -67,8 +63,8 @@ describe("Meta functions", () => {
     try {
       fn();
     } catch (e) {
-      assert.equal(e.message, message);
-      assert.instanceOf(e, errorConstructor);
+      assert.equal(e.value.message, message);
+      assert.instanceOf(e.value, errorConstructor);
     }
   });
 });

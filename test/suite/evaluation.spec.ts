@@ -15,25 +15,6 @@ describe("Evaluation", () => {
     expect(() => context.evaluate("throw 1;")).to.not.throw();
   });
 
-  it("should be notified once about async error", () =>
-    new Promise((resolve, reject) => {
-      context.evaluate(
-        "setTimeout(()=> nonExistingIdentifier())",
-        null,
-        null,
-        { setTimeout },
-        {
-          onError(e) {
-            if (e instanceof ReferenceError) {
-              resolve();
-            } else {
-              reject();
-            }
-          }
-        }
-      );
-    }));
-
   it("should correctly execute scripting context", async () => {
     assert.equal(await evalFunctionBody(context, a => a * 2, { values: { a: 1 } }), 2);
   });

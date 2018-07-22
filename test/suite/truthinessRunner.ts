@@ -42,6 +42,6 @@ const evaluate = (input: string) => new Promise((resolve, reject) => metaesEval(
       it("noop", () => {});
     });
   } catch (e) {
-    console.log(e);
+    console.log("Thruthiness test error", e);
   }
 })();

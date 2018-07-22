@@ -25,12 +25,6 @@ const localContext = new MetaesContext(
       child_process: require("child_process"),
       console
     }
-  },
-  {
-    onError: e => {
-      console.log("[error callback]");
-      console.log(e);
-    }
   }
 );
 

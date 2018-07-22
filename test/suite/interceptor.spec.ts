@@ -7,17 +7,13 @@ describe("Interceptor", () => {
   function getEvaluationsOf(script: string, env) {
     let evaluations: Evaluation[] = [];
 
-    function onError(e) {
-      console.log(e);
-    }
-
     function interceptor(evaluation) {
       evaluations.push(evaluation);
     }
 
     function noop() {}
 
-    metaesEval(script, noop, console.log, env, { interceptor, onError });
+    metaesEval(script, noop, console.log, env, { interceptor });
     return evaluations;
   }
 

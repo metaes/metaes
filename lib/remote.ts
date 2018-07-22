@@ -118,9 +118,7 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
             log("[Client: raw message]", e.data);
             log("[Client: message]", message);
             log("[Client: env is]", env);
-            metaesEval(message.source, env.values.c, env.values.cerr, env, {
-              onError: e => log("[Client: metaesEval/onError:]", e)
-            });
+            metaesEval(message.source, env.values.c, env.values.cerr, env);
           } else {
             log("[Client: ignored message without env:]", message);
           }

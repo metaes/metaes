@@ -4,10 +4,6 @@ import { ASTNode } from "./nodes/nodes";
 import { callInterceptor, Environment } from "./environment";
 import { NotImplementedException } from "./exceptions";
 
-if (typeof window !== "undefined") {
-  window.addEventListener("unhandledrejection", event => console.log(event));
-}
-
 export const evaluateProp = (
   propertyKey: string,
   e: ASTNode,
@@ -90,15 +86,13 @@ export function evaluate(
         }
       );
     } catch (error) {
-      // catch error in interpreters implementations
+      // catch errors in interpreters implementations
       throw error;
     }
   } else if (!e) {
     cerr({ type: "EmptyNode" });
   } else {
-    const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
-    config.onError && config.onError(exception);
-    cerr(exception);
+    cerr(NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e));
   }
 }
 

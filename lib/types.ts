@@ -40,20 +40,9 @@ export interface Evaluation {
 
 export type Interceptor = (evaluation: Evaluation) => void;
 
-// TODO: will be used to add properties while transfering RemoteValues
 export interface EvaluationConfig {
   interceptor: Interceptor;
-
-  // Per context unique id of running script.
   scriptId: string;
-
-  // if true, the interceptor will receive Reference object for Identifiers, not a bare JavaScript values.
-  // It's following ECMAScript reference naming guidelines
-  // TODO: it's not tested/not used anywhere yet. Remains here for historical reasons, should be cleaned up.
-  useReferences?: boolean;
-
-  // Inform about asychronous errors
-  onError?: ErrorContinuation;
 }
 
 export type Continuation = (value: MetaesException | any) => void;

@@ -10,6 +10,7 @@ describe("Exceptions", () => {
         resolve();
       });
     }));
+
   describe("From host functions", () => {});
   describe("From MetaES functions", () => {});
 
@@ -18,7 +19,6 @@ describe("Exceptions", () => {
       try {
         await evalFunctionBody(new MetaesContext(), function() {
           throw 1;
-          return true;
         });
         throw new Error("Didn't throw");
       } catch (e) {
@@ -26,15 +26,13 @@ describe("Exceptions", () => {
       }
     });
 
-    it("should exit block statement when throwing from function", async () => {
+    it("should exit block statement when throwing from nested function", async () => {
       try {
         await evalFunctionBody(new MetaesContext(), function() {
           (() => {
             throw 1;
           })();
-          return true;
         });
-        throw new Error("Didn't throw");
       } catch (e) {
         assert.equal(e.type, "ThrowStatement");
       }
