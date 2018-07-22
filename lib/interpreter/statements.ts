@@ -381,7 +381,7 @@ export function MethodDefinition(e: MethodDefinition, env, config, c, cerr) {
     config,
     value => {
       if (e.kind === "constructor") {
-        let key = e.key.name;
+        const key = e.key.name;
         c({ key, value });
       } else {
         cerr(NotImplementedException("Object methods not implemented yet."));
