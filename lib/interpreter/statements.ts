@@ -284,7 +284,7 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
     right => {
       switch (e.left.type) {
         case "VariableDeclaration":
-          let loopEnv = {
+          const loopEnv = {
             prev: env,
             values: {}
           };
