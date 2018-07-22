@@ -3,7 +3,7 @@ import { Environment, Reference } from "./environment";
 import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
-  type?: "Error" | "ReturnStatement" | "EmptyNode" | "NotImplemented" | "ThrowStatement" | "ReferenceError";
+  type?: "Error" | "ReturnStatement" | "NotImplemented" | "ThrowStatement" | "ReferenceError";
   message?: string;
   value?: Error | any;
   location?: ASTNode;

@@ -1,5 +1,5 @@
 import { evaluate, evaluateProp, evaluateArray, visitArray } from "../applyEval";
-import { callInterceptor, getValue, setValue, setValueAndCallAfterInterceptor } from "../environment";
+import { callInterceptor, getValue, setValue } from "../environment";
 import { EvaluationConfig, MetaesException } from "../types";
 import { NotImplementedException, LocatedError, LocatedException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
@@ -164,30 +164,22 @@ export function ExpressionStatement(e: ExpressionStatement, env, config, c, cerr
 }
 
 export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, cerr) {
-  evaluateProp(
-    "block",
-    e,
-    env,
-    config,
-    c,
-    exception =>
-      exception.type === "ThrowStatement"
-        ? evaluateProp(
-            "handler",
-            e,
-            {
-              values: {
-                // Use name which is illegal JavaScript identifier.
-                // It will disallow collision with user names.
-                "/exception": exception.value
-              },
-              prev: env
-            },
-            config,
-            () => (e.finalizer ? evaluateProp("finalizer", e, env, config, c, cerr) : c()),
-            cerr
-          )
-        : cerr(exception)
+  evaluateProp("block", e, env, config, c, exception =>
+    evaluateProp(
+      "handler",
+      e,
+      {
+        values: {
+          // Use name which is illegal JavaScript identifier.
+          // It will disallow collision with user names.
+          "/exception": exception.value
+        },
+        prev: env
+      },
+      config,
+      () => (e.finalizer ? evaluateProp("finalizer", e, env, config, c, cerr) : c()),
+      cerr
+    )
   );
 }
 
@@ -243,14 +235,14 @@ export function ForInStatement(e: ForInStatement, env, config, c, cerr) {
         visitArray(
           names,
           (name, c, cerr) =>
-            setValueAndCallAfterInterceptor(
-              leftNode,
+            setValue(
               env,
-              config,
               leftNode.name,
               name,
               false,
-              () => evaluate(e.body, env, config, c, cerr),
+              value => (
+                callInterceptor({ phase: "exit" }, config, leftNode, env, value), evaluate(e.body, env, config, c, cerr)
+              ),
               cerr
             ),
           c,
@@ -298,18 +290,17 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
                 right,
                 (rightItem, c, cerr) =>
                   // TODO: iterate over declarations in e.left
-                  setValueAndCallAfterInterceptor(
-                    e.left,
-                    loopEnv,
-                    config,
+                  setValue(
+                    env,
                     left[0].id,
                     rightItem,
                     false,
-                    () =>
+                    value => {
+                      callInterceptor({ phase: "exit" }, config, e.left, env, value);
                       evaluate(e.body, loopEnv, config, c, e => {
                         cerr(e);
-                        throw e;
-                      }),
+                      });
+                    },
                     cerr
                   ),
                 c,
@@ -355,7 +346,16 @@ export function ClassDeclaration(e: ClassDeclaration, env, config, c, cerr) {
               if (key === "constructor") {
                 value.prototype = Object.create(superClass.prototype);
                 if (e.id) {
-                  setValueAndCallAfterInterceptor(e.id, env, config, e.id.name, value, true, c, cerr);
+                  setValue(
+                    env,
+                    e.id.name,
+                    value,
+                    true,
+                    value => (callInterceptor({ phase: "exit" }, config, e.id!, env, value), c(value)),
+                    cerr
+                  );
+                } else {
+                  cerr(NotImplementedException("Not implemented case"));
                 }
               } else {
                 cerr(NotImplementedException("Methods handling not implemented yet."));

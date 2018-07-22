@@ -30,29 +30,6 @@ export function mergeValues(values: object, environment?: Environment): Environm
   }
 }
 
-// TODO: verify if it's really needed
-export const setValueAndCallAfterInterceptor = (
-  e: ASTNode,
-  env: Environment,
-  config: EvaluationConfig,
-  name: string,
-  value: any,
-  isDeclaration: boolean,
-  c: Continuation,
-  cerr: ErrorContinuation
-) =>
-  setValue(
-    env,
-    name,
-    value,
-    isDeclaration,
-    value => {
-      callInterceptor({ phase: "exit" }, config, e, env, value);
-      c(value);
-    },
-    cerr
-  );
-
 export function setValue(
   env: Environment,
   name: string,

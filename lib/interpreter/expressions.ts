@@ -2,7 +2,7 @@ import { apply, evaluate, evaluateProp, evaluatePropWrap, evaluateArray } from "
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { NotImplementedException, LocatedError, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
-import { callInterceptor, Environment, getValue, setValueAndCallAfterInterceptor } from "../environment";
+import { callInterceptor, Environment, getValue, setValue } from "../environment";
 import { IfStatement } from "./statements";
 import {
   ArrayExpression,
@@ -288,7 +288,14 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
           break;
         case "Identifier":
           callInterceptor({ phase: "enter" }, config, e.left, right, env);
-          setValueAndCallAfterInterceptor(e.left, env, config, e_left.name, right, false, c, cerr);
+          setValue(
+            env,
+            e_left.name,
+            right,
+            false,
+            value => (callInterceptor({ phase: "exit" }, config, e.left, env, value), c(value)),
+            cerr
+          );
           break;
         default:
           cerr(NotImplementedException("This assignment is not supported yet."));

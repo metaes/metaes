@@ -64,33 +64,17 @@ export function evaluate(
           c(value);
         },
         exception => {
-          switch (exception.type) {
-            case "EmptyNode":
-              cerr({
-                message: `"${e.type}" tried to access non-existing descendant node.). 
-                Error occurred in "${e.type}" interpreter.`,
-                location: e
-              });
-              break;
-            case "ReturnStatement":
-              callInterceptor({ phase: "exit" }, config, e, env, exception.value);
-              cerr(exception);
-              break;
-            default:
-              if (!exception.location) {
-                exception.location = e;
-              }
-              cerr(exception);
-              break;
+          if (!exception.location) {
+            exception.location = e;
           }
+          callInterceptor({ phase: "exit" }, config, e, env, exception.value);
+          cerr(exception);
         }
       );
     } catch (error) {
       // catch errors in interpreters implementations
       throw error;
     }
-  } else if (!e) {
-    cerr({ type: "EmptyNode" });
   } else {
     cerr(NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e));
   }
