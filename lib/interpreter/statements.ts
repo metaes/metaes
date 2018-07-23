@@ -1,7 +1,7 @@
 import { evaluate, evaluateProp, evaluateArray, visitArray } from "../applyEval";
 import { callInterceptor, getValue, setValue } from "../environment";
-import { EvaluationConfig, MetaesException } from "../types";
-import { NotImplementedException, LocatedError, LocatedException } from "../exceptions";
+import { EvaluationConfig } from "../types";
+import { NotImplementedException, LocatedError } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import {
   BlockStatement as BlockStatement_,
@@ -16,10 +16,8 @@ import {
   ForOfStatement,
   ForStatement,
   FunctionDeclaration,
-  Identifier,
   IfStatement,
   MethodDefinition,
-  ObjectPattern,
   Program,
   ReturnStatement,
   Statement,
@@ -58,86 +56,31 @@ type VariableDeclaratorValue = { id: string; init: any };
 export function VariableDeclaration(e: VariableDeclaration, env, config, c, cerr) {
   visitArray(
     e.declarations,
-    (declarator: VariableDeclarator, c, cerr) =>
-      evaluate(
-        declarator,
-        env,
-        config,
-        ({ id, init }: VariableDeclaratorValue) => setValue(env, id, init, true, c, cerr),
-        cerr
-      ),
+    (declarator: VariableDeclarator, c, cerr) => evaluate(declarator, env, config, c, cerr),
     c,
     cerr
   );
 }
 
 export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) {
-  switch (e.id.type) {
-    case "Identifier":
-      if (e.init) {
-        evaluateProp(
-          "init",
-          e,
+  function id(initValue) {
+    switch (e.id.type) {
+      case "Identifier":
+        callInterceptor({ phase: "enter" }, config, e.id, env);
+        setValue(
           env,
-          config,
-          init => {
-            const v = {
-              id: (e.id as Identifier).name,
-              init
-            };
-            // TODO: handle _error, it may happen in the future with redeclaration of `let/const` Reference
-            const cnt = (_exception?: MetaesException) => {
-              // undefined as value, because Identifier at this point doesn't represent a Reference.
-              // It does after VariableDeclarator finishes.
-              callInterceptor({ phase: "exit" }, config, e.id, env);
-              c(v);
-            };
-            evaluate(e.id, env, config, cnt, cnt);
-          },
+          e.id.name,
+          initValue,
+          true,
+          value => (callInterceptor({ phase: "exit" }, config, e.id, env), c(value)),
           cerr
         );
-      } else {
-        const value = {
-          id: e.id.name,
-          init: undefined
-        };
-        const cnt = () => {
-          callInterceptor({ phase: "exit" }, config, e.id, env);
-          c(value);
-        };
-        evaluate(e.id, env, config, cnt, cnt);
-      }
-      break;
-    case "ObjectPattern":
-      evaluateProp(
-        "init",
-        e,
-        env,
-        config,
-        init => {
-          if (!init) {
-            cerr(LocatedException("Cannot match against falsy value.", e.init));
-          } else {
-            const results: VariableDeclaratorValue[] = [];
-            for (let id of (e.id as ObjectPattern).properties) {
-              switch (id.key.type) {
-                case "Identifier":
-                  const key = id.key.name;
-                  results.push({ id: key, init: init[key] });
-                  break;
-                default:
-                  return cerr(NotImplementedException(`'${id.key.type}' in '${e.type}' is not supported yet.`));
-              }
-            }
-            c(results);
-          }
-        },
-        cerr
-      );
-      break;
-    default:
-      cerr(NotImplementedException(`Pattern ${e.type} is not supported yet.`, e));
+        break;
+      default:
+        cerr(NotImplementedException(`Init ${e.id.type} is not supported yet.`, e));
+    }
   }
+  e.init ? evaluateProp("init", e, env, config, id, cerr) : id(undefined);
 }
 
 export function IfStatement(e: IfStatement | ConditionalExpression, env, config, c, cerr) {
