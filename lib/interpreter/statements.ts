@@ -208,11 +208,9 @@ export function CatchClause(e: CatchClause, env, config, c, cerr) {
 }
 
 export function ReturnStatement(e: ReturnStatement, env, config, _c, cerr) {
-  if (e.argument) {
-    evaluateProp("argument", e, env, config, value => cerr({ type: "ReturnStatement", value }), cerr);
-  } else {
-    cerr({ type: "ReturnStatement" });
-  }
+  e.argument
+    ? evaluateProp("argument", e, env, config, value => cerr({ type: "ReturnStatement", value }), cerr)
+    : cerr({ type: "ReturnStatement" });
 }
 
 export function FunctionDeclaration(e: FunctionDeclaration, env, config, c, cerr) {
@@ -379,14 +377,10 @@ export function MethodDefinition(e: MethodDefinition, env, config, c, cerr) {
     e.value,
     env,
     config,
-    value => {
-      if (e.kind === "constructor") {
-        const key = e.key.name;
-        c({ key, value });
-      } else {
-        cerr(NotImplementedException("Object methods not implemented yet."));
-      }
-    },
+    value =>
+      e.kind === "constructor"
+        ? c({ key: e.key.name, value })
+        : cerr(NotImplementedException("Object methods not implemented yet.")),
     cerr
   );
 }
