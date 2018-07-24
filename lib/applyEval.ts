@@ -4,26 +4,29 @@ import { ASTNode } from "./nodes/nodes";
 import { callInterceptor, Environment } from "./environment";
 import { NotImplementedException } from "./exceptions";
 
-export const evaluateProp = (
+export function evaluateProp(
   propertyKey: string,
   e: ASTNode,
   env: Environment,
   config: EvaluationConfig,
   c: Continuation,
   cerr: ErrorContinuation
-) => {
+) {
   callInterceptor({ phase: "enter", propertyKey }, config, e);
 
   const value = e[propertyKey];
-  const createContinuation = (phase, cnt) => value => (callInterceptor({ phase, propertyKey }, config, e), cnt(value));
-  const _c = createContinuation("exit", c);
-  const _cerr = createContinuation("exit", cerr);
+  const createContinuation = (cnt, value) => {
+    callInterceptor({ phase: "exit", propertyKey }, config, e, env);
+    cnt(value);
+  };
+  const _c = createContinuation.bind(null, c);
+  const _cerr = createContinuation.bind(null, cerr);
 
   Array.isArray(value) ? evaluateArray(value, env, config, _c, _cerr) : evaluate(value, env, config, _c, _cerr);
-};
+}
 
 // TODO: DRY
-export const evaluatePropWrap = (
+export function evaluatePropWrap(
   propertyKey: string,
   body: (c: Continuation, cerr: ErrorContinuation) => void,
   e: ASTNode,
@@ -31,19 +34,20 @@ export const evaluatePropWrap = (
   config: EvaluationConfig,
   c: Continuation,
   cerr: ErrorContinuation
-) => {
+) {
   callInterceptor({ phase: "enter", propertyKey }, config, e, env);
 
-  const _c = value => {
-    callInterceptor({ phase: "exit", propertyKey }, config, e, env);
-    c(value);
-  };
-  const _cerr = exception => {
-    callInterceptor({ phase: "exit", propertyKey }, config, e, env);
-    cerr(exception);
-  };
-  body(_c, _cerr);
-};
+  body(
+    value => {
+      callInterceptor({ phase: "exit", propertyKey }, config, e, env);
+      c(value);
+    },
+    exception => {
+      callInterceptor({ phase: "exit", propertyKey }, config, e, env);
+      cerr(exception);
+    }
+  );
+}
 
 export function evaluate(
   e: ASTNode,
@@ -67,16 +71,18 @@ export function evaluate(
           if (!exception.location) {
             exception.location = e;
           }
-          callInterceptor({ phase: "exit" }, config, e, env, exception.value);
+          callInterceptor({ phase: "exit" }, config, e, env, exception);
           cerr(exception);
         }
       );
     } catch (error) {
-      // catch errors in interpreters implementations
       throw error;
     }
   } else {
-    cerr(NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e));
+    const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
+    callInterceptor({ phase: "enter" }, config, e, env);
+    cerr(exception);
+    callInterceptor({ phase: "enter" }, config, e, env, exception);
   }
 }
 

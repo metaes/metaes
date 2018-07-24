@@ -72,7 +72,7 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
           e.id.name,
           initValue,
           true,
-          value => (callInterceptor({ phase: "exit" }, config, e.id, env), c(value)),
+          value => (callInterceptor({ phase: "exit" }, config, e.id, env, value), c(value)),
           cerr
         );
         break;
@@ -203,7 +203,7 @@ export function ForStatement(e: ForStatement, env, config, _c, cerr) {
     env,
     config,
     _init => {
-      debugger;
+      cerr(NotImplementedException(`${e.type} is not implemented yet`));
     },
     cerr
   );

@@ -91,7 +91,12 @@ describe("Interceptor", () => {
         .map(({ e, value, tag }) => (value ? [tag.propertyKey || e.type, value] : null))
         .filter(Boolean)
     ).to.eql([
-      ["Identifier", { b: 2 }],
+      [
+        "Identifier",
+        {
+          b: 2
+        }
+      ],
       ["Identifier", 2],
       ["MemberExpression", 2],
       ["ExpressionStatement", 2],

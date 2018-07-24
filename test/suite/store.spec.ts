@@ -59,24 +59,33 @@ describe("MetaesStore", () => {
   });
 
   it("should collect trap results of dynamically added proxy", async () => {
+    const source = `store["foo"]={}, store.foo.bar=1`;
     const value = {};
     let called = false;
-    const store = new MetaesStore(value, {
-      didSet(_store, key) {
-        store.addProxy({
-          target: _store[key],
-          handler: {
-            set(_object, key, args) {
-              expect(key).to.equal("bar");
-              expect(args).to.equal(1);
-              called = true;
+
+    await new Promise((resolve, reject) => {
+      const store = new MetaesStore(value, {
+        didSet(_store, key) {
+          store.addProxy({
+            target: _store[key],
+            handler: {
+              set(_object, key, args) {
+                try {
+                  expect(key).to.equal("bar");
+                  expect(args).to.equal(1);
+                  called = true;
+                  resolve();
+                } catch (e) {
+                  console.log({ _object, key, args });
+                  reject(e);
+                }
+              }
             }
-          }
-        });
-      }
+          });
+        }
+      });
+      store.evaluate(source);
     });
-    const source = `store["foo"]={}, store.foo.bar=1`;
-    await store.evaluate(source);
 
     expect(called).to.be.true;
   });
