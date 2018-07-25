@@ -172,9 +172,8 @@ export function ForInStatement(e: ForInStatement, env, config, c, cerr) {
     right => {
       const leftNode = e.left;
       if (leftNode.type === "Identifier") {
-        const names = Object.keys(right);
         visitArray(
-          names,
+          Object.keys(right),
           (name, c, cerr) =>
             setValue(
               env,
@@ -198,15 +197,7 @@ export function ForInStatement(e: ForInStatement, env, config, c, cerr) {
 }
 
 export function ForStatement(e: ForStatement, env, config, _c, cerr) {
-  evaluate(
-    e.init,
-    env,
-    config,
-    _init => {
-      cerr(NotImplementedException(`${e.type} is not implemented yet`));
-    },
-    cerr
-  );
+  evaluate(e.init, env, config, _init => cerr(NotImplementedException(`${e.type} is not implemented yet`)), cerr);
 }
 
 export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
