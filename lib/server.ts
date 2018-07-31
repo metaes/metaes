@@ -1,4 +1,4 @@
-import { MetaesContext, evalToPromise, ScriptingContext } from "./metaes";
+import { MetaesContext, evalToPromise, Context } from "./metaes";
 import { Environment, mergeValues } from "./environment";
 import { environmentFromJSON, environmentToJSON, Message, assertMessage } from "./remote";
 import { Continuation, Source, ErrorContinuation } from "./types";
@@ -38,7 +38,7 @@ export const runWSServer = (port: number = config.port) =>
     const webSocketServer = new WebSocket.Server({ server });
 
     webSocketServer.on("connection", connection => {
-      const clientContext: ScriptingContext = {
+      const clientContext: Context = {
         evaluate: (input: Source, _c?: Continuation, _cerr?: ErrorContinuation, environment?: Environment) => {
           log("[Server: in evaluate/environment", environment);
           const message = {

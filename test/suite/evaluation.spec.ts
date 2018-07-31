@@ -1,9 +1,9 @@
 import { describe, it, beforeEach } from "mocha";
 import { assert, expect } from "chai";
-import { MetaesContext, evalFunctionBody, ScriptingContext } from "../../lib/metaes";
+import { MetaesContext, evalFunctionBody, Context } from "../../lib/metaes";
 
 describe("Evaluation", () => {
-  let context: ScriptingContext;
+  let context: Context;
   beforeEach(() => {
     context = new MetaesContext();
   });

@@ -2,16 +2,16 @@ import { evalToPromise, MetaesContext } from "./metaes";
 import { Evaluation, Source } from "./types";
 import { ASTNode } from "./nodes/nodes";
 
-type MetaesProxyHandler = {
+type Traps = {
   apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
   get?: (target: object, key: string, value: any) => void;
   set?: (target: object, key: string, args: any) => void;
   didSet?: (target: object, key: string, args: any) => void;
 };
 
-type MetaesProxy = {
+type ProxyHandler = {
   target: any;
-  handler: MetaesProxyHandler;
+  traps: Traps;
 };
 
 export type FlameGraph = { executionStack: EvaluationNode[]; values: Map<ASTNode, any> };
@@ -28,14 +28,14 @@ type InterceptorOnce = (evaluation: Evaluation) => boolean;
 
 const { apply, call } = Function;
 
-export class MetaesStore<T> {
+export class ContextProxy<T> {
   private _context: MetaesContext;
   private _listeners: EvaluationListener[] = [];
-  private _proxies: MetaesProxy[] = [];
+  private _handlers: ProxyHandler[] = [];
   private _flameGraphs: FlameGraphs = {};
   private _oneTimeInterceptors: InterceptorOnce[] = [];
 
-  constructor(private _store: T, rootValueHandler?: MetaesProxyHandler) {
+  constructor(target: T | MetaesContext, mainHandler?: Traps) {
     const config = {
       interceptor: (evaluation: Evaluation) => {
         this._flameGraphBuilder("before", evaluation);
@@ -48,19 +48,20 @@ export class MetaesStore<T> {
         this._flameGraphBuilder("after", evaluation);
       }
     };
-    this._context = new MetaesContext(
-      this.c.bind(this),
-      this.cerr.bind(this),
-      { values: { store: this._store, console } },
-      config
-    );
-    if (rootValueHandler) {
-      this._proxies.push({ handler: rootValueHandler, target: _store });
+    if (target instanceof MetaesContext) {
+      this._context = target;
+    } else {
+      this._context = new MetaesContext(
+        this.c.bind(this),
+        this.cerr.bind(this),
+        { values: { this: target, console } },
+        config
+      );
     }
-  }
 
-  getStore() {
-    return this._store;
+    if (mainHandler) {
+      this._handlers.push({ traps: mainHandler, target });
+    }
   }
 
   addListener(listener: EvaluationListener) {
@@ -71,8 +72,8 @@ export class MetaesStore<T> {
     this._oneTimeInterceptors.push(fn);
   }
 
-  addProxy(proxy: MetaesProxy) {
-    this._proxies.push(proxy);
+  addHandler(handler: ProxyHandler) {
+    this._handlers.push(handler);
   }
 
   interceptor(evaluation: Evaluation) {
@@ -101,10 +102,10 @@ export class MetaesStore<T> {
         if (evaluation.tag.phase === "exit" && evaluation.tag.propertyKey === "property") {
           const left = getValue(assignment.left.object);
           if (left) {
-            for (let i = 0; i < this._proxies.length; i++) {
-              const proxy = this._proxies[i];
-              if (proxy.target === left && proxy.handler.set) {
-                proxy.handler.set(left, getValue(assignment.left.property), getValue(assignment.right));
+            for (let i = 0; i < this._handlers.length; i++) {
+              const handler = this._handlers[i];
+              if (handler.target === left && handler.traps.set) {
+                handler.traps.set(left, getValue(assignment.left.property), getValue(assignment.right));
               }
             }
           }
@@ -121,10 +122,10 @@ export class MetaesStore<T> {
 
         const left = getValue(assignment.left.object);
         if (left) {
-          for (let i = 0; i < this._proxies.length; i++) {
-            const proxy = this._proxies[i];
-            if (proxy.target === left && proxy.handler.didSet) {
-              proxy.handler.didSet(left, getValue(assignment.left.property), getValue(assignment.right));
+          for (let i = 0; i < this._handlers.length; i++) {
+            const handler = this._handlers[i];
+            if (handler.target === left && handler.traps.didSet) {
+              handler.traps.didSet(left, getValue(assignment.left.property), getValue(assignment.right));
             }
           }
         }
@@ -137,20 +138,20 @@ export class MetaesStore<T> {
         const object = getValue(callNode.callee.object);
         const property = getValue(callNode.callee.property);
         const args: any[] = callNode.arguments.map(getValue);
-        for (let i = 0; i < this._proxies.length; i++) {
-          const proxy = this._proxies[i];
-          if (proxy.handler.apply) {
-            if (proxy.target === object) {
-              proxy.handler.apply(object, property, args, callNodeValue);
+        for (let i = 0; i < this._handlers.length; i++) {
+          const handler = this._handlers[i];
+          if (handler.traps.apply) {
+            if (handler.target === object) {
+              handler.traps.apply(object, property, args, callNodeValue);
             } else if (
               // in this case check if function is called using .call or .apply with
               // `this` equal to `proxy.target`
-              args[0] === proxy.target
+              args[0] === handler.target
             ) {
               if (property === apply) {
-                proxy.handler.apply(args[0], object, args[1], callNodeValue);
+                handler.traps.apply(args[0], object, args[1], callNodeValue);
               } else if (property === call) {
-                proxy.handler.apply(args[0], object, args.slice(1), callNodeValue);
+                handler.traps.apply(args[0], object, args.slice(1), callNodeValue);
               }
             }
           }
@@ -162,16 +163,14 @@ export class MetaesStore<T> {
   }
 
   /**
-   * Evaluates source in context of store.
-   * @param source If not a function, the store is bound to `store` environment variable.
+   * Evaluates source in bound context.
+   * @param source
    * @param args
    */
-  async evaluate(source: Source | ((store: T, ...rest) => void), ...args: any[]) {
+  async evaluate(source: Source | ((...rest) => void), ...args: any[]) {
     return typeof source === "function"
-      ? (await evalToPromise(this._context, source)).apply(null, [this._store].concat(args))
-      : await evalToPromise(this._context, source, {
-          values: { store: this._store }
-        });
+      ? (await evalToPromise(this._context, source)).apply(null, args)
+      : await evalToPromise(this._context, source);
   }
 
   c(e) {

@@ -5,7 +5,7 @@ import { ASTNode } from "./nodes/nodes";
 import { FunctionNode, ExpressionStatement } from "./nodeTypes";
 import { Environment, EnvironmentBase } from "./environment";
 
-export interface ScriptingContext {
+export interface Context {
   evaluate: Evaluate;
 }
 
@@ -41,7 +41,7 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
   }
 };
 
-export class MetaesContext implements ScriptingContext {
+export class MetaesContext implements Context {
   constructor(
     public c?: Continuation,
     public cerr?: ErrorContinuation,
@@ -64,7 +64,7 @@ export class MetaesContext implements ScriptingContext {
   }
 }
 
-export const evalToPromise = (context: ScriptingContext, source: Source | Function, environment?: EnvironmentBase) =>
+export const evalToPromise = (context: Context, source: Source | Function, environment?: EnvironmentBase) =>
   new Promise<any>((resolve, reject) => context.evaluate(source, resolve, reject, environment));
 
 export const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")", { loc: false, range: false });
@@ -75,7 +75,7 @@ export const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")", 
  * @param source
  * @param environment
  */
-export const evalFunctionBody = (context: ScriptingContext, source: Function, environment?: EnvironmentBase) =>
+export const evalFunctionBody = (context: Context, source: Function, environment?: EnvironmentBase) =>
   new Promise((resolve, reject) =>
     context.evaluate(
       ((parseFunction(source).body[0] as ExpressionStatement).expression as FunctionNode).body,
