@@ -54,7 +54,7 @@ export class ContextProxy<T> {
       this._context = new MetaesContext(
         this.c.bind(this),
         this.cerr.bind(this),
-        { values: { this: target, console } },
+        { values: { this: target, self: target } },
         config
       );
     }
@@ -169,10 +169,7 @@ export class ContextProxy<T> {
    */
   async evaluate(source: Source | ((...rest) => void), ...args: any[]) {
     return typeof source === "function"
-      ? (await evalToPromise(this._context, source)).apply(
-          null,
-          [await evalToPromise(this._context, "this")].concat(args)
-        )
+      ? (await evalToPromise(this._context, source)).apply(null, args)
       : await evalToPromise(this._context, source);
   }
 

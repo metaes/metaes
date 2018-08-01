@@ -6,7 +6,7 @@ describe("Proxy", () => {
   it("should correctly build tree structure of children", async () => {
     const value = {};
     const proxy = new ContextProxy(value);
-    await proxy.evaluate(self => (self["foo"] = "bar"));
+    await proxy.evaluate(() => (self["foo"] = "bar"));
 
     expect(value["foo"]).to.equal("bar");
   });
@@ -15,7 +15,7 @@ describe("Proxy", () => {
     const value = {};
     const proxy = new ContextProxy(value);
 
-    await proxy.evaluate(`this.foo="bar"`);
+    await proxy.evaluate(`self.foo="bar"`);
 
     expect(value["foo"]).to.equal("bar");
   });
@@ -34,7 +34,7 @@ describe("Proxy", () => {
         expect(proxyValue["foo"]).to.equal(undefined);
       }
     });
-    const source = `this.foo="bar"`;
+    const source = `self.foo="bar"`;
     await proxy.evaluate(source);
 
     expect(called).to.be.true;
@@ -54,14 +54,14 @@ describe("Proxy", () => {
         expect(proxyValue["foo"]).to.equal("bar");
       }
     });
-    const source = `this["foo"]="bar"`;
+    const source = `self["foo"]="bar"`;
     await proxy.evaluate(source);
 
     expect(called).to.be.true;
   });
 
   it("should collect trap results of dynamically added proxy", async () => {
-    const source = `this["foo"]={}, this.foo.bar=1`;
+    const source = `self["foo"]={}, self.foo.bar=1`;
     const value = {};
     let called = false;
 
@@ -103,7 +103,7 @@ describe("Proxy", () => {
         called = true;
       }
     });
-    await proxy.evaluate(`this.push(1)`);
+    await proxy.evaluate(`self.push(1)`);
 
     expect(called).to.be.true;
   });
@@ -123,7 +123,7 @@ describe("Proxy", () => {
         }
       }
     });
-    const source = `this.array.push(1)`;
+    const source = `self.array.push(1)`;
     await proxy.evaluate(source);
     expect(value.array.length).to.equal(1);
 
@@ -142,7 +142,7 @@ describe("Proxy", () => {
       }
     });
 
-    await proxy.evaluate(`this.push.apply(this, [1])`);
+    await proxy.evaluate(`self.push.apply(self, [1])`);
     expect(value.length).to.equal(1);
     expect(called).to.be.true;
   });
@@ -159,7 +159,7 @@ describe("Proxy", () => {
       }
     });
 
-    await proxy.evaluate(`this.push.call(this, 1)`);
+    await proxy.evaluate(`self.push.call(self, 1)`);
     expect(value.length).to.equal(1);
     expect(called).to.be.true;
   });
