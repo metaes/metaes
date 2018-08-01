@@ -88,23 +88,21 @@ export function evaluate(
 
 type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;
 
-export function visitArray<T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) {
-  const accumulated: T[] = [];
-  (function loop(index) {
+export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) =>
+  (function loop(index, accumulated: T[]) {
     if (index < items.length) {
       fn(
         items[index],
         value => {
           accumulated.push(value);
-          loop(index + 1);
+          loop(index + 1, accumulated);
         },
         cerr
       );
     } else {
       c(accumulated);
     }
-  })(0);
-}
+  })(0, []);
 
 export const evaluateArray = (
   array: ASTNode[],
