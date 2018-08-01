@@ -1,7 +1,7 @@
 import { ASTNode } from "./nodes/nodes";
 import { MetaesException } from "./types";
 
-export const ensureException = (value: Error | MetaesException, location?: ASTNode): MetaesException =>
+export const toException = (value: Error | MetaesException, location?: ASTNode): MetaesException =>
   value instanceof Error ? { type: "Error", value, location } : value;
 
 export const NotImplementedException = (message: string, location?: ASTNode): MetaesException => ({

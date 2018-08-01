@@ -4,34 +4,29 @@ import { ASTNode } from "./nodes/nodes";
 import { callInterceptor, Environment } from "./environment";
 import { NotImplementedException } from "./exceptions";
 
-if (typeof window !== "undefined") {
-  window.addEventListener("unhandledrejection", event => console.log(event));
-}
-
-export const evaluateProp = (
+export function evaluateProp(
   propertyKey: string,
   e: ASTNode,
   env: Environment,
   config: EvaluationConfig,
   c: Continuation,
   cerr: ErrorContinuation
-) => {
-  callInterceptor(e, config, env, { phase: "enter", propertyKey });
+) {
+  callInterceptor({ phase: "enter", propertyKey }, config, e);
 
   const value = e[propertyKey];
-  const _c = value => {
-    callInterceptor(e, config, env, { phase: "exit", propertyKey });
-    c(value);
+  const createContinuation = (cnt, value) => {
+    callInterceptor({ phase: "exit", propertyKey }, config, e, env);
+    cnt(value);
   };
-  const _cerr = exception => {
-    callInterceptor(e, config, env, { phase: "exit", propertyKey });
-    cerr(exception);
-  };
+  const _c = createContinuation.bind(null, c);
+  const _cerr = createContinuation.bind(null, cerr);
+
   Array.isArray(value) ? evaluateArray(value, env, config, _c, _cerr) : evaluate(value, env, config, _c, _cerr);
-};
+}
 
 // TODO: DRY
-export const evaluatePropWrap = (
+export function evaluatePropWrap(
   propertyKey: string,
   body: (c: Continuation, cerr: ErrorContinuation) => void,
   e: ASTNode,
@@ -39,19 +34,20 @@ export const evaluatePropWrap = (
   config: EvaluationConfig,
   c: Continuation,
   cerr: ErrorContinuation
-) => {
-  callInterceptor(e, config, env, { phase: "enter", propertyKey });
+) {
+  callInterceptor({ phase: "enter", propertyKey }, config, e, env);
 
-  const _c = value => {
-    callInterceptor(e, config, env, { phase: "exit", propertyKey });
-    c(value);
-  };
-  const _cerr = exception => {
-    callInterceptor(e, config, env, { phase: "exit", propertyKey });
-    cerr(exception);
-  };
-  body(_c, _cerr);
-};
+  body(
+    value => {
+      callInterceptor({ phase: "exit", propertyKey }, config, e, env);
+      c(value);
+    },
+    exception => {
+      callInterceptor({ phase: "exit", propertyKey }, config, e, env);
+      cerr(exception);
+    }
+  );
+}
 
 export function evaluate(
   e: ASTNode,
@@ -61,80 +57,53 @@ export function evaluate(
   cerr: ErrorContinuation
 ) {
   if (e.type in tokens) {
-    callInterceptor(e, config, env, { phase: "enter" });
+    callInterceptor({ phase: "enter" }, config, e, env);
     try {
       tokens[e.type](
         e,
         env,
         config,
         value => {
-          callInterceptor(e, config, env, { phase: "exit" }, value);
+          callInterceptor({ phase: "exit" }, config, e, env, value);
           c(value);
         },
         exception => {
-          switch (exception.type) {
-            case "EmptyNode":
-              cerr({
-                message: `"${e.type}" tried to access non-existing descendant node.). 
-                Error occurred in "${e.type}" interpreter.`,
-                location: e
-              });
-              break;
-            case "ReturnStatement":
-              callInterceptor(e, config, env, { phase: "exit" }, exception.value);
-              cerr(exception);
-              break;
-            default:
-              if (!exception.location) {
-                exception.location = e;
-              }
-              cerr(exception);
-              break;
+          if (!exception.location) {
+            exception.location = e;
           }
+          callInterceptor({ phase: "exit" }, config, e, env, exception);
+          cerr(exception);
         }
       );
     } catch (error) {
-      // catch error in interpreters implementations
       throw error;
     }
-  } else if (!e) {
-    cerr({ type: "EmptyNode" });
   } else {
-    const exception = NotImplementedException(`"${e.type}" token interpreter is not defined yet.`, e);
-    config.onError && config.onError(exception);
+    const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
+    callInterceptor({ phase: "enter" }, config, e, env);
     cerr(exception);
+    callInterceptor({ phase: "enter" }, config, e, env, exception);
   }
 }
 
-// TODO: it's only a sync code. Gradually move to `evaluateArrayAsync`
-export function evaluateArrayParametrized(
-  array: Iterable<ASTNode>,
-  env: Environment,
-  config: EvaluationConfig,
-  c: Continuation,
-  cerr: ErrorContinuation,
-  pre?: (i: number) => void
-) {
-  const results: any[] = [];
-  let stopped;
-  let i = 0;
-  for (let e of array) {
-    pre && pre(i++);
-    evaluate(
-      e,
-      env,
-      config,
-      result => results.push(result),
-      e => {
-        stopped = e;
-        cerr(e);
-      }
-    );
-    if (stopped) {
-      return;
+type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;
+
+export function visitArray<T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) {
+  const accumulated: T[] = [];
+  (function loop(index) {
+    if (index < items.length) {
+      fn(
+        items[index],
+        value => {
+          accumulated.push(value);
+          loop(index + 1);
+        },
+        cerr
+      );
+    } else {
+      c(accumulated);
     }
-  }
-  c(results);
+  })(0);
 }
 
 export const evaluateArray = (
@@ -143,41 +112,6 @@ export const evaluateArray = (
   config: EvaluationConfig,
   c: Continuation,
   cerr: ErrorContinuation
-) => evaluateArrayParametrized(array, env, config, c, cerr);
+) => visitArray(array, (e, c, cerr) => evaluate(e, env, config, c, cerr), c, cerr);
 
-type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;
-
-export function evaluateArrayAsync<T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) {
-  const accumulated: T[] = [];
-
-  function loop(array: T[]) {
-    if (array.length) {
-      fn(
-        array[0],
-        value => {
-          accumulated.push(value);
-          // TODO: maybe don't slice and use pointer
-          loop(array.slice(1));
-        },
-        cerr
-      );
-    } else {
-      c(accumulated);
-    }
-  }
-
-  loop(items);
-}
-
-export function apply(e: ASTNode, fn: Function, args: any[], _config: EvaluationConfig, thisObj?: Object) {
-  let result;
-  try {
-    result = fn.apply(thisObj, args);
-  } catch (error) {
-    if (!error.location) {
-      error.location = e;
-    }
-    throw error;
-  }
-  return result;
-}
+export const apply = (fn: Function, thisObj: any, args: any[]) => fn.apply(thisObj, args);

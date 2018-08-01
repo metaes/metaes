@@ -1,13 +1,13 @@
-import { EvaluationConfig, OnSuccess, MetaesFunction, OnError } from "./types";
-import { NotImplementedException } from "./exceptions";
+import { EvaluationConfig, MetaesFunction, Continuation, ErrorContinuation } from "./types";
+import { NotImplementedException, toException } from "./exceptions";
 import { evaluate } from "./applyEval";
 import { callInterceptor, Environment } from "./environment";
 import { FunctionNode } from "./nodeTypes";
 
 export const evaluateMetaFunction = (
   metaFunction: MetaesFunction,
-  c: OnSuccess,
-  cerr: OnError,
+  c: Continuation,
+  cerr: ErrorContinuation,
   thisObject: any,
   args: any[]
 ) => {
@@ -17,7 +17,6 @@ export const evaluateMetaFunction = (
       prev: closure,
       values: { this: thisObject, arguments: args }
     };
-
     let i = 0;
     for (let param of e.params) {
       switch (param.type) {
@@ -28,19 +27,17 @@ export const evaluateMetaFunction = (
           env.values[param.argument.name] = args.slice(i);
           break;
         default:
-          const error = NotImplementedException(`Not supported type (${param["type"]}) of function param.`, param);
-          config && config.onError && config.onError(error);
-          throw error;
+          throw NotImplementedException(`Not supported type (${param["type"]}) of function param.`, param);
       }
     }
-    config && callInterceptor(e, config, env, "enter", metaFunction);
+    callInterceptor({ phase: "enter" }, config, e, env, metaFunction);
     let _calledAfterInterceptor = false;
 
     function _interceptorAfter(e, value, env) {
       if (_calledAfterInterceptor) {
         return;
       }
-      config && callInterceptor(e, config, env, "exit", value);
+      callInterceptor({ phase: "exit" }, config, e, env, value);
       _calledAfterInterceptor = true;
     }
 
@@ -62,8 +59,6 @@ export const evaluateMetaFunction = (
               exception.location = e;
             }
             cerr(exception);
-            // TODO: if running inside metaes, would be good not to use JavaScript errors, but rather exceptions only
-            throw exception.value || exception;
         }
         _interceptorAfter(e, exception.value, env);
       }
@@ -75,21 +70,11 @@ export const evaluateMetaFunction = (
 
 export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) =>
   function(this: any, ...args) {
-    const config = metaFunction.config;
     let result;
-    let error;
-    evaluateMetaFunction(
-      metaFunction,
-      r => (result = r),
-      exception => {
-        error = exception.value || exception;
-        config && config.onError && config.onError(exception);
-      },
-      this,
-      args
-    );
-    if (error) {
-      throw error;
+    let exception;
+    evaluateMetaFunction(metaFunction, r => (result = r), ex => (exception = toException(ex)), this, args);
+    if (exception) {
+      throw exception;
     }
     return result;
   };

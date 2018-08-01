@@ -3,11 +3,11 @@ import { metaesEval } from "../../lib/metaes";
 
 describe("Async functions", () => {
   it("should throw on AwaitExpression use", () =>
-    new Promise((resolve, reject) => {
+    new Promise(resolve => {
       metaesEval(
         `(async ()=>await 2)()`,
         x => {
-          console.log("BUKA", x);
+          console.log({ x });
         },
         resolve
       );

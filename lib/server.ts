@@ -1,7 +1,7 @@
-import { MetaesContext, evalToPromise, ScriptingContext } from "./metaes";
+import { MetaesContext, evalToPromise, Context } from "./metaes";
 import { Environment, mergeValues } from "./environment";
 import { environmentFromJSON, environmentToJSON, Message, assertMessage } from "./remote";
-import { OnSuccess, Source, OnError } from "./types";
+import { Continuation, Source, ErrorContinuation } from "./types";
 import * as WebSocket from "ws";
 import * as express from "express";
 import * as http from "http";
@@ -25,12 +25,6 @@ const localContext = new MetaesContext(
       child_process: require("child_process"),
       console
     }
-  },
-  {
-    onError: e => {
-      console.log("[error callback]");
-      console.log(e);
-    }
   }
 );
 
@@ -44,8 +38,8 @@ export const runWSServer = (port: number = config.port) =>
     const webSocketServer = new WebSocket.Server({ server });
 
     webSocketServer.on("connection", connection => {
-      const clientContext: ScriptingContext = {
-        evaluate: (input: Source, c?: OnSuccess, cerr?: OnError, environment?: Environment) => {
+      const clientContext: Context = {
+        evaluate: (input: Source, _c?: Continuation, _cerr?: ErrorContinuation, environment?: Environment) => {
           log("[Server: in evaluate/environment", environment);
           const message = {
             source: input,

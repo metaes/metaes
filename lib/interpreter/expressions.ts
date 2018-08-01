@@ -1,8 +1,8 @@
 import { apply, evaluate, evaluateProp, evaluatePropWrap, evaluateArray } from "../applyEval";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
-import { NotImplementedException, LocatedError, ensureException } from "../exceptions";
+import { NotImplementedException, LocatedError, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
-import { callInterceptor, Environment, getReference, getValue, setValueAndCallAfterInterceptor } from "../environment";
+import { callInterceptor, Environment, getValue, setValue } from "../environment";
 import { IfStatement } from "./statements";
 import {
   ArrayExpression,
@@ -59,16 +59,21 @@ export function CallExpression(
                 calleeNode,
                 env,
                 config,
-                object =>
-                  typeof property === "function"
-                    ? c(apply(e, property as Function, args, config, object))
-                    : // TODO: use exceptions
-                      cerr(new TypeError(typeof property + " is not a function")),
+                object => {
+                  if (typeof property === "function") {
+                    try {
+                      c(apply(property as Function, object, args));
+                    } catch (e) {
+                      cerr({ value: e, location: calleeNode });
+                    }
+                  } else {
+                    cerr({ value: new TypeError(typeof property + " is not a function") });
+                  }
+                },
                 cerr
               ),
             cerr
           );
-
           break;
         case "Identifier":
         case "FunctionExpression":
@@ -79,10 +84,14 @@ export function CallExpression(
             env,
             config,
             callee => {
-              try {
-                c(apply(e, callee, args, config));
-              } catch (error) {
-                cerr(ensureException(error, calleeNode));
+              if (typeof callee === "function") {
+                try {
+                  c(apply(callee, undefined, args));
+                } catch (error) {
+                  cerr(toException(error, calleeNode));
+                }
+              } else {
+                cerr(new TypeError(callee + " is not a function"));
               }
             },
             cerr
@@ -96,10 +105,10 @@ export function CallExpression(
             config,
             callee => {
               try {
-                const cnt = thisValue => c(apply(calleeNode, callee, args, config, thisValue));
+                const cnt = thisValue => c(apply(callee, thisValue, args));
                 getValue(env, "this", cnt, () => cnt(undefined));
               } catch (error) {
-                cerr(ensureException(error, calleeNode));
+                cerr(toException(error, calleeNode));
               }
             },
             cerr
@@ -138,12 +147,10 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
                   evaluatePropWrap(
                     "property",
                     (c, _cerr) => {
-                      // just call interceptors, don't evaluate the Identifier which is not a Reference
-                      // TODO: add tests/refactor
-                      let _config = Object.assign({}, config, { useReferences: false });
-                      callInterceptor(e.property, _config, env, { phase: "enter" });
-                      callInterceptor(e.property, _config, env, { phase: "exit" });
-                      c(object[propertyNode.name]);
+                      const value = object[propertyNode.name];
+                      callInterceptor({ phase: "enter" }, config, e.property, env);
+                      callInterceptor({ phase: "exit" }, config, e.property, env, value);
+                      c(value);
                     },
                     e,
                     env,
@@ -192,8 +199,9 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
     env,
     config,
     right => {
-      const leftNode = e.left;
-      switch (leftNode.type) {
+      const e_left = e.left;
+
+      switch (e_left.type) {
         case "MemberExpression":
           evaluatePropWrap(
             "left",
@@ -204,7 +212,28 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
                 env,
                 config,
                 object => {
-                  function doAssign(object, key, value) {
+                  const property = e_left.property;
+                  if (e_left.computed) {
+                    evaluateProp("property", e_left, env, config, key => evalAssignment(object, key, right), cerr);
+                  } else if (property.type === "Identifier") {
+                    evaluatePropWrap(
+                      "property",
+                      (c, _cerr) => {
+                        const value = property.name;
+                        callInterceptor({ phase: "enter" }, config, property, env);
+                        callInterceptor({ phase: "exit" }, config, property, env, value);
+                        c(null);
+                      },
+                      e_left,
+                      env,
+                      config,
+                      () => evalAssignment(object, property.name, right),
+                      cerr
+                    );
+                  } else {
+                    cerr(NotImplementedException("This kind of assignment is not implemented yet.", property));
+                  }
+                  function evalAssignment(object, key, value) {
                     switch (e.operator) {
                       case "=":
                         c((object[key] = value));
@@ -246,13 +275,6 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
                         cerr(NotImplementedException(e.type + "has not implemented " + e.operator));
                     }
                   }
-                  if (leftNode.computed) {
-                    evaluate(leftNode.property, env, config, key => doAssign(object, key, right), cerr);
-                  } else if (leftNode.property.type === "Identifier") {
-                    doAssign(object, leftNode.property.name, right);
-                  } else {
-                    cerr(NotImplementedException("This kind of assignment is not implemented yet.", leftNode.property));
-                  }
                 },
                 cerr
               );
@@ -263,11 +285,17 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
             c,
             cerr
           );
-
           break;
         case "Identifier":
-          callInterceptor(e.left, config, right, env, "enter");
-          setValueAndCallAfterInterceptor(e.left, env, config, leftNode.name, right, false, c, cerr);
+          callInterceptor({ phase: "enter" }, config, e.left, right, env);
+          setValue(
+            env,
+            e_left.name,
+            right,
+            false,
+            value => (callInterceptor({ phase: "exit" }, config, e.left, env, value), c(value)),
+            cerr
+          );
           break;
         default:
           cerr(NotImplementedException("This assignment is not supported yet."));
@@ -422,7 +450,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
                 try {
                   c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
                 } catch (error) {
-                  cerr(ensureException(error, e));
+                  cerr(toException(error, e));
                 }
               }
             },
@@ -440,7 +468,7 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
                 try {
                   c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
                 } catch (error) {
-                  cerr(ensureException(error, calleeNode));
+                  cerr(toException(error, calleeNode));
                 }
               }
             },
@@ -480,47 +508,49 @@ export function LogicalExpression(e: LogicalExpression, env, config, c, cerr) {
 export function UpdateExpression(e: UpdateExpression, env: Environment, _config, c, cerr) {
   switch (e.argument.type) {
     case "Identifier":
-      getReference(
+      const propName = e.argument.name;
+      getValue(
         env,
-        e.argument.name,
-        reference => {
-          if (reference.environment && reference.name) {
-            try {
-              let container = reference.environment.values;
-              let propName = reference.name;
-              let value;
-              if (e.prefix) {
-                switch (e.operator) {
-                  case "++":
-                    value = ++container[propName];
-                    break;
-                  case "--":
-                    value = --container[propName];
-                    break;
-                  default:
-                    throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
-                }
-              } else {
-                switch (e.operator) {
-                  case "++":
-                    value = container[propName]++;
-                    break;
-                  case "--":
-                    value = container[propName]--;
-                    break;
-                  default:
-                    throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
-                }
+        propName,
+        _ => {
+          // discard found value
+          // if value is found, there must be an env for that value, don't check for negative case
+          let foundEnv: Environment = env;
+          let value;
+          while (!(propName in foundEnv.values)) {
+            foundEnv = foundEnv.prev!;
+          }
+          try {
+            if (e.prefix) {
+              switch (e.operator) {
+                case "++":
+                  value = ++foundEnv.values[propName];
+                  break;
+                case "--":
+                  value = --foundEnv.values[propName];
+                  break;
+                default:
+                  throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
               }
-              c(value);
-            } catch (e) {
-              cerr(e);
+            } else {
+              switch (e.operator) {
+                case "++":
+                  value = foundEnv.values[propName]++;
+                  break;
+                case "--":
+                  value = foundEnv.values[propName]--;
+                  break;
+                default:
+                  throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
+              }
             }
+            c(value);
+          } catch (e) {
+            cerr(e);
           }
         },
         cerr
       );
-
       break;
     default:
       cerr(NotImplementedException(`Support of argument of type ${e.argument.type} not implemented yet.`));

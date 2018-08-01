@@ -1,7 +1,7 @@
 import { createTestServer } from "./utils";
 import { before, describe, it } from "mocha";
 import { assert } from "chai";
-import { createConnector } from "../../..//lib/remote";
+import { createConnector } from "../../../lib/remote";
 import { evalToPromise, evalFunctionBody } from "../../../lib/metaes";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
@@ -59,7 +59,9 @@ describe("Remote websocket messaging", () => {
       require("child_process")
         .execSync("cat tsconfig.json")
         .toString(),
-      await evalFunctionBody(connection, child_process => child_process.execSync("cat tsconfig.json").toString())
+      await evalFunctionBody(connection, (child_process, command) => child_process.execSync(command).toString(), {
+        values: { command: "cat tsconfig.json" }
+      })
     );
   });
 
@@ -73,24 +75,5 @@ describe("Remote websocket messaging", () => {
       }
     }
     assert.equal(true, thrown);
-  });
-
-  // TODO: change save file location and fix gitignore
-  it("should write a file to disk correctly", async () => {
-    let contents = "" + Math.random();
-    await evalFunctionBody(
-      connection,
-      fs => {
-        fs.writeFileSync("message.txt", contents, err => {
-          if (err) throw err;
-        });
-      },
-      { values: { contents } }
-    );
-
-    assert.equal(
-      contents,
-      await evalFunctionBody(connection, child_process => child_process.execSync("cat message.txt").toString())
-    );
   });
 });

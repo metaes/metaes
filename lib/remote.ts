@@ -1,9 +1,9 @@
-import { ScriptingContext, metaesEval, evalFunctionBody } from "./metaes";
+import { Context, metaesEval, evalFunctionBody } from "./metaes";
 import { EnvironmentBase, Environment, mergeValues } from "./environment";
-import { OnSuccess, OnError, Source, EvaluationConfig } from "./types";
+import { Continuation, ErrorContinuation, Source, EvaluationConfig } from "./types";
 import { log } from "./logging";
 
-const referencesMaps = new Map<ScriptingContext, Map<object | Function, string>>();
+const referencesMaps = new Map<Context, Map<object | Function, string>>();
 
 function pairs(o: object) {
   let result: any[] = [];
@@ -13,7 +13,7 @@ function pairs(o: object) {
   return result;
 }
 
-export const getReferencesMap = (context: ScriptingContext) => {
+export const getReferencesMap = (context: Context) => {
   let env = referencesMaps.get(context);
   if (!env) {
     referencesMaps.set(context, (env = new Map()));
@@ -24,7 +24,7 @@ export const getReferencesMap = (context: ScriptingContext) => {
 
 export type Message = { source: Source; env?: EnvironmentBase };
 
-function createRemoteFunction(context: ScriptingContext, id: string) {
+function createRemoteFunction(context: Context, id: string) {
   const referencesMap = getReferencesMap(context);
   const fn = (...args) =>
     evalFunctionBody(
@@ -41,7 +41,7 @@ function createRemoteFunction(context: ScriptingContext, id: string) {
   return fn;
 }
 
-export function environmentFromJSON(context: ScriptingContext, environment: EnvironmentBase): Environment {
+export function environmentFromJSON(context: Context, environment: EnvironmentBase): Environment {
   const referencesMap = getReferencesMap(context);
   const values = environment.values || {};
   if (environment.references) {
@@ -62,7 +62,7 @@ export function environmentFromJSON(context: ScriptingContext, environment: Envi
   return { values };
 }
 
-export function environmentToJSON(context: ScriptingContext, environment: EnvironmentBase): EnvironmentBase {
+export function environmentToJSON(context: Context, environment: EnvironmentBase): EnvironmentBase {
   const referencesMap = getReferencesMap(context);
   const references: { [key: string]: { id: string } } = {};
   const values = {};
@@ -96,10 +96,10 @@ export function assertMessage(message: Message): Message {
 }
 
 export const createConnector = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>
-  new Promise<ScriptingContext>((resolve, reject) => {
+  new Promise<Context>((resolve, reject) => {
     const connect = () => {
       const client = new WebSocketConstructor(connectionString);
-      let context: ScriptingContext;
+      let context: Context;
 
       const send = (message: Message) => {
         const stringified = JSON.stringify(assertMessage(message));
@@ -118,9 +118,7 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
             log("[Client: raw message]", e.data);
             log("[Client: message]", message);
             log("[Client: env is]", env);
-            metaesEval(message.source, env.values.c, env.values.cerr, env, {
-              onError: e => log("[Client: metaesEval/onError:]", e)
-            });
+            metaesEval(message.source, env.values.c, env.values.cerr, env);
           } else {
             log("[Client: ignored message without env:]", message);
           }
@@ -133,8 +131,8 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
         context = {
           evaluate: (
             source: Source,
-            c?: OnSuccess,
-            cerr?: OnError,
+            c?: Continuation,
+            cerr?: ErrorContinuation,
             environment?: Environment,
             _config?: EvaluationConfig
           ) => {

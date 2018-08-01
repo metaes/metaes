@@ -1,24 +1,25 @@
 import { parse } from "./parse";
-import { EvaluationConfig, OnSuccess, Evaluate, Source, OnError, MetaesException } from "./types";
+import { EvaluationConfig, Evaluate, Source, Continuation, ErrorContinuation } from "./types";
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
 import { FunctionNode, ExpressionStatement } from "./nodeTypes";
 import { Environment, EnvironmentBase } from "./environment";
 
-const log = e => console.log(e);
-
-export interface ScriptingContext {
+export interface Context {
   evaluate: Evaluate;
 }
 
-let scriptsConter = 0;
+let scriptIdsCounter = 0;
 
 export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config = {}) => {
+  if (!config.interceptor) {
+    config.interceptor = function noop() {};
+  }
+
+  let env: Environment;
   try {
     const node: ASTNode =
       typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source);
-    let env: Environment;
-
     if ("values" in environment) {
       env = environment as Environment;
     } else {
@@ -28,22 +29,9 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
     }
 
     if (!config.scriptId) {
-      config.scriptId = "" + scriptsConter++;
+      config.scriptId = "" + scriptIdsCounter++;
     }
-    evaluate(
-      node,
-      env,
-      config,
-      val => c && c(val, node),
-      exception => {
-        if (cerr) {
-          if (!exception.location) {
-            exception.location = node;
-          }
-          cerr(exception);
-        }
-      }
-    );
+    evaluate(node, env, config as EvaluationConfig, val => c && c(val), exception => cerr && cerr(exception));
   } catch (e) {
     if (cerr) {
       cerr(e);
@@ -53,18 +41,18 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
   }
 };
 
-export class MetaesContext implements ScriptingContext {
+export class MetaesContext implements Context {
   constructor(
-    public c?: OnSuccess,
-    public cerr?: OnError,
+    public c?: Continuation,
+    public cerr?: ErrorContinuation,
     public environment: Environment = { values: {} },
-    public config: EvaluationConfig = { onError: log }
+    public config: Partial<EvaluationConfig> = {}
   ) {}
 
   evaluate(
     source: Source | Function,
-    c?: OnSuccess,
-    cerr?: OnError,
+    c?: Continuation,
+    cerr?: ErrorContinuation,
     environment?: EnvironmentBase,
     config?: EvaluationConfig
   ) {
@@ -72,17 +60,11 @@ export class MetaesContext implements ScriptingContext {
     if (environment) {
       env = Object.assign({ prev: this.environment }, environment);
     }
-    metaesEval(
-      source,
-      c || this.c,
-      cerr || this.cerr,
-      env,
-      Object.assign({}, config || this.config, { scriptId: null })
-    );
+    metaesEval(source, c || this.c, cerr || this.cerr, env, Object.assign({}, config || this.config));
   }
 }
 
-export const evalToPromise = (context: ScriptingContext, source: Source | Function, environment?: EnvironmentBase) =>
+export const evalToPromise = (context: Context, source: Source | Function, environment?: EnvironmentBase) =>
   new Promise<any>((resolve, reject) => context.evaluate(source, resolve, reject, environment));
 
 export const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")", { loc: false, range: false });
@@ -93,7 +75,7 @@ export const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")", 
  * @param source
  * @param environment
  */
-export const evalFunctionBody = (context: ScriptingContext, source: Function, environment?: EnvironmentBase) =>
+export const evalFunctionBody = (context: Context, source: Function, environment?: EnvironmentBase) =>
   new Promise((resolve, reject) =>
     context.evaluate(
       ((parseFunction(source).body[0] as ExpressionStatement).expression as FunctionNode).body,
@@ -113,9 +95,6 @@ export const consoleLoggingMetaesContext = (environment: Environment = { values:
     {
       interceptor: evaluation => {
         console.log(evaluation);
-      },
-      onError: (e: MetaesException) => {
-        console.log(e);
       }
     }
   );

@@ -1,9 +1,9 @@
 import { describe, it, beforeEach } from "mocha";
 import { assert, expect } from "chai";
-import { MetaesContext, evalFunctionBody, ScriptingContext } from "../../lib/metaes";
+import { MetaesContext, evalFunctionBody, Context } from "../../lib/metaes";
 
 describe("Evaluation", () => {
-  let context: ScriptingContext;
+  let context: Context;
   beforeEach(() => {
     context = new MetaesContext();
   });
@@ -14,28 +14,6 @@ describe("Evaluation", () => {
   it("should not throw in current callstack", () => {
     expect(() => context.evaluate("throw 1;")).to.not.throw();
   });
-
-  it("should be notified once about async error", () =>
-    new Promise(resolve => {
-      try {
-        context.evaluate(
-          "setTimeout(()=>console())", // should throw, `console` is not a function
-          null,
-          null,
-          { setTimeout, console },
-          {
-            // FIX: this handler should be called only once.
-            onError(e) {
-              if (e instanceof TypeError) {
-                resolve();
-              }
-            }
-          }
-        );
-      } catch (e) {
-        console.log("caught and ignored:", e);
-      }
-    }));
 
   it("should correctly execute scripting context", async () => {
     assert.equal(await evalFunctionBody(context, a => a * 2, { values: { a: 1 } }), 2);
