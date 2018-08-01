@@ -6,8 +6,7 @@ describe("Proxy", () => {
   it("should correctly build tree structure of children", async () => {
     const value = {};
     const proxy = new ContextProxy(value);
-    const self = await proxy.evaluate("this");
-    await proxy.evaluate(self => (self["foo"] = "bar"), self);
+    await proxy.evaluate(self => (self["foo"] = "bar"));
 
     expect(value["foo"]).to.equal("bar");
   });
