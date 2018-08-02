@@ -10,7 +10,7 @@ const evaluate = (input: string) => new Promise((resolve, reject) => metaesEval(
 
 (async () => {
   try {
-    describe("Truthiness tests", async () => {
+    describe("From source files tests", async () => {
 
       // generate tests on runtime
       before(async () => {
@@ -43,6 +43,6 @@ const evaluate = (input: string) => new Promise((resolve, reject) => metaesEval(
       it("noop", () => {});
     });
   } catch (e) {
-    console.log("Thruthiness test error", e);
+    console.log("Source files test error", e);
   }
 })();
