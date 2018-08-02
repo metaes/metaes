@@ -1,10 +1,31 @@
-import { createTestServer } from "./utils";
 import { before, describe, it } from "mocha";
 import { assert } from "chai";
 import { createConnector } from "./remote";
 import { evalToPromise, evalFunctionBody } from "./metaes";
+import {runWSServer} from "./server";
+
+let server, serverAlreadyAskedToStart;
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
+export const testServerPort = 8082;
+export async function createTestServer(port: number = testServerPort) {
+  if (serverAlreadyAskedToStart && !server) {
+    // periodically check if server is assigned
+    return new Promise(resolve => {
+      let interval = setInterval(() => {
+        if (server) {
+          clearInterval(interval);
+          resolve(server);
+        }
+      }, 10);
+    });
+  } else if (server) {
+    return Promise.resolve(server);
+  } else {
+    serverAlreadyAskedToStart = true;
+    return (server = await runWSServer(port));
+  }
+}
 
 // TODO: merge it with `evaluation` tests and run first with "normal" context, then with remote
 // behind websockets
