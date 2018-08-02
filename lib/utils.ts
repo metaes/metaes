@@ -1,4 +1,4 @@
-import { runWSServer } from "../../../lib/server";
+import { runWSServer } from "./server";
 
 export const testServerPort = 8082;
 let server, serverAlreadyAskedToStart;

@@ -74,8 +74,9 @@ export function environmentToJSON(context: Context, environment: EnvironmentBase
       }
       references[k] = { id: referencesMap.get(v)! };
 
-      // add here whatever there is as a value, it'll be serialized to json
-      if (typeof v === "object") {
+      if (Array.isArray(v)) {
+        values[k] = v.slice(0, 10);
+      } else if (typeof v === "object") {
         values[k] = v;
       }
     } else {

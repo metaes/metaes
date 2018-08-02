@@ -1,7 +1,7 @@
 import { describe, it } from "mocha";
 import { assert, expect } from "chai";
-import { metaesEval } from "../../lib/metaes";
-import { Evaluation } from "../../lib/types";
+import { metaesEval } from "./metaes";
+import { Evaluation } from "./types";
 
 describe("Interceptor", () => {
   function getEvaluationsOf(script: string, env) {

@@ -1,5 +1,5 @@
 import { describe, it } from "mocha";
-import { ContextProxy } from "../../lib/proxy";
+import { ContextProxy } from "./proxy";
 import { expect } from "chai";
 
 describe("Proxy", () => {

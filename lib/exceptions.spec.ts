@@ -1,8 +1,19 @@
 import { describe, it } from "mocha";
-import { evalFunctionBody, MetaesContext, metaesEval } from "../../lib/metaes";
+import { evalFunctionBody, MetaesContext, metaesEval } from "./metaes";
 import { assert } from "chai";
 
 describe("Exceptions", () => {
+  it("should throw on AwaitExpression use", () =>
+    new Promise(resolve => {
+      metaesEval(
+        `(async ()=>await 2)()`,
+        x => {
+          console.log({ x });
+        },
+        resolve
+      );
+    }));
+
   it("should throw ReferenceError", () =>
     new Promise((resolve, _reject) => {
       metaesEval(`a`, null, x => {

@@ -1,8 +1,8 @@
 import { beforeEach, describe, it } from "mocha";
 import { assert } from "chai";
-import { environmentToJSON, environmentFromJSON, getReferencesMap } from "../../lib/remote";
-import { Context, consoleLoggingMetaesContext } from "../../lib/metaes";
-import { Environment, mergeValues } from "../../lib/environment";
+import { environmentToJSON, environmentFromJSON, getReferencesMap } from "./remote";
+import { Context, consoleLoggingMetaesContext } from "./metaes";
+import { Environment, mergeValues } from "./environment";
 
 describe("Environment", () => {
   let context: Context;
@@ -45,5 +45,15 @@ describe("Environment", () => {
     const env2 = mergeValues({ b: 2 }, env);
 
     assert.equal(env2.values["a"], 1);
+  });
+
+  it("should handle large messages", () => {
+    const result = environmentToJSON(context, {
+      values: "i"
+        .repeat(20)
+        .split("")
+        .map((_, i) => i)
+    });
+    console.log(result);
   });
 });
