@@ -1,8 +1,8 @@
-import { before, describe, it } from "mocha";
+import { before, after, describe, it } from "mocha";
 import { assert } from "chai";
 import { createConnector } from "./remote";
 import { evalToPromise, evalFunctionBody } from "./metaes";
-import {runWSServer} from "./server";
+import { runWSServer } from "./server";
 
 let server, serverAlreadyAskedToStart;
 
@@ -35,6 +35,8 @@ describe("Remote websocket messaging", () => {
     await createTestServer(8083);
     connection = await createConnector(W3CWebSocket)(`ws://localhost:8083`);
   });
+
+  after(() => server.close());
 
   it("should correctly deliver primitive success value", async () =>
     assert.equal(4, await evalToPromise(connection, "2+2")));

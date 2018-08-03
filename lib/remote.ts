@@ -1,17 +1,9 @@
 import { Context, metaesEval, evalFunctionBody } from "./metaes";
-import { EnvironmentBase, Environment, mergeValues } from "./environment";
+import { EnvironmentBase, Environment, mergeValues, Reference } from "./environment";
 import { Continuation, ErrorContinuation, Source, EvaluationConfig } from "./types";
 import { log } from "./logging";
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
-
-function pairs(o: object) {
-  let result: any[] = [];
-  for (let k of Object.keys(o)) {
-    result.push([k, o[k]]);
-  }
-  return result;
-}
 
 export const getReferencesMap = (context: Context) => {
   let env = referencesMaps.get(context);
@@ -24,28 +16,11 @@ export const getReferencesMap = (context: Context) => {
 
 export type Message = { source: Source; env?: EnvironmentBase };
 
-function createRemoteFunction(context: Context, id: string) {
-  const referencesMap = getReferencesMap(context);
-  const fn = (...args) =>
-    evalFunctionBody(
-      context,
-      args => {
-        fn.apply(null, args);
-      },
-      environmentFromJSON(context, {
-        values: { args },
-        references: { fn: { id } }
-      })
-    );
-  referencesMap.set(fn, id);
-  return fn;
-}
-
 export function environmentFromJSON(context: Context, environment: EnvironmentBase): Environment {
   const referencesMap = getReferencesMap(context);
   const values = environment.values || {};
   if (environment.references) {
-    outer: for (let [key, { id }] of pairs(environment.references)) {
+    outer: for (let [key, { id }] of Object.entries(environment.references)) {
       for (let [value, boundaryId] of referencesMap.entries()) {
         if (boundaryId === id) {
           values[key] = value;
@@ -62,20 +37,22 @@ export function environmentFromJSON(context: Context, environment: EnvironmentBa
   return { values };
 }
 
+const MaxSize = 10;
+
 export function environmentToJSON(context: Context, environment: EnvironmentBase): EnvironmentBase {
   const referencesMap = getReferencesMap(context);
-  const references: { [key: string]: { id: string } } = {};
+  const references: { [key: string]: Reference } = {};
   const values = {};
 
-  for (let [k, v] of pairs(environment.values)) {
+  for (let [k, v] of Object.entries(environment.values)) {
     if (typeof v === "function" || typeof v === "object") {
       if (!referencesMap.has(v)) {
         referencesMap.set(v, Math.random() + "");
       }
       references[k] = { id: referencesMap.get(v)! };
 
-      if (Array.isArray(v)) {
-        values[k] = v.slice(0, 10);
+      if (Array.isArray(v) && v.length > MaxSize) {
+        values[k] = v.slice(0, MaxSize);
       } else if (typeof v === "object") {
         values[k] = v;
       }
@@ -94,6 +71,23 @@ export function assertMessage(message: Message): Message {
     throw new Error("Message should contain `env` value of type object.");
   }
   return message;
+}
+
+function createRemoteFunction(context: Context, id: string) {
+  const referencesMap = getReferencesMap(context);
+  const fn = (...args) =>
+    evalFunctionBody(
+      context,
+      args => {
+        fn.apply(null, args);
+      },
+      environmentFromJSON(context, {
+        values: { args },
+        references: { fn: { id } }
+      })
+    );
+  referencesMap.set(fn, id);
+  return fn;
 }
 
 export const createConnector = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>

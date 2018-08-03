@@ -2,8 +2,6 @@ import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationTag } from
 import { ASTNode } from "./nodes/nodes";
 
 export interface Reference {
-  name?: string;
-  value?: any;
   id?: string;
 }
 
