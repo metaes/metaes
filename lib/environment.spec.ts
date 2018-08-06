@@ -47,7 +47,7 @@ describe("Environment", () => {
     assert.equal(env2.values["a"], 1);
   });
 
-  it.only("should handle large messages", () => {
+  it("should handle large messages", () => {
     const array = "i"
       .repeat(20)
       .split("")
@@ -62,5 +62,8 @@ describe("Environment", () => {
     console.log(result);
 
     console.log(environmentFromJSON(context, result));
+
+    // const [usersPart, size] = await context.evaluate("let u = this.users.all(); [u, u.length]");
+    // const usersStream = await context.evaluate("this.users.all()");
   });
 });
