@@ -229,9 +229,7 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
                     false,
                     value => {
                       callInterceptor({ phase: "exit" }, config, e.left, env, value);
-                      evaluate(e.body, loopEnv, config, c, e => {
-                        cerr(e);
-                      });
+                      evaluate(e.body, loopEnv, config, c, cerr);
                     },
                     cerr
                   ),
