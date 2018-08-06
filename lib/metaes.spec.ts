@@ -20,8 +20,8 @@ describe("Evaluation", () => {
   });
 
   it("should correctly execute cooperatively", async () => {
-    [1, 2, 3, 4, 5, 6].forEach(async i => {
-      assert.equal(await evalFunctionBody(context, a => a * 2, { values: { a: i } }), i * 2);
-    });
+    [1, 2, 3, 4, 5, 6].forEach(async i =>
+      assert.equal(await evalFunctionBody(context, a => a * 2, { values: { a: i } }), i * 2)
+    );
   });
 });
