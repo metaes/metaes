@@ -14,9 +14,9 @@ export const getReferencesMap = (context: Context) => {
   return env;
 };
 
-export type Message = { source: Source; env?: EnvironmentBase };
+export type MetaesMessage = { source: Source; env?: EnvironmentBase };
 
-export function environmentFromJSON(context: Context, environment: EnvironmentBase): Environment {
+export function environmentFromMessage(context: Context, environment: EnvironmentBase): Environment {
   const referencesMap = getReferencesMap(context);
   const values = environment.values || {};
   if (environment.references) {
@@ -39,7 +39,7 @@ export function environmentFromJSON(context: Context, environment: EnvironmentBa
 
 const MaxSize = 10;
 
-export function environmentToJSON(context: Context, environment: EnvironmentBase): EnvironmentBase {
+export function environmentToMessage(context: Context, environment: EnvironmentBase): EnvironmentBase {
   const referencesMap = getReferencesMap(context);
   const references: { [key: string]: Reference } = {};
   const values = {};
@@ -63,7 +63,7 @@ export function environmentToJSON(context: Context, environment: EnvironmentBase
   return Object.keys(references).length ? { references, values } : { values };
 }
 
-export function assertMessage(message: Message): Message {
+export function assertMessage(message: MetaesMessage): MetaesMessage {
   if (typeof message.source !== "string" && typeof message.source !== "object") {
     throw new Error("Message should contain `source` value of type string or object.");
   }
@@ -81,7 +81,7 @@ function createRemoteFunction(context: Context, id: string) {
       args => {
         fn.apply(null, args);
       },
-      environmentFromJSON(context, {
+      environmentFromMessage(context, {
         values: { args },
         references: { fn: { id } }
       })
@@ -96,7 +96,7 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
       const client = new WebSocketConstructor(connectionString);
       let context: Context;
 
-      const send = (message: Message) => {
+      const send = (message: MetaesMessage) => {
         const stringified = JSON.stringify(assertMessage(message));
         log("[Client: sending message]", stringified);
         client.send(stringified);
@@ -107,9 +107,9 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
       });
       client.addEventListener("message", e => {
         try {
-          const message = assertMessage(JSON.parse(e.data) as Message);
+          const message = assertMessage(JSON.parse(e.data) as MetaesMessage);
           if (message.env) {
-            const env = environmentFromJSON(context, message.env);
+            const env = environmentFromMessage(context, message.env);
             log("[Client: raw message]", e.data);
             log("[Client: message]", message);
             log("[Client: env is]", env);
@@ -134,7 +134,7 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
             try {
               send({
                 source,
-                env: environmentToJSON(context, mergeValues({ c, cerr }, environment))
+                env: environmentToMessage(context, mergeValues({ c, cerr }, environment))
               });
             } catch (e) {
               if (cerr) {

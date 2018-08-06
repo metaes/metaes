@@ -1,6 +1,6 @@
 import { MetaesContext, evalToPromise, Context } from "./metaes";
 import { Environment, mergeValues } from "./environment";
-import { environmentFromJSON, environmentToJSON, Message, assertMessage } from "./remote";
+import { environmentFromMessage, environmentToMessage, MetaesMessage, assertMessage } from "./remote";
 import { Continuation, Source, ErrorContinuation } from "./types";
 import * as WebSocket from "ws";
 import * as express from "express";
@@ -43,7 +43,7 @@ export const runWSServer = (port: number = config.port) =>
           log("[Server: in evaluate/environment", environment);
           const message = {
             source: input,
-            env: environmentToJSON(clientContext, mergeValues({}, environment))
+            env: environmentToMessage(clientContext, mergeValues({}, environment))
           };
           log("[Server sending message]", JSON.stringify(message));
           connection.send(JSON.stringify(assertMessage(message)));
@@ -53,8 +53,8 @@ export const runWSServer = (port: number = config.port) =>
       connection.on("message", async message => {
         let environment;
         try {
-          const { source, env } = assertMessage(JSON.parse(message)) as Message;
-          environment = env ? environmentFromJSON(clientContext, env) : { values: {} };
+          const { source, env } = assertMessage(JSON.parse(message)) as MetaesMessage;
+          environment = env ? environmentFromMessage(clientContext, env) : { values: {} };
           log("[Server: got raw message]:", message);
 
           log("[Server: client environmentFromJSON]", environment);
@@ -71,7 +71,7 @@ export const runWSServer = (port: number = config.port) =>
         } catch (e) {
           log("[Server: caught error]", e.message);
           log("[Server: client environment]", environment);
-          log("[Server: client environmentToJSON]", environmentToJSON(clientContext, environment));
+          log("[Server: client environmentToJSON]", environmentToMessage(clientContext, environment));
           clientContext.evaluate(
             `cerr(error)`,
             null,
