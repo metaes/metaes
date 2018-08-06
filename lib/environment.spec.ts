@@ -47,20 +47,14 @@ describe("Environment", () => {
     assert.equal(env2.values["a"], 1);
   });
 
-  it.only("should handle large messages", () => {
-    const array = "i"
-      .repeat(20)
-      .split("")
-      .map((_, i) => i);
+  it("should handle large messages", async () => {
+    const array = [1, 2, 3];
 
     const result = environmentToJSON(context, {
       values: {
         array
       }
     });
-    assert.deepEqual(result.values, { array: array.slice(0, 10) });
-    console.log(result);
-
-    console.log(environmentFromJSON(context, result));
+    assert.deepEqual(result.values, { array: array });
   });
 });
