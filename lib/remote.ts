@@ -37,27 +37,18 @@ export function environmentFromMessage(context: Context, environment: Environmen
   return { values };
 }
 
-const MaxSize = 10;
-
 export function environmentToMessage(context: Context, environment: EnvironmentBase): EnvironmentBase {
   const referencesMap = getReferencesMap(context);
   const references: { [key: string]: Reference } = {};
   const values = {};
 
-  for (let [k, v] of Object.entries(environment.values)) {
-    if (typeof v === "function" || typeof v === "object") {
-      if (!referencesMap.has(v)) {
-        referencesMap.set(v, Math.random() + "");
+  for (let [key, value] of Object.entries(environment.values)) {
+    values[key] = value;
+    if (typeof value === "function" || typeof value === "object") {
+      if (!referencesMap.has(value)) {
+        referencesMap.set(value, Math.random() + "");
       }
-      references[k] = { id: referencesMap.get(v)! };
-
-      if (Array.isArray(v) && v.length > MaxSize) {
-        values[k] = v.slice(0, MaxSize);
-      } else if (typeof v === "object") {
-        values[k] = v;
-      }
-    } else {
-      values[k] = v;
+      references[key] = { id: referencesMap.get(value)! };
     }
   }
   return Object.keys(references).length ? { references, values } : { values };
