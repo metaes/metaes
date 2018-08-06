@@ -1,8 +1,9 @@
 import { EvaluationConfig, MetaesFunction, Continuation, ErrorContinuation } from "./types";
 import { NotImplementedException, toException } from "./exceptions";
 import { evaluate } from "./applyEval";
-import { callInterceptor, Environment } from "./environment";
+import { Environment } from "./environment";
 import { FunctionNode } from "./nodeTypes";
+import { callInterceptor } from "./metaes";
 
 export const evaluateMetaFunction = (
   metaFunction: MetaesFunction,

@@ -1,8 +1,9 @@
 import { Continuation, ErrorContinuation, EvaluationConfig } from "./types";
 import { tokens } from "./interpreters";
 import { ASTNode } from "./nodes/nodes";
-import { callInterceptor, Environment } from "./environment";
+import { Environment } from "./environment";
 import { NotImplementedException } from "./exceptions";
+import { callInterceptor } from "./metaes";
 
 export function evaluateProp(
   propertyKey: string,

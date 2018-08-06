@@ -77,7 +77,12 @@ describe("Remote websocket messaging", () => {
 
   it("should correctly deliver non-primitve success value and use env", async () => {
     let value = [1, 2, 3];
-    assert.equal(value.toString(), (await evalToPromise(connection, "a", { values: { a: [1, 2, 3] } })).toString());
+    assert.equal(
+      value.toString(),
+      (await evalToPromise(connection, "a", {
+        values: { a: [1, 2, 3] }
+      })).toString()
+    );
   });
 
   it("should return correct value reading a disk file", async () => {

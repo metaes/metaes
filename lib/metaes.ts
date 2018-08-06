@@ -1,8 +1,8 @@
 import { parse } from "./parse";
-import { EvaluationConfig, Evaluate, Source, Continuation, ErrorContinuation } from "./types";
+import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, EvaluationTag, Source } from "./types";
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
-import { FunctionNode, ExpressionStatement } from "./nodeTypes";
+import { ExpressionStatement, FunctionNode } from "./nodeTypes";
 import { Environment, EnvironmentBase } from "./environment";
 
 export interface Context {
@@ -98,3 +98,13 @@ export const consoleLoggingMetaesContext = (environment: Environment = { values:
       }
     }
   );
+
+export const callInterceptor = (tag: EvaluationTag, config: EvaluationConfig, e: ASTNode, env?: Environment, value?) =>
+  config.interceptor({
+    scriptId: config.scriptId,
+    e,
+    tag,
+    value,
+    timestamp: new Date().getTime(),
+    env
+  });

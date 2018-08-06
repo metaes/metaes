@@ -14,7 +14,10 @@ type ProxyHandler = {
   traps: Traps;
 };
 
-export type FlameGraph = { executionStack: EvaluationNode[]; values: Map<ASTNode, any> };
+export type FlameGraph = {
+  executionStack: EvaluationNode[];
+  values: Map<ASTNode, any>;
+};
 
 export type EvaluationNode = {
   evaluation: Evaluation;

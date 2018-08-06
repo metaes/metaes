@@ -1,5 +1,5 @@
 import { evaluate, evaluateProp, evaluateArray, visitArray } from "../applyEval";
-import { callInterceptor, getValue, setValue } from "../environment";
+import { getValue, setValue } from "../environment";
 import { EvaluationConfig } from "../types";
 import { NotImplementedException, LocatedError } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
@@ -27,6 +27,7 @@ import {
   VariableDeclarator,
   WhileStatement
 } from "../nodeTypes";
+import { callInterceptor } from "../metaes";
 
 function hoistDeclarations(e: Statement[], env, config, c, cerr) {
   visitArray(

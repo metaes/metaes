@@ -14,11 +14,7 @@ export type ASTNode = NodeBase & {
 
 const isNode = (node: ASTNode, key: string) => {
   const value = node[key];
-  return (
-    key !== "range" &&
-    value &&
-    (Array.isArray(value) || (typeof value === "object" && "type" in value))
-  );
+  return key !== "range" && value && (Array.isArray(value) || (typeof value === "object" && "type" in value));
 };
 
 export const getNodeChildren = (node: ASTNode) =>

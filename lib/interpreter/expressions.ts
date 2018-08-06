@@ -2,7 +2,7 @@ import { apply, evaluate, evaluateProp, evaluatePropWrap, evaluateArray } from "
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { NotImplementedException, LocatedError, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
-import { callInterceptor, Environment, getValue, setValue } from "../environment";
+import { Environment, getValue, setValue } from "../environment";
 import { IfStatement } from "./statements";
 import {
   ArrayExpression,
@@ -23,6 +23,7 @@ import {
   UpdateExpression,
   TemplateLiteral
 } from "../nodeTypes";
+import { callInterceptor } from "../metaes";
 
 export function lastArrayItem(array?: any[]) {
   if (array) {
@@ -67,7 +68,9 @@ export function CallExpression(
                       cerr({ value: e, location: calleeNode });
                     }
                   } else {
-                    cerr({ value: new TypeError(typeof property + " is not a function") });
+                    cerr({
+                      value: new TypeError(typeof property + " is not a function")
+                    });
                   }
                 },
                 cerr

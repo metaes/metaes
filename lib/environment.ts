@@ -1,5 +1,4 @@
-import { Continuation, ErrorContinuation, EvaluationConfig, EvaluationTag } from "./types";
-import { ASTNode } from "./nodes/nodes";
+import { Continuation, ErrorContinuation } from "./types";
 
 export interface Reference {
   id?: string;
@@ -13,9 +12,6 @@ export interface EnvironmentBase {
 export interface Environment extends EnvironmentBase {
   prev?: Environment;
 }
-
-export const callInterceptor = (tag: EvaluationTag, config: EvaluationConfig, e: ASTNode, env?: Environment, value?) =>
-  config.interceptor({ scriptId: config.scriptId, e, tag, value, timestamp: new Date().getTime(), env });
 
 export function mergeValues(values: object, environment?: Environment): EnvironmentBase {
   if (environment) {
@@ -72,5 +68,8 @@ export const getValue = (env: Environment, name: string, c: Continuation, cerr: 
     }
   } while ((_env = _env.prev));
 
-  cerr({ type: "ReferenceError", value: new ReferenceError(`"${name}" is not defined.`) });
+  cerr({
+    type: "ReferenceError",
+    value: new ReferenceError(`"${name}" is not defined.`)
+  });
 };
