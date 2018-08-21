@@ -1,6 +1,7 @@
 import { evalToPromise, MetaesContext } from "./metaes";
 import { Evaluation, Source } from "./types";
 import { ASTNode } from "./nodes/nodes";
+import { EnvironmentBase } from "./environment";
 
 type Traps = {
   apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
@@ -166,14 +167,21 @@ export class ContextProxy<T> {
   }
 
   /**
+   * Evaluates function in bound context.
+   * @param source
+   * @param args
+   */
+  async evaluateFunction(source: ((...rest) => void), ...args: any[]) {
+    return (await evalToPromise(this._context, source)).apply(null, args);
+  }
+
+  /**
    * Evaluates source in bound context.
    * @param source
    * @param args
    */
-  async evaluate(source: Source | ((...rest) => void), ...args: any[]) {
-    return typeof source === "function"
-      ? (await evalToPromise(this._context, source)).apply(null, args)
-      : await evalToPromise(this._context, source);
+  evaluate(source: Source, environment?: EnvironmentBase) {
+    return evalToPromise(this._context, source, environment);
   }
 
   c(e) {
