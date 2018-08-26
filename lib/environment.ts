@@ -13,6 +13,10 @@ export interface Environment extends EnvironmentBase {
   prev?: Environment;
 }
 
+export function toEnvironment(environment: any | EnvironmentBase): EnvironmentBase {
+  return "values" in environment ? environment : { values: environment };
+}
+
 export function mergeValues(values: object, environment?: Environment): EnvironmentBase {
   if (environment) {
     for (let k of Object.keys(values)) {

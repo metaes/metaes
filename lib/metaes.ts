@@ -3,7 +3,7 @@ import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, Evaluation
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
 import { ExpressionStatement, FunctionNode } from "./nodeTypes";
-import { Environment, EnvironmentBase } from "./environment";
+import { Environment, EnvironmentBase, toEnvironment } from "./environment";
 
 export interface Context {
   evaluate: Evaluate;
@@ -15,23 +15,17 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
   if (!config.interceptor) {
     config.interceptor = function noop() {};
   }
-
-  let env: Environment;
+  if (!config.scriptId) {
+    config.scriptId = "" + scriptIdsCounter++;
+  }
   try {
-    const node: ASTNode =
-      typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source);
-    if ("values" in environment) {
-      env = environment as Environment;
-    } else {
-      env = {
-        values: environment
-      };
-    }
-
-    if (!config.scriptId) {
-      config.scriptId = "" + scriptIdsCounter++;
-    }
-    evaluate(node, env, config as EvaluationConfig, val => c && c(val), exception => cerr && cerr(exception));
+    evaluate(
+      typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source),
+      toEnvironment(environment),
+      config as EvaluationConfig,
+      val => c && c(val),
+      exception => cerr && cerr(exception)
+    );
   } catch (e) {
     if (cerr) {
       cerr(e);
