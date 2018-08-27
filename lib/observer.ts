@@ -1,7 +1,7 @@
 import { evalToPromise, MetaesContext } from "./metaes";
 import { Evaluation, Source } from "./types";
 import { ASTNode } from "./nodes/nodes";
-import { EnvironmentBase } from "./environment";
+import { EnvironmentBase, Environment } from "./environment";
 
 type Traps = {
   apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
@@ -10,7 +10,7 @@ type Traps = {
   didSet?: (target: object, key: string, args: any) => void;
 };
 
-type ProxyHandler = {
+type ObserverHandler = {
   target: any;
   traps: Traps;
 };
@@ -32,14 +32,14 @@ type InterceptorOnce = (evaluation: Evaluation) => boolean;
 
 const { apply, call } = Function;
 
-export class ContextProxy<T> {
+export class EvaluationObserver {
   private _context: MetaesContext;
   private _listeners: EvaluationListener[] = [];
-  private _handlers: ProxyHandler[] = [];
+  private _handlers: ObserverHandler[] = [];
   private _flameGraphs: FlameGraphs = {};
   private _oneTimeInterceptors: InterceptorOnce[] = [];
 
-  constructor(target: T | MetaesContext, mainHandler?: Traps) {
+  constructor(target: Environment | object, mainHandler?: Traps) {
     const config = {
       interceptor: (evaluation: Evaluation) => {
         this._flameGraphBuilder("before", evaluation);
@@ -52,16 +52,12 @@ export class ContextProxy<T> {
         this._flameGraphBuilder("after", evaluation);
       }
     };
-    if (target instanceof MetaesContext) {
-      this._context = target;
-    } else {
-      this._context = new MetaesContext(
-        this.c.bind(this),
-        this.cerr.bind(this),
-        { values: { this: target, self: target } },
-        config
-      );
-    }
+    this._context = new MetaesContext(
+      this.c.bind(this),
+      this.cerr.bind(this),
+      { values: { this: target, self: target } },
+      config
+    );
 
     if (mainHandler) {
       this._handlers.push({ traps: mainHandler, target });
@@ -76,7 +72,7 @@ export class ContextProxy<T> {
     this._oneTimeInterceptors.push(fn);
   }
 
-  addHandler(handler: ProxyHandler) {
+  addHandler(handler: ObserverHandler) {
     this._handlers.push(handler);
   }
 
@@ -149,7 +145,7 @@ export class ContextProxy<T> {
               handler.traps.apply(object, property, args, callNodeValue);
             } else if (
               // in this case check if function is called using .call or .apply with
-              // `this` equal to `proxy.target`
+              // `this` equal to `observer.target`
               args[0] === handler.target
             ) {
               if (property === apply) {
