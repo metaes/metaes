@@ -1,4 +1,4 @@
-// should support MemberExpression
+// it: should support MemberExpression
 {
   let o = {
     method() {
@@ -9,7 +9,7 @@
   o.method() === 44;
 }
 
-// should support Identifier
+// it: should support Identifier
 {
   function f() {
     return 44;
@@ -17,12 +17,12 @@
   f() === 44;
 }
 
-// should support FunctionExpression
+// it: should support FunctionExpression
 (function() {
   return 44;
 })() === 44;
 
-// should support CallExpression
+// it: should support CallExpression
 {
   function f2() {
     return function() {
@@ -32,7 +32,7 @@
   f2()() === 44;
 }
 
-// should support ArrowFunctionExpression
+// it: should support ArrowFunctionExpression
 {
   let fn = () => 44;
   fn() === 44;

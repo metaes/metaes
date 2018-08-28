@@ -5,13 +5,15 @@ import { describe, it, before } from "mocha";
 import { assert } from "chai";
 import { zip } from "lodash";
 import { metaesEval } from "../lib/metaes";
+import { getCurrentEnvironment } from "../lib/special";
+
+global["getCurrentEnvironment"] = getCurrentEnvironment;
 
 const evaluate = (input: string) => new Promise((resolve, reject) => metaesEval(input, resolve, reject, global));
 
 (async () => {
   try {
     describe("From source files tests", async () => {
-
       // generate tests on runtime
       before(async () => {
         let files = (await pify(glob)(__dirname + "/*.spec.ts")).map(async file => ({
@@ -20,8 +22,8 @@ const evaluate = (input: string) => new Promise((resolve, reject) => metaesEval(
         }));
 
         return (await Promise.all(files)).forEach(({ contents, name }) => {
-          let testNames = contents.match(/\/\/[^\n]+\n/g);
-          let tests = contents.split(/\/\/.+\n/).filter(line => line.length);
+          let testNames = contents.match(/\/\/ it: [^\n]+\n/g);
+          let tests = contents.split(/\/\/ it: .+\n/).filter(line => line.length);
           let suiteName = name.substring(name.lastIndexOf("/") + 1);
 
           describe(suiteName, () => {
@@ -29,7 +31,7 @@ const evaluate = (input: string) => new Promise((resolve, reject) => metaesEval(
               if (name.includes(":skip")) {
                 return;
               }
-              let testName = name.replace("//", "").trim();
+              let testName = name.replace("// it:", "").trim();
               it(testName, async () => {
                 const result = await evaluate(value);
                 return assert.isTrue(typeof result === "boolean" && result);

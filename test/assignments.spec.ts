@@ -1,4 +1,4 @@
-// should assign to computed value
+// it: should assign to computed value
 {
   let o = {};
   let key = 1;

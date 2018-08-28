@@ -1,4 +1,4 @@
-// should throw correctly
+// it: should throw correctly
 {
   let thrown = false;
   try {
@@ -9,7 +9,7 @@
   thrown;
 }
 
-// should throw primitive value correctly
+// it: should throw primitive value correctly
 {
   let thrown = false;
   try {
@@ -20,14 +20,14 @@
   thrown;
 }
 
-// should support while statement, :skip
+// it: should support while statement, :skip
 {
   let c = 10;
   while (c-- > 0) {}
   c;
 }
 
-// should write and read variables
+// it: should write and read variables
 {
   let c = { a: 1 };
   c.a = 2;

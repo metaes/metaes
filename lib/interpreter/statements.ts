@@ -25,7 +25,8 @@ import {
   TryStatement,
   VariableDeclaration,
   VariableDeclarator,
-  WhileStatement
+  WhileStatement,
+  Identifier
 } from "../nodeTypes";
 import { callInterceptor } from "../metaes";
 
@@ -51,8 +52,6 @@ export function BlockStatement(e: BlockStatement_ | Program, env, config, c, cer
 export function Program(e: Program, env, config, c, cerr) {
   BlockStatement(e, env, config, c, cerr);
 }
-
-type VariableDeclaratorValue = { id: string; init: any };
 
 export function VariableDeclaration(e: VariableDeclaration, env, config, c, cerr) {
   visitArray(
@@ -209,6 +208,7 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
     right => {
       switch (e.left.type) {
         case "VariableDeclaration":
+          // loopEnv should depend on var vs let/const choice
           const loopEnv = {
             prev: env,
             values: {}
@@ -218,14 +218,14 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
             e.left,
             loopEnv,
             config,
-            (left: VariableDeclaratorValue[]) =>
+            _ =>
+              // TODO: iterate over declarations in e.left
               visitArray(
                 right,
                 (rightItem, c, cerr) =>
-                  // TODO: iterate over declarations in e.left
                   setValue(
-                    env,
-                    left[0].id,
+                    loopEnv,
+                    (<Identifier>e.left.declarations[0].id).name,
                     rightItem,
                     false,
                     value => {
