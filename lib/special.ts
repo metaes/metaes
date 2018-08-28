@@ -1,4 +1,5 @@
 import { Environment } from "./environment";
+import { Continuation } from "./types";
 
 /**
  * Should be called only inside Metaes context,
@@ -10,8 +11,7 @@ export function getCurrentEnvironment(): Environment {
 
 /**
  * Should be called only inside Metaes context,
- * CallExpression interpreter makes sure it returns current environment.
  */
-export function callCC(..._: any[]): any {
+export function callWithCurrentContinuation(_receiver: (c: Continuation) => void, ..._args: any[]): any {
   throw new Error("Not intended to be called directly, call from Metaes context.");
 }
