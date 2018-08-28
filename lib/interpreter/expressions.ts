@@ -94,7 +94,7 @@ export function CallExpression(
                     // Hand over current environment to caller
                     c(env);
                   } else if (callee === callWithCurrentContinuation) {
-                    // Pass continuation to first argument of callCC caller
+                    // Pass continuation to first argument of callWithCurrentContinuation caller
                     // It should call `c` later at some point, otherwise execution will be stopped.
                     const continuation = args[0];
                     continuation(c, ...args.slice(1));

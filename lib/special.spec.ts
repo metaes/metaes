@@ -2,10 +2,11 @@ import { describe, it } from "mocha";
 import { metaesEval, evalFunctionBody, MetaesContext } from "./metaes";
 import { callWithCurrentContinuation, getCurrentEnvironment } from "./special";
 import { assert } from "chai";
+import { Environment } from "./environment";
 
 describe("Special", () => {
   it("should return current env", () => {
-    function c(result) {
+    function c(result: Environment) {
       assert.equal(result.values.answer, 42);
       assert.equal(result.values.getCurrentEnvironment, getCurrentEnvironment);
     }
@@ -31,7 +32,7 @@ describe("Special", () => {
       // intentionally continue a bit later
       setTimeout(cc, 0, 21);
     }
-    
+
     const result = await evalFunctionBody(
       context,
       (callWithCurrentContinuation, getCurrentEnvironment) =>
