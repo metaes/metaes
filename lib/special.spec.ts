@@ -19,19 +19,23 @@ describe("Special", () => {
     );
   });
 
-  it("should call with current continuation", async () => {
+  it("should call with current continuation with additional arguments", async () => {
     const context = new MetaesContext(undefined, undefined, {
-      values: { callWithCurrentContinuation, receiver, console }
+      values: { callWithCurrentContinuation, getCurrentEnvironment, receiver }
     });
 
-    function receiver(cc) {
+    let env;
+    function receiver(cc, environment) {
       // intentionally continue a bit later
+      env = environment;
       setTimeout(cc, 0, 21);
     }
     const result = await evalFunctionBody(
       context,
-      callWithCurrentContinuation => 2 * callWithCurrentContinuation(receiver)
+      (callWithCurrentContinuation, getCurrentEnvironment) =>
+        2 * callWithCurrentContinuation(receiver, getCurrentEnvironment())
     );
     assert.equal(result, 42);
+    assert.containsAllKeys(env, ["values"]);
   });
 });
