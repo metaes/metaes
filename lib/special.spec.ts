@@ -26,10 +26,12 @@ describe("Special", () => {
 
     let env;
     function receiver(cc, environment) {
-      // intentionally continue a bit later
+      // remember environment for later check
       env = environment;
+      // intentionally continue a bit later
       setTimeout(cc, 0, 21);
     }
+    
     const result = await evalFunctionBody(
       context,
       (callWithCurrentContinuation, getCurrentEnvironment) =>
