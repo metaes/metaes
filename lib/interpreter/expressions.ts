@@ -2,6 +2,7 @@ import { apply, evaluate, evaluateProp, evaluatePropWrap, evaluateArray } from "
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { NotImplementedException, LocatedError, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
+import { getCurrentEnvironment, callCC } from "../special";
 import { Environment, getValue, setValue } from "../environment";
 import { IfStatement } from "./statements";
 import {
@@ -89,7 +90,17 @@ export function CallExpression(
             callee => {
               if (typeof callee === "function") {
                 try {
-                  c(apply(callee, undefined, args));
+                  if (callee === getCurrentEnvironment) {
+                    // Hand over current environment to caller
+                    c(env);
+                  } else if (callee === callCC) {
+                    // Pass continuation to first argument of callCC caller
+                    // It should call `c` later at some point, otherwise execution will be stopped.
+                    const continuation = args[0];
+                    continuation(c);
+                  } else {
+                    c(apply(callee, undefined, args));
+                  }
                 } catch (error) {
                   cerr(toException(error, calleeNode));
                 }
