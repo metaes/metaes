@@ -1,7 +1,6 @@
-import { evalToPromise, MetaesContext } from "./metaes";
-import { Evaluation, Source } from "./types";
+import { MetaesContext } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
-import { EnvironmentBase, Environment } from "./environment";
+import { Evaluation } from "./types";
 
 type Traps = {
   apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
@@ -32,31 +31,29 @@ type InterceptorOnce = (evaluation: Evaluation) => boolean;
 
 const { apply, call } = Function;
 
-export class EvaluationObserver {
-  private _context: MetaesContext;
+export class ObservableContext extends MetaesContext {
   private _listeners: EvaluationListener[] = [];
   private _handlers: ObserverHandler[] = [];
   private _flameGraphs: FlameGraphs = {};
   private _oneTimeInterceptors: InterceptorOnce[] = [];
 
-  constructor(target: Environment | object, mainHandler?: Traps) {
-    const config = {
-      interceptor: (evaluation: Evaluation) => {
-        this._flameGraphBuilder("before", evaluation);
-        try {
-          this.interceptor(evaluation);
-        } catch (e) {
-          // TODO: use logger
-          console.log(e);
-        }
-        this._flameGraphBuilder("after", evaluation);
-      }
-    };
-    this._context = new MetaesContext(
-      this.c.bind(this),
-      this.cerr.bind(this),
+  constructor(target: object, mainHandler?: Traps) {
+    super(
+      undefined,
+      undefined,
       { values: { this: target, self: target } },
-      config
+      {
+        interceptor: (evaluation: Evaluation) => {
+          this._flameGraphBuilder("before", evaluation);
+          try {
+            this.interceptor(evaluation);
+          } catch (e) {
+            // TODO: use logger
+            console.log(e);
+          }
+          this._flameGraphBuilder("after", evaluation);
+        }
+      }
     );
 
     if (mainHandler) {
@@ -160,32 +157,6 @@ export class EvaluationObserver {
     }
 
     this._listeners.forEach(listener => listener(evaluation, flameGraph));
-  }
-
-  /**
-   * Evaluates function in bound context.
-   * @param source
-   * @param args
-   */
-  async evaluateFunction(source: ((...rest) => void), ...args: any[]) {
-    return (await evalToPromise(this._context, source)).apply(null, args);
-  }
-
-  /**
-   * Evaluates source in bound context.
-   * @param source
-   * @param args
-   */
-  evaluate(source: Source, environment?: EnvironmentBase) {
-    return evalToPromise(this._context, source, environment);
-  }
-
-  c(e) {
-    console.log("ok:", e);
-  }
-
-  cerr(exception) {
-    console.log("exception:", exception);
   }
 
   private _flameGraphBuilder(phase: "before" | "after", evaluation: Evaluation) {

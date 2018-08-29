@@ -79,6 +79,15 @@ export const evalFunctionBody = (context: Context, source: Function, environment
     )
   );
 
+/**
+ * Evaluates function in context.
+ * @param source
+ * @param args
+ */
+export async function evaluateFunction(context: MetaesContext, source: ((...rest) => void), ...args: any[]) {
+  return (await evalToPromise(context, source)).apply(null, args);
+}
+
 export const consoleLoggingMetaesContext = (environment: Environment = { values: {} }) =>
   new MetaesContext(
     value => {
