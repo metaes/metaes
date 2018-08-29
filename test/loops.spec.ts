@@ -1,6 +1,6 @@
-// it: should loop over values;
+// it: should loop over values with long array
 {
-  const input = [1, 2, 3];
+  const input = Array.from(Array(10000).keys());
   const output = [];
   for (let o of input) {
     // @ts-ignore

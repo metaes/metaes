@@ -89,21 +89,49 @@ export function evaluate(
 
 type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;
 
-export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) =>
-  (function loop(index, accumulated: T[]) {
+/**
+ * visitArray uses trampolining inside as it's likely that too long array execution will eat up callstack.
+ * @param items
+ * @param fn
+ * @param c
+ * @param cerr
+ */
+export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) => {
+  // Array of loop function arguments to be applied next time
+  const tasks: any[] = [];
+  // Indicates if tasks execution is done. Initially it is done.
+  let done = true;
+
+  // Simple `loop` function executor, just loop over arguments until nothing is left.
+  function execute() {
+    done = false;
+    while (tasks.length) {
+      (<any>loop)(...tasks.shift());
+    }
+    done = true;
+  }
+
+  function loop(index, accumulated: T[]) {
     if (index < items.length) {
       fn(
         items[index],
         value => {
           accumulated.push(value);
-          loop(index + 1, accumulated);
+          tasks.push([index + 1, accumulated]);
+          if (done) {
+            execute();
+          }
         },
         cerr
       );
     } else {
       c(accumulated);
     }
-  })(0, []);
+  }
+
+  // start
+  loop(0, []);
+};
 
 export const evaluateArray = (
   array: ASTNode[],
