@@ -9,3 +9,18 @@
 
   input.toString() === output.toString();
 }
+
+// it: should correctly throw from loop
+{
+  const input = [1, 2, 3];
+  let result = false;
+  try {
+    for (let _ of input) {
+      throw "error";
+    }
+  } catch (e) {
+    // ignore
+    result = true;
+  }
+  result;
+}
