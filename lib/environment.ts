@@ -13,8 +13,8 @@ export interface Environment extends EnvironmentBase {
   prev?: Environment;
 }
 
-export function toEnvironment(environment: any | EnvironmentBase | Environment): Environment {
-  return "values" in environment ? environment : { values: environment };
+export function toEnvironment(environment?: any | EnvironmentBase | Environment): Environment {
+  return environment ? ("values" in environment ? environment : { values: environment }) : { values: {} };
 }
 
 export function mergeValues(values: object, environment?: Environment): EnvironmentBase {
