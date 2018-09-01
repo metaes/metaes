@@ -17,6 +17,21 @@ export function toEnvironment(environment?: any | EnvironmentBase | Environment)
   return environment ? ("values" in environment ? environment : { values: environment }) : { values: {} };
 }
 
+export function cloneEnvironment(environment?: Environment, topEnvironment?: Environment) {
+  if (!environment) {
+    throw new Error(`Can't clone falsy value`);
+  }
+  if (environment.prev) {
+    return { values: environment.values, prev: cloneEnvironment(environment.prev) };
+  } else {
+    const env: Environment = { values: environment.values };
+    if (topEnvironment) {
+      env.prev = topEnvironment;
+    }
+    return env;
+  }
+}
+
 export function mergeValues(values: object, environment?: Environment): EnvironmentBase {
   if (environment) {
     for (let k of Object.keys(values)) {

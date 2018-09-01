@@ -3,7 +3,7 @@ import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, Evaluation
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
 import { ExpressionStatement, FunctionNode } from "./nodeTypes";
-import { Environment, EnvironmentBase, toEnvironment } from "./environment";
+import { Environment, toEnvironment, cloneEnvironment } from "./environment";
 
 export interface Context {
   evaluate: Evaluate;
@@ -47,18 +47,26 @@ export class MetaesContext implements Context {
     source: Source | Function,
     c?: Continuation,
     cerr?: ErrorContinuation,
-    environment?: EnvironmentBase,
+    environment?: Environment,
     config?: EvaluationConfig
   ) {
     let env = this.environment;
+
+    // Provided environment will be stacked on top of current context's environment.
     if (environment) {
-      env = Object.assign({ prev: this.environment }, environment);
+      let prev = environment.prev;
+      if (prev) {
+        env = cloneEnvironment(environment, this.environment);
+      } else {
+        // Otherwise just bind provided values within a new tail environment
+        env = Object.assign({ prev: this.environment }, environment);
+      }
     }
     metaesEval(source, c || this.c, cerr || this.cerr, env, Object.assign({}, config || this.config));
   }
 }
 
-export const evalToPromise = (context: Context, source: Source | Function, environment?: EnvironmentBase) =>
+export const evalToPromise = (context: Context, source: Source | Function, environment?: Environment) =>
   new Promise<any>((resolve, reject) => context.evaluate(source, resolve, reject, environment));
 
 export const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")", { loc: false, range: false });
@@ -69,7 +77,7 @@ export const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")", 
  * @param source
  * @param environment
  */
-export const evalFunctionBody = (context: Context, source: Function, environment?: EnvironmentBase) =>
+export const evalFunctionBody = (context: Context, source: Function, environment?: Environment) =>
   new Promise((resolve, reject) =>
     context.evaluate(
       ((parseFunction(source).body[0] as ExpressionStatement).expression as FunctionNode).body,
