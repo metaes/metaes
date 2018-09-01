@@ -57,6 +57,7 @@ export function setValue(
   } else {
     while (_env) {
       if (name in _env.values) {
+        // Use `return` to exit loop and whole function.
         return c((_env.values[name] = value));
       }
       _env = _env.prev;
