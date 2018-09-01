@@ -3,7 +3,7 @@ import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, Evaluation
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
 import { ExpressionStatement, FunctionNode } from "./nodeTypes";
-import { Environment, toEnvironment, cloneEnvironment } from "./environment";
+import { Environment, toEnvironment } from "./environment";
 
 export interface Context {
   evaluate: Evaluate;
@@ -43,6 +43,15 @@ export class MetaesContext implements Context {
     public config: Partial<EvaluationConfig> = {}
   ) {}
 
+  /**
+   * Runs metaesEval configured by provided parameters.
+   * @param source
+   * @param c
+   * @param cerr
+   * @param environment - If user provides environment with `prev` field it means he wants to completely replace current evaluation environment.
+   *                      If `prev` is not defined, evaluation will use both `values` field of `environment` and environment from context's environment.
+   * @param config
+   */
   evaluate(
     source: Source | Function,
     c?: Continuation,
@@ -51,7 +60,7 @@ export class MetaesContext implements Context {
     config?: EvaluationConfig
   ) {
     let env = this.environment;
-    
+
     if (environment) {
       if (environment.prev) {
         env = environment;
