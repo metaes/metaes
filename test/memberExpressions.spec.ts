@@ -16,8 +16,8 @@
 {
   let a = { b: null };
   let result;
-  // @ts-ignore
   try {
+    // @ts-ignore
     a.b.c;
   } catch (e) {
     result = e instanceof TypeError;
@@ -29,9 +29,9 @@
 {
   let a = { b: null };
   let result;
-  // @ts-ignore
   let c = "anything";
   try {
+    // @ts-ignore
     a.b[c];
   } catch (e) {
     result = e instanceof TypeError;
