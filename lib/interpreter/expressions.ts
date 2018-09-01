@@ -161,10 +161,14 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
                   evaluatePropWrap(
                     "property",
                     (c, _cerr) => {
-                      const value = object[propertyNode.name];
-                      callInterceptor({ phase: "enter" }, config, e.property, env);
-                      callInterceptor({ phase: "exit" }, config, e.property, env, value);
-                      c(value);
+                      try {
+                        const value = object[propertyNode.name];
+                        callInterceptor({ phase: "enter" }, config, e.property, env);
+                        callInterceptor({ phase: "exit" }, config, e.property, env, value);
+                        c(value);
+                      } catch (e) {
+                        cerr(toException(e, propertyNode));
+                      }
                     },
                     e,
                     env,
