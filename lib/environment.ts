@@ -22,7 +22,7 @@ export function cloneEnvironment(environment?: Environment, topEnvironment?: Env
     throw new Error(`Can't clone falsy value`);
   }
   if (environment.prev) {
-    return { values: environment.values, prev: cloneEnvironment(environment.prev) };
+    return { values: environment.values, prev: cloneEnvironment(environment.prev, topEnvironment) };
   } else {
     const env: Environment = { values: environment.values };
     if (topEnvironment) {

@@ -1,5 +1,5 @@
 import { describe, it } from "mocha";
-import { evalFunctionBody, MetaesContext, metaesEval } from "./metaes";
+import { evalFunctionBody, MetaesContext, metaesEval, evalToPromise } from "./metaes";
 import { assert } from "chai";
 
 describe("Exceptions", () => {
@@ -79,6 +79,26 @@ describe("Exceptions", () => {
           }
           error;
         })) instanceof ReferenceError
+      );
+    });
+
+    it("should merge two or more environments", async () => {
+      const ctx = new MetaesContext(undefined, undefined, { values: { a: 1 } });
+      assert.equal(await evalToPromise(ctx, "a"), 1, "doesn't work with basic environment");
+      assert.equal(await evalToPromise(ctx, "a", { values: { a: 2 } }), 2, "doesn't work with variable shadowing");
+
+      assert.deepEqual(
+        await evalToPromise(ctx, "[a,b]", { values: { b: 1 } }),
+        [1, 1],
+        "doesn't work with creating inner scope"
+      );
+      const env1 = { values: { b: 2 } };
+      const env2 = { values: { c: 3 }, prev: env1 };
+
+      assert.deepEqual(
+        await evalToPromise(ctx, "[a,b,c]", env2),
+        [1, 2, 3],
+        "doesn't work with creating inner scope with double scope environment"
       );
     });
   });
