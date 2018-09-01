@@ -51,12 +51,10 @@ export class MetaesContext implements Context {
     config?: EvaluationConfig
   ) {
     let env = this.environment;
-
-    // Provided environment will be stacked on top of current context's environment.
+    
     if (environment) {
-      let prev = environment.prev;
-      if (prev) {
-        env = cloneEnvironment(environment, this.environment);
+      if (environment.prev) {
+        env = environment;
       } else {
         // Otherwise just bind provided values within a new tail environment
         env = Object.assign({ prev: this.environment }, environment);
