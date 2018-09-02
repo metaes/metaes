@@ -2,16 +2,21 @@ import { Environment } from "./environment";
 import { Continuation } from "./types";
 
 /**
- * Should be called only inside Metaes context,
- * CallExpression interpreter makes sure it returns current environment.
+ * Returns current environment.
  */
 export function getCurrentEnvironment(): Environment {
   throw new Error("Not intended to be called directly, call from Metaes context.");
 }
 
 /**
- * Should be called only inside Metaes context,
+ * Calls argument giving it current continuation, then stop evaluation (if possible). Continuation is a function
+ * that when called it causes evaluation to continue from given point. See unit tests for use examples.
+ *
+ * @param receiver - A function that when called the evaluation resumes and callWithCurrentContinuation
+ *                    will evaluated to whatever was pushed to receiver.
+ * @param args - additional values pased to receiver function.
  */
-export function callWithCurrentContinuation(_receiver: (c: Continuation) => void, ..._args: any[]): any {
+// @ts-ignore - to ignore unused arg warning
+export function callWithCurrentContinuation(receiver: (c: Continuation) => void, ...args: any[]): any {
   throw new Error("Not intended to be called directly, call from Metaes context.");
 }
