@@ -165,4 +165,20 @@ describe("ObservableContext", () => {
     expect(value.length).to.equal(1);
     expect(called).to.be.true;
   });
+
+  it("should collect results of member expressions", async () => {
+    const value = { user: { name: "First", lastname: "Lastname" } };
+    const context = new ObservableContext(value, {
+      get(target, prop, value) {
+        console.log(target, prop, value);
+      }
+    });
+    const source = "self.user.lastname";
+
+    context.addListener(({ e, value, tag: { phase, propertyKey } }, _graph) => {
+      console.log(`${phase}:\t${e.type}, (${propertyKey}) ${source.substring(...e.range)} "${JSON.stringify(value)}"`);
+    });
+
+    context.evaluate(source, value => console.log("Success", value), e => console.log("Error:", e.value.message));
+  });
 });
