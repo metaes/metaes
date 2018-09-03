@@ -4,7 +4,7 @@ import { expect } from "chai";
 import { evaluateFunction } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
 import { MemberExpression } from "./nodeTypes";
-import { Environment } from "./environment";
+import { getValueTag } from "./environment";
 
 describe("ObservableContext", () => {
   it("should correctly build tree structure of children", async () => {
@@ -181,46 +181,17 @@ describe("ObservableContext", () => {
       [self.user.address, self.user, self.user.address.street, dummy.value1]
     `;
 
-    function objectValueRec(e: ASTNode) {
-      if (isMemberExpression(e)) {
-        return objectValueRec(e.object);
-      } else {
-        return e;
-      }
-    }
-
     const isMemberExpression = (e: ASTNode): e is MemberExpression => e.type === "MemberExpression";
 
-    function getTopEnv(env: Environment) {
-      while (env.prev) {
-        env = env.prev;
-      }
-      return env;
-    }
-
-    function environmentHasValue(environment: Environment, value: any) {
-      for (let k in environment.values) {
-        if (value === environment.values[k]) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    const belongsToObservableEnvironment = (value: any) => environmentHasValue(topEnv, value);
-
-    const topEnv = getTopEnv(context.environment);
-
     const actualToObserve = new Set();
+
+    const bottomEnv = { values: { dummy: {} }, prev: context.environment };
 
     context.addListener(({ e, tag: { phase } }, graph) => {
       if (phase === "exit") {
         if (isMemberExpression(e)) {
-          const [rootObjectValue, propertyValue] = [
-            graph.values.get(objectValueRec(e.object)),
-            graph.values.get(e.property)
-          ];
-          if (belongsToObservableEnvironment(rootObjectValue) && typeof propertyValue === "object") {
+          const propertyValue = graph.values.get(e.property);
+          if (typeof propertyValue === "object" && getValueTag(bottomEnv, "self", "observable")) {
             actualToObserve.add(propertyValue);
           }
         } else if (e.type === "Identifier") {
@@ -235,7 +206,7 @@ describe("ObservableContext", () => {
       }
     });
     let error;
-    context.evaluate(source, undefined, _e => (error = _e.value), { values: { dummy: {} }, prev: topEnv });
+    context.evaluate(source, undefined, _e => (error = _e.value), bottomEnv);
     if (error) {
       throw error;
     }

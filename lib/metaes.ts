@@ -57,14 +57,14 @@ export class MetaesContext implements Context {
     c?: Continuation,
     cerr?: ErrorContinuation,
     environment?: Environment,
-    config?: EvaluationConfig
+    config?: Partial<EvaluationConfig>
   ) {
     let env = this.environment;
 
     if (environment) {
       env = environment.prev ? environment : Object.assign({ prev: this.environment }, environment);
     }
-    metaesEval(source, c || this.c, cerr || this.cerr, env, Object.assign({}, config || this.config));
+    metaesEval(source, c || this.c, cerr || this.cerr, env, config || this.config);
   }
 }
 

@@ -6,6 +6,7 @@ export interface Reference {
 
 export interface EnvironmentBase {
   values: { [key: string]: any };
+  tags?: { [key: string]: any };
   references?: { [key: string]: Reference };
 }
 
@@ -28,6 +29,17 @@ export function mergeValues(values: object, environment?: Environment): Environm
   }
 }
 
+export function getEnvironmentForValue(env: Environment, name: string): Environment | null {
+  let _env: Environment | undefined = env;
+  while (_env) {
+    if (name in _env.values) {
+      return _env;
+    }
+    _env = _env.prev;
+  }
+  return null;
+}
+
 export function setValue(
   env: Environment,
   name: string,
@@ -36,22 +48,19 @@ export function setValue(
   c: Continuation,
   cerr: ErrorContinuation
 ) {
-  let _env: Environment | undefined = env;
   if (isDeclaration) {
     c((env.values[name] = value));
   } else {
-    while (_env) {
-      if (name in _env.values) {
-        // Use `return` to exit loop and whole function.
-        return c((_env.values[name] = value));
-      }
-      _env = _env.prev;
+    const _env = getEnvironmentForValue(env, name);
+    if (_env) {
+      c((_env.values[name] = value));
+    } else {
+      cerr({ message: "environment not found" });
     }
-    cerr({ message: "environment not found" });
   }
 }
 
-export const getValue = (env: Environment, name: string, c: Continuation, cerr: ErrorContinuation) => {
+export function getValue(env: Environment, name: string, c: Continuation, cerr: ErrorContinuation) {
   let _env: Environment | undefined = env;
   do {
     if (!_env) {
@@ -77,4 +86,37 @@ export const getValue = (env: Environment, name: string, c: Continuation, cerr: 
     type: "ReferenceError",
     value: new ReferenceError(`"${name}" is not defined.`)
   });
-};
+}
+
+export function setValueTag(env: Environment, name: string, tagKey: string, tagValue: any) {
+  const _env = getEnvironmentForValue(env, name);
+  if (_env) {
+    _env.tags = _env.tags || {};
+    _env.tags[name] = _env.tags[name] || {};
+    _env.tags[name][tagKey] = tagValue;
+  } else {
+    throw new Error(`Couldn't find environment for ${name} value`);
+  }
+}
+
+export function deleteValueTag(env: Environment, valueName: string, tagKey: string) {
+  const _env = getEnvironmentForValue(env, valueName);
+  if (_env) {
+    try {
+      delete _env.tags![valueName][tagKey];
+    } catch {
+      // ignore
+    }
+  }
+}
+
+export function getValueTag(env: Environment, name: string, key: string) {
+  const _env = getEnvironmentForValue(env, name);
+  if (_env) {
+    try {
+      return _env.tags![name][key];
+    } catch {
+      return null;
+    }
+  }
+}

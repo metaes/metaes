@@ -1,6 +1,7 @@
 import { MetaesContext } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
 import { Evaluation } from "./types";
+import { setValueTag } from "./environment";
 
 type Traps = {
   apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
@@ -41,10 +42,7 @@ export class ObservableContext extends MetaesContext {
     super(
       undefined,
       undefined,
-      // create additional wrapping environment to 
-      // disallow creating variables in top environment.
-      // Only target value should sit in top environment.
-      { values: {}, prev: { values: { this: target, self: target } } },
+      { values: { this: target, self: target } },
       {
         interceptor: (evaluation: Evaluation) => {
           this._flameGraphBuilder("before", evaluation);
@@ -58,6 +56,7 @@ export class ObservableContext extends MetaesContext {
         }
       }
     );
+    ["self", "this"].forEach(name => setValueTag(this.environment, name, "observable", true));
 
     if (mainHandler) {
       this._handlers.push({ traps: mainHandler, target });
