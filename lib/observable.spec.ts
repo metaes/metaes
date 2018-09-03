@@ -183,8 +183,8 @@ describe("ObservableContext", () => {
     context.addListener(({ e, tag: { phase } }, graph) => {
       if (phase === "exit") {
         if (isMemberExpression(e)) {
-          const propertyValue = graph.values.get(e.property);
-          if (typeof propertyValue === "object") {
+          const [objectValue, propertyValue] = [graph.values.get(e.object), graph.values.get(e.property)];
+          if (objectValue === self && typeof propertyValue === "object") {
             actualToObserve.add(propertyValue);
           }
         } else if (e.type === "Identifier") {
@@ -198,8 +198,11 @@ describe("ObservableContext", () => {
         }
       }
     });
-
-    context.evaluate(source, undefined, e => console.log("Error:", e.value.message));
+    let error;
+    context.evaluate(source, undefined, _e => (error = _e.value));
+    if (error) {
+      throw error;
+    }
 
     const expected = [self.user, self.user.address];
     const results = [...actualToObserve];
