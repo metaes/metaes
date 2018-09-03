@@ -1,8 +1,8 @@
-import { MetaesContext, evalToPromise } from "./metaes";
+import { Environment, getValueTag, setValueTag } from "./environment";
+import { MetaesContext } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
-import { Evaluation, Source } from "./types";
-import { setValueTag, getValueTag, Environment } from "./environment";
-import { MemberExpression, Identifier } from "./nodeTypes";
+import { Identifier, MemberExpression } from "./nodeTypes";
+import { Evaluation } from "./types";
 
 type Traps = {
   apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
