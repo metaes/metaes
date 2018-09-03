@@ -4,6 +4,7 @@ import { expect } from "chai";
 import { evaluateFunction } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
 import { MemberExpression } from "./nodeTypes";
+import { Environment } from "./environment";
 
 describe("ObservableContext", () => {
   it("should correctly build tree structure of children", async () => {
@@ -169,22 +170,57 @@ describe("ObservableContext", () => {
   });
 
   it("should collect results of member expressions", async () => {
-    const self = { user: { name: "First", lastname: "Lastname", address: { street: "Long" } } };
+    const self = {
+      user: { name: "First", lastname: "Lastname", address: { street: "Long" } }
+    };
     const context = new ObservableContext(self);
 
     // self.user.address.street shouldn't be collected, it's a primitive value.
-    const source = "[self.user.address, self.user, self.user.address.street]";
+    // anything from `dummy` shouldn't be collected.
+    const source = `
+      [self.user.address, self.user, self.user.address.street, dummy.value1]
+    `;
 
-    function isMemberExpression(e: ASTNode): e is MemberExpression {
-      return e.type === "MemberExpression";
+    function objectValueRec(e: ASTNode) {
+      if (isMemberExpression(e)) {
+        return objectValueRec(e.object);
+      } else {
+        return e;
+      }
     }
 
+    const isMemberExpression = (e: ASTNode): e is MemberExpression => e.type === "MemberExpression";
+
+    function getTopEnv(env: Environment) {
+      while (env.prev) {
+        env = env.prev;
+      }
+      return env;
+    }
+
+    function environmentHasValue(environment: Environment, value: any) {
+      for (let k in environment.values) {
+        if (value === environment.values[k]) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    const belongsToObservableEnvironment = (value: any) => environmentHasValue(topEnv, value);
+
+    const topEnv = getTopEnv(context.environment);
+
     const actualToObserve = new Set();
+
     context.addListener(({ e, tag: { phase } }, graph) => {
       if (phase === "exit") {
         if (isMemberExpression(e)) {
-          const [objectValue, propertyValue] = [graph.values.get(e.object), graph.values.get(e.property)];
-          if (objectValue === self && typeof propertyValue === "object") {
+          const [rootObjectValue, propertyValue] = [
+            graph.values.get(objectValueRec(e.object)),
+            graph.values.get(e.property)
+          ];
+          if (belongsToObservableEnvironment(rootObjectValue) && typeof propertyValue === "object") {
             actualToObserve.add(propertyValue);
           }
         } else if (e.type === "Identifier") {
@@ -199,7 +235,7 @@ describe("ObservableContext", () => {
       }
     });
     let error;
-    context.evaluate(source, undefined, _e => (error = _e.value));
+    context.evaluate(source, undefined, _e => (error = _e.value), { values: { dummy: {} }, prev: topEnv });
     if (error) {
       throw error;
     }

@@ -41,7 +41,10 @@ export class ObservableContext extends MetaesContext {
     super(
       undefined,
       undefined,
-      { values: { this: target, self: target } },
+      // create additional wrapping environment to 
+      // disallow creating variables in top environment.
+      // Only target value should sit in top environment.
+      { values: {}, prev: { values: { this: target, self: target } } },
       {
         interceptor: (evaluation: Evaluation) => {
           this._flameGraphBuilder("before", evaluation);
