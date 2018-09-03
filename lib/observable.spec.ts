@@ -1,7 +1,7 @@
 import { describe, it } from "mocha";
-import { ObservableContext } from "./observable";
+import { ObservableContext, createListenerToCollectObservables } from "./observable";
 import { expect } from "chai";
-import { evaluateFunction } from "./metaes";
+import { evaluateFunction, evalToPromise } from "./metaes";
 
 describe("ObservableContext", () => {
   it("should correctly build tree structure of children", async () => {
@@ -173,8 +173,12 @@ describe("ObservableContext", () => {
     const context = new ObservableContext(self);
     const source = `[self.user.address, self.user, self.user.address.street, dummy.value1]`;
     const bottomEnv = { values: { dummy: { dummyEmpty: true } }, prev: context.environment };
-    const actualToObserve = await context.getObjectsToObserve(source, bottomEnv);
-    const results = [...actualToObserve];
+
+    const result = new Set();
+    context.addListener(createListenerToCollectObservables(result, bottomEnv));
+    await evalToPromise(context, source, bottomEnv);
+
+    const results = [...result];
     const expected = [self.user, self, self.user.address];
 
     console.log({ results });

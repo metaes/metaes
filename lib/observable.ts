@@ -195,44 +195,6 @@ export class ObservableContext extends MetaesContext {
       stack.pop();
     }
   }
-
-  async getObjectsToObserve(source: Source, bottomEnv: Environment) {
-    const actualToObserve = new Set<object>();
-
-    function collectObservableObjects({ e, tag: { phase } }, graph) {
-      if (phase === "exit") {
-        if (isMemberExpression(e)) {
-          const propertyValue = graph.values.get(e.property);
-          const topObject = getTopObject(e.object);
-          if (getValueTag(bottomEnv, topObject.name, "observable")) {
-            if (typeof propertyValue === "object") {
-              actualToObserve.add(propertyValue);
-            } else {
-              actualToObserve.add(graph.values.get(topObject));
-            }
-          }
-        } else if (e.type === "Identifier") {
-          const stack = graph.executionStack;
-          if (stack[stack.length - 2].evaluation.e.type === "MemberExpression") {
-            return;
-          }
-          if (getValueTag(bottomEnv, (<Identifier>e).name, "observable")) {
-            actualToObserve.add(graph.values.get(e));
-          }
-        }
-      }
-    }
-    this.addListener(collectObservableObjects);
-    try {
-      await evalToPromise(this, source, bottomEnv);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      this.removeListener(collectObservableObjects);
-    }
-
-    return actualToObserve;
-  }
 }
 
 const isMemberExpression = (e: ASTNode): e is MemberExpression => e.type === "MemberExpression";
@@ -244,3 +206,30 @@ function getTopObject(e: ASTNode) {
     return e;
   }
 }
+
+export const createListenerToCollectObservables = (result: Set<object>, environment: Environment) => (
+  { e, tag: { phase } },
+  graph
+) => {
+  if (phase === "exit") {
+    if (isMemberExpression(e)) {
+      const propertyValue = graph.values.get(e.property);
+      const topObject = getTopObject(e.object);
+      if (getValueTag(environment, topObject.name, "observable")) {
+        if (typeof propertyValue === "object") {
+          result.add(propertyValue);
+        } else {
+          result.add(graph.values.get(topObject));
+        }
+      }
+    } else if (e.type === "Identifier") {
+      const stack = graph.executionStack;
+      if (stack[stack.length - 2].evaluation.e.type === "MemberExpression") {
+        return;
+      }
+      if (getValueTag(environment, (<Identifier>e).name, "observable")) {
+        result.add(graph.values.get(e));
+      }
+    }
+  }
+};

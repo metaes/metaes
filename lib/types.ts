@@ -45,7 +45,7 @@ export interface EvaluationConfig {
   scriptId: string;
 }
 
-export type Continuation = (value: MetaesException | any) => void;
+export type Continuation = (value?: MetaesException | any) => void;
 export type ErrorContinuation = (error: MetaesException) => void;
 
 type Interpreter<T extends ASTNode> = (
