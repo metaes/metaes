@@ -2,9 +2,6 @@ import { describe, it } from "mocha";
 import { ObservableContext } from "./observable";
 import { expect } from "chai";
 import { evaluateFunction } from "./metaes";
-import { ASTNode } from "./nodes/nodes";
-import { MemberExpression } from "./nodeTypes";
-import { getValueTag } from "./environment";
 
 describe("ObservableContext", () => {
   it("should correctly build tree structure of children", async () => {
@@ -174,45 +171,13 @@ describe("ObservableContext", () => {
       user: { name: "First", lastname: "Lastname", address: { street: "Long" } }
     };
     const context = new ObservableContext(self);
-
-    // self.user.address.street shouldn't be collected, it's a primitive value.
-    // anything from `dummy` shouldn't be collected.
-    const source = `
-      [self.user.address, self.user, self.user.address.street, dummy.value1]
-    `;
-
-    const isMemberExpression = (e: ASTNode): e is MemberExpression => e.type === "MemberExpression";
-
-    const actualToObserve = new Set();
-
-    const bottomEnv = { values: { dummy: {} }, prev: context.environment };
-
-    context.addListener(({ e, tag: { phase } }, graph) => {
-      if (phase === "exit") {
-        if (isMemberExpression(e)) {
-          const propertyValue = graph.values.get(e.property);
-          if (typeof propertyValue === "object" && getValueTag(bottomEnv, "self", "observable")) {
-            actualToObserve.add(propertyValue);
-          }
-        } else if (e.type === "Identifier") {
-          const value = graph.values.get(e);
-
-          if (self === value) {
-            if (graph.executionStack[graph.executionStack.length - 2].evaluation.e.type !== "MemberExpression") {
-              actualToObserve.add(value);
-            }
-          }
-        }
-      }
-    });
-    let error;
-    context.evaluate(source, undefined, _e => (error = _e.value), bottomEnv);
-    if (error) {
-      throw error;
-    }
-
-    const expected = [self.user, self.user.address];
+    const source = `[self.user.address, self.user, self.user.address.street, dummy.value1]`;
+    const bottomEnv = { values: { dummy: { dummyEmpty: true } }, prev: context.environment };
+    const actualToObserve = await context.getObjectsToObserve(source, bottomEnv);
     const results = [...actualToObserve];
+    const expected = [self.user, self, self.user.address];
+
+    console.log({ results });
 
     results.forEach(result => expect(expected).to.include(result));
     expect(results).to.have.length(expected.length);

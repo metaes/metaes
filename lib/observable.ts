@@ -1,7 +1,8 @@
-import { MetaesContext } from "./metaes";
+import { MetaesContext, evalToPromise } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
-import { Evaluation } from "./types";
-import { setValueTag } from "./environment";
+import { Evaluation, Source } from "./types";
+import { setValueTag, getValueTag, Environment } from "./environment";
+import { MemberExpression, Identifier } from "./nodeTypes";
 
 type Traps = {
   apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
@@ -67,6 +68,11 @@ export class ObservableContext extends MetaesContext {
     this._listeners.push(listener);
   }
 
+  removeListener(listener: EvaluationListener) {
+    const index = this._listeners.indexOf(listener);
+    this._listeners.splice(index, 1);
+  }
+
   _interceptOnce(fn: InterceptorOnce) {
     this._oneTimeInterceptors.push(fn);
   }
@@ -90,8 +96,7 @@ export class ObservableContext extends MetaesContext {
   }
 
   _mainInterceptor(evaluation: Evaluation) {
-    const { scriptId } = evaluation;
-    const flameGraph = this._flameGraphs[scriptId];
+    const flameGraph = this._flameGraphs[evaluation.scriptId];
     const getValue = e => flameGraph.values.get(e);
 
     // handler.set
@@ -189,5 +194,53 @@ export class ObservableContext extends MetaesContext {
     if (phase === "after" && tag.phase === "exit") {
       stack.pop();
     }
+  }
+
+  async getObjectsToObserve(source: Source, bottomEnv: Environment) {
+    const actualToObserve = new Set<object>();
+
+    function collectObservableObjects({ e, tag: { phase } }, graph) {
+      if (phase === "exit") {
+        if (isMemberExpression(e)) {
+          const propertyValue = graph.values.get(e.property);
+          const topObject = getTopObject(e.object);
+          if (getValueTag(bottomEnv, topObject.name, "observable")) {
+            if (typeof propertyValue === "object") {
+              actualToObserve.add(propertyValue);
+            } else {
+              actualToObserve.add(graph.values.get(topObject));
+            }
+          }
+        } else if (e.type === "Identifier") {
+          const stack = graph.executionStack;
+          if (stack[stack.length - 2].evaluation.e.type === "MemberExpression") {
+            return;
+          }
+          if (getValueTag(bottomEnv, (<Identifier>e).name, "observable")) {
+            actualToObserve.add(graph.values.get(e));
+          }
+        }
+      }
+    }
+    this.addListener(collectObservableObjects);
+    try {
+      await evalToPromise(this, source, bottomEnv);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      this.removeListener(collectObservableObjects);
+    }
+
+    return actualToObserve;
+  }
+}
+
+const isMemberExpression = (e: ASTNode): e is MemberExpression => e.type === "MemberExpression";
+
+function getTopObject(e: ASTNode) {
+  if (isMemberExpression(e)) {
+    return getTopObject(e.object);
+  } else {
+    return e;
   }
 }
