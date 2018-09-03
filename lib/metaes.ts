@@ -49,7 +49,7 @@ export class MetaesContext implements Context {
    * @param c
    * @param cerr
    * @param environment - If user provides environment with `prev` field it means he wants to completely replace current evaluation environment.
-   *                      If `prev` is not defined, evaluation will use both `values` field of `environment` and environment from context's environment.
+   *                      If `prev` is not defined, new environment will be build using provided values and refering to context's original environment with `prev`.
    * @param config
    */
   evaluate(
@@ -62,12 +62,7 @@ export class MetaesContext implements Context {
     let env = this.environment;
 
     if (environment) {
-      if (environment.prev) {
-        env = environment;
-      } else {
-        // Otherwise just bind provided values within a new tail environment
-        env = Object.assign({ prev: this.environment }, environment);
-      }
+      env = environment.prev ? environment : Object.assign({ prev: this.environment }, environment);
     }
     metaesEval(source, c || this.c, cerr || this.cerr, env, Object.assign({}, config || this.config));
   }

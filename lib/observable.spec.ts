@@ -2,6 +2,8 @@ import { describe, it } from "mocha";
 import { ObservableContext } from "./observable";
 import { expect } from "chai";
 import { evaluateFunction } from "./metaes";
+import { ASTNode } from "./nodes/nodes";
+import { MemberExpression } from "./nodeTypes";
 
 describe("ObservableContext", () => {
   it("should correctly build tree structure of children", async () => {
@@ -167,18 +169,42 @@ describe("ObservableContext", () => {
   });
 
   it("should collect results of member expressions", async () => {
-    const value = { user: { name: "First", lastname: "Lastname" } };
-    const context = new ObservableContext(value, {
-      get(target, prop, value) {
-        console.log(target, prop, value);
+    const self = { user: { name: "First", lastname: "Lastname", address: { street: "Long" } } };
+    const context = new ObservableContext(self);
+
+    // self.user.address.street shouldn't be collected, it's a primitive value.
+    const source = "[self.user.address, self.user, self.user.address.street]";
+
+    function isMemberExpression(e: ASTNode): e is MemberExpression {
+      return e.type === "MemberExpression";
+    }
+
+    const actualToObserve = new Set();
+    context.addListener(({ e, tag: { phase } }, graph) => {
+      if (phase === "exit") {
+        if (isMemberExpression(e)) {
+          const propertyValue = graph.values.get(e.property);
+          if (typeof propertyValue === "object") {
+            actualToObserve.add(propertyValue);
+          }
+        } else if (e.type === "Identifier") {
+          const value = graph.values.get(e);
+
+          if (self === value) {
+            if (graph.executionStack[graph.executionStack.length - 2].evaluation.e.type !== "MemberExpression") {
+              actualToObserve.add(value);
+            }
+          }
+        }
       }
     });
-    const source = "self.user.lastname";
 
-    context.addListener(({ e, value, tag: { phase, propertyKey } }, _graph) => {
-      console.log(`${phase}:\t${e.type}, (${propertyKey}) ${source.substring(...e.range)} "${JSON.stringify(value)}"`);
-    });
+    context.evaluate(source, undefined, e => console.log("Error:", e.value.message));
 
-    context.evaluate(source, value => console.log("Success", value), e => console.log("Error:", e.value.message));
+    const expected = [self.user, self.user.address];
+    const results = [...actualToObserve];
+
+    results.forEach(result => expect(expected).to.include(result));
+    expect(results).to.have.length(expected.length);
   });
 });
