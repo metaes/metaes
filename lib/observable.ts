@@ -208,29 +208,22 @@ function getTopObject(e: ASTNode) {
 }
 
 export const createListenerToCollectObservables = (
-  result: Set<object>,
+  resultsCallback: (result: any) => void,
   environment: Environment
 ): EvaluationListener => ({ e, tag: { phase } }, graph) => {
   if (phase === "exit") {
     const stack = graph.executionStack;
 
-    // do not support nested MemberExpressions
+    // Ignore checking when sitting inside deeper member expression
     if (stack.length > 1 && stack[stack.length - 2].evaluation.e.type === "MemberExpression") {
       return;
     }
-    if (isMemberExpression(e)) {
-      const propertyValue = graph.values.get(e.property);
-      const topObject = getTopObject(e.object);
-      if (getValueTag(environment, topObject.name, "observable")) {
-        if (typeof propertyValue === "object") {
-          result.add(propertyValue);
-        } else {
-          result.add(graph.values.get(e.object));
-        }
-      }
+    if (isMemberExpression(e) && getValueTag(environment, getTopObject(e.object).name, "observable")) {
+      const property = e.computed ? graph.values.get(e.property) : e.property.name;
+      resultsCallback({ object: graph.values.get(e.object), property });
     } else if (e.type === "Identifier") {
       if (getValueTag(environment, (<Identifier>e).name, "observable")) {
-        result.add(graph.values.get(e));
+        resultsCallback({ object: graph.values.get(e) });
       }
     }
   }

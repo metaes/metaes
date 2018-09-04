@@ -174,23 +174,38 @@ describe("ObservableContext", () => {
     const context = new ObservableContext(self);
     const task = { name: "test" };
     const environment = {
-      values: { dummy: { dummyEmpty: true }, task },
+      values: { nonObservableThing: { empty: true }, task },
       tags: { task: { observable: true } },
       prev: context.environment
     };
-    const results = new Set();
-    context.addListener(createListenerToCollectObservables(results, environment));
+    const results: any[] = [];
+    context.addListener(createListenerToCollectObservables(result => results.push(result), environment));
 
-    const sources = ["task.name", "self.user.address", "self.user", "self.user.address.street", "dummy.value1"];
-    const expected = [task, self.user.address, self.user, self.user.address, null];
+    const sources = [
+      "task.name",
+      "task['name']", // test computed property
+      "self.user.address",
+      "self.user",
+      "self.user.address.street",
+      "self",
+      "nonObservableThing.value1"
+    ];
+    const expected = [
+      { object: task, property: "name" },
+      { object: task, property: "name" },
+      { object: self.user, property: "address" },
+      { object: self, property: "user" },
+      { object: self.user.address, property: "street" },
+      { object: self },
+      null
+    ];
+
     for (const [source, expectedValue] of zip(sources, expected)) {
-      results.clear();
-
+      results.length = 0;
       await evalToPromise(context, source, environment);
-
       if (expectedValue) {
-        expect(results.size).to.equal(1);
-        expect([...results][0]).to.equal(expectedValue);
+        expect(results.length).to.equal(1);
+        expect(results[0]).deep.equal(expectedValue);
       }
     }
   });
