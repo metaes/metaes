@@ -207,10 +207,10 @@ function getTopObject(e: ASTNode) {
   }
 }
 
-export const createListenerToCollectObservables = (result: Set<object>, environment: Environment) => (
-  { e, tag: { phase } },
-  graph
-) => {
+export const createListenerToCollectObservables = (
+  result: Set<object>,
+  environment: Environment
+): EvaluationListener => ({ e, tag: { phase } }, graph) => {
   if (phase === "exit") {
     if (isMemberExpression(e)) {
       const propertyValue = graph.values.get(e.property);

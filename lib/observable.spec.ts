@@ -179,7 +179,7 @@ describe("ObservableContext", () => {
     await evalToPromise(context, source, bottomEnv);
 
     const results = [...result];
-    const expected = [self.user, self, self.user.address];
+    const expected = [self.user, self.user.address];
 
     console.log({ results });
 
