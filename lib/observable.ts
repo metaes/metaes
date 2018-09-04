@@ -212,6 +212,12 @@ export const createListenerToCollectObservables = (
   environment: Environment
 ): EvaluationListener => ({ e, tag: { phase } }, graph) => {
   if (phase === "exit") {
+    const stack = graph.executionStack;
+
+    // do not support nested MemberExpressions
+    if (stack.length > 1 && stack[stack.length - 2].evaluation.e.type === "MemberExpression") {
+      return;
+    }
     if (isMemberExpression(e)) {
       const propertyValue = graph.values.get(e.property);
       const topObject = getTopObject(e.object);
@@ -219,14 +225,10 @@ export const createListenerToCollectObservables = (
         if (typeof propertyValue === "object") {
           result.add(propertyValue);
         } else {
-          result.add(graph.values.get(topObject));
+          result.add(graph.values.get(e.object));
         }
       }
     } else if (e.type === "Identifier") {
-      const stack = graph.executionStack;
-      if (stack[stack.length - 2].evaluation.e.type === "MemberExpression") {
-        return;
-      }
       if (getValueTag(environment, (<Identifier>e).name, "observable")) {
         result.add(graph.values.get(e));
       }

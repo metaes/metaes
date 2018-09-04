@@ -2,6 +2,7 @@ import { describe, it } from "mocha";
 import { ObservableContext, createListenerToCollectObservables } from "./observable";
 import { expect } from "chai";
 import { evaluateFunction, evalToPromise } from "./metaes";
+import { zip } from "lodash";
 
 describe("ObservableContext", () => {
   it("should correctly build tree structure of children", async () => {
@@ -166,24 +167,28 @@ describe("ObservableContext", () => {
     expect(called).to.be.true;
   });
 
-  it("should collect results of member expressions", async () => {
+  it("should collect only observable variables", async () => {
     const self = {
-      user: { name: "First", lastname: "Lastname", address: { street: "Long" } }
+      user: { name: "First", lastname: "Lastname", address: { street: "Long" } },
+      value: "string"
     };
     const context = new ObservableContext(self);
-    const source = `[self.user.address, self.user, self.user.address.street, dummy.value1]`;
     const bottomEnv = { values: { dummy: { dummyEmpty: true } }, prev: context.environment };
+    const results = new Set();
+    context.addListener(createListenerToCollectObservables(results, bottomEnv));
 
-    const result = new Set();
-    context.addListener(createListenerToCollectObservables(result, bottomEnv));
-    await evalToPromise(context, source, bottomEnv);
+    const sources = ["self.value", "self.user.address", "self.user", "self.user.address.street", "dummy.value1"];
+    const expected = [self, self.user.address, self.user, self.user.address, null];
+    for (const [source, expectedValue] of zip(sources, expected)) {
+      results.clear();
 
-    const results = [...result];
-    const expected = [self.user, self.user.address];
+      await evalToPromise(context, source, bottomEnv);
 
-    console.log({ results });
-
-    results.forEach(result => expect(expected).to.include(result));
-    expect(results).to.have.length(expected.length);
+      if (expectedValue) {
+        console.log({ source, results });
+        expect(results.size).to.equal(1);
+        expect([...results][0]).to.equal(expectedValue);
+      }
+    }
   });
 });
