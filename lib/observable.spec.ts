@@ -169,20 +169,24 @@ describe("ObservableContext", () => {
 
   it("should collect only observable variables", async () => {
     const self = {
-      user: { name: "First", lastname: "Lastname", address: { street: "Long" } },
-      value: "string"
+      user: { name: "First", lastname: "Lastname", address: { street: "Long" } }
     };
     const context = new ObservableContext(self);
-    const bottomEnv = { values: { dummy: { dummyEmpty: true } }, prev: context.environment };
+    const task = { name: "test" };
+    const environment = {
+      values: { dummy: { dummyEmpty: true }, task },
+      tags: { task: { observable: true } },
+      prev: context.environment
+    };
     const results = new Set();
-    context.addListener(createListenerToCollectObservables(results, bottomEnv));
+    context.addListener(createListenerToCollectObservables(results, environment));
 
-    const sources = ["self.value", "self.user.address", "self.user", "self.user.address.street", "dummy.value1"];
-    const expected = [self, self.user.address, self.user, self.user.address, null];
+    const sources = ["task.name", "self.user.address", "self.user", "self.user.address.street", "dummy.value1"];
+    const expected = [task, self.user.address, self.user, self.user.address, null];
     for (const [source, expectedValue] of zip(sources, expected)) {
       results.clear();
 
-      await evalToPromise(context, source, bottomEnv);
+      await evalToPromise(context, source, environment);
 
       if (expectedValue) {
         console.log({ source, results });
