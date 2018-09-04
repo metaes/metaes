@@ -189,7 +189,6 @@ describe("ObservableContext", () => {
       await evalToPromise(context, source, environment);
 
       if (expectedValue) {
-        console.log({ source, results });
         expect(results.size).to.equal(1);
         expect([...results][0]).to.equal(expectedValue);
       }

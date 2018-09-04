@@ -1,4 +1,4 @@
-import { parse } from "./parse";
+import { parse, isParsedSource } from "./parse";
 import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, EvaluationTag, Source } from "./types";
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
@@ -19,8 +19,19 @@ export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config
     config.scriptId = "" + scriptIdsCounter++;
   }
   try {
+    if (typeof source === "object") {
+      if (isParsedSource(source)) {
+        source = source.ast;
+      } else {
+        source = source;
+      }
+    } else if (typeof source === "function") {
+      source = parseFunction(source);
+    } else {
+      source = parse(source);
+    }
     evaluate(
-      typeof source === "object" ? source : typeof source === "function" ? parseFunction(source) : parse(source),
+      source,
       toEnvironment(environment),
       config as EvaluationConfig,
       val => c && c(val),

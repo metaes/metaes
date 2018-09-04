@@ -11,7 +11,9 @@ export type MetaesException = {
 
 export type Range = [number, number];
 
-export type Source = string | ASTNode;
+export type ParsedSource = { raw: string; ast: ASTNode };
+
+export type Source = string | ASTNode | ParsedSource;
 
 export type Evaluate = (
   source: Source | Function,
