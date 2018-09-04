@@ -1,7 +1,6 @@
 import * as esprima from "esprima";
 import { Range, ParsedSource, Source } from "./types";
 import { Program } from "./nodeTypes";
-import { ASTNode } from "./nodes/nodes";
 
 export type Parser = (source: string, options?: ParserOptions) => Program;
 
@@ -68,4 +67,4 @@ export function createCache() {
 export const createCachedParse = (cache: ReturnType<typeof createCache>) => (
   source: string,
   options: ParserOptions = {}
-) => cache[source] || cache.set(source, parse(source, options));
+) => cache.get(source) || cache.set(source, parse(source, options));
