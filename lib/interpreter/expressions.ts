@@ -97,7 +97,7 @@ export function CallExpression(
                     // Pass continuation to first argument of callWithCurrentContinuation caller
                     // It should call `c` later at some point, otherwise execution will be stopped.
                     const continuation = args[0];
-                    continuation(c, ...args.slice(1));
+                    continuation(c, cerr, ...args.slice(1));
                   } else {
                     c(apply(callee, undefined, args));
                   }

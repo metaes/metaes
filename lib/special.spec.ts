@@ -1,4 +1,4 @@
-import { assert } from "chai";
+import { assert, expect } from "chai";
 import { describe, it } from "mocha";
 import { Environment } from "./environment";
 import { evalFunctionBody, evaluateFunction, MetaesContext, metaesEval } from "./metaes";
@@ -26,7 +26,7 @@ describe("Special", () => {
     });
 
     let env;
-    function receiver(cc, environment) {
+    function receiver(cc, _cerr, environment) {
       // remember environment for later check
       env = environment;
       // intentionally continue a bit later
@@ -86,5 +86,29 @@ describe("Special", () => {
     );
 
     assert.equal(i, 10);
+  });
+
+  it("should throw from call/cc receiver", async () => {
+    const context = new MetaesContext(undefined, undefined, {
+      values: { callcc: callWithCurrentContinuation, console }
+    });
+
+    function receiver(_cc, cerr) {
+      cerr({ value: new Error("Continuation error") });
+    }
+
+    const error = await evaluateFunction(
+      context,
+      (callcc, receiver) => {
+        try {
+          callcc(receiver);
+        } catch (e) {
+          return e;
+        }
+      },
+      callWithCurrentContinuation,
+      receiver
+    );
+    expect(error.message).equal("Continuation error");
   });
 });
