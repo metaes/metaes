@@ -1,8 +1,8 @@
-import { describe, it } from "mocha";
-import { metaesEval, evalFunctionBody, MetaesContext } from "./metaes";
-import { callWithCurrentContinuation, getCurrentEnvironment } from "./special";
 import { assert } from "chai";
+import { describe, it } from "mocha";
 import { Environment } from "./environment";
+import { evalFunctionBody, evaluateFunction, MetaesContext, metaesEval } from "./metaes";
+import { callWithCurrentContinuation, getCurrentEnvironment } from "./special";
 
 describe("Special", () => {
   it("should return current env", () => {
@@ -60,5 +60,31 @@ describe("Special", () => {
     assert.deepEqual(result, [1, 2, 3]);
     cc([4, 5, 6]);
     assert.deepEqual(result, [1, 2, 3, 4, 5, 6]);
+  });
+
+  it("should accept metaes function as call/cc receiver", async () => {
+    const context = new MetaesContext(undefined, undefined, {
+      values: { callcc: callWithCurrentContinuation, console }
+    });
+
+    const i = await evaluateFunction(
+      context,
+      callcc => {
+        let evilGoTo;
+        let i = 0;
+        callcc(function(_cc) {
+          evilGoTo = _cc;
+          evilGoTo();
+        });
+        i++;
+        if (i < 10) {
+          evilGoTo();
+        }
+        return i;
+      },
+      callWithCurrentContinuation
+    );
+
+    assert.equal(i, 10);
   });
 });
