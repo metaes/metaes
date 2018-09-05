@@ -136,7 +136,7 @@ export class ObservableContext extends MetaesContext {
       }
 
       // handler.apply
-      if (evaluation.e.type === "CallExpression") {
+      if (evaluation.e.type === "CallExpression" && !evaluation.tag.propertyKey) {
         const callNode = evaluation.e as any;
         const callNodeValue = getValue(callNode);
         const object = getValue(callNode.callee.object);
