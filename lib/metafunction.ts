@@ -69,8 +69,8 @@ export const evaluateMetaFunction = (
   }
 };
 
-export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) =>
-  function(this: any, ...args) {
+export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
+  const fn = function(this: any, ...args) {
     let result;
     let exception;
     evaluateMetaFunction(metaFunction, r => (result = r), ex => (exception = toException(ex)), this, args);
@@ -80,9 +80,21 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) =>
     return result;
   };
 
+  markAsMetaFunction(fn, metaFunction);
+  return fn;
+};
+
 export const createMetaFunction = (e: FunctionNode, closure: Environment, config: EvaluationConfig) =>
   createMetaFunctionWrapper({
     e,
     closure,
     config
   });
+
+export function markAsMetaFunction(fn: Function, meta: MetaesFunction) {
+  (<any>fn).__meta__ = meta;
+}
+
+export function isMetaFunction(fn: Function) {
+  return (<any>fn).__meta__;
+}

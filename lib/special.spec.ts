@@ -69,19 +69,18 @@ describe("Special", () => {
       values: { callcc: callWithCurrentContinuation, receiver, result }
     });
     let cc;
-    function receiver(_cc) {
+    function receiver(_cc, _cerr, value) {
       cc = _cc;
-      cc([1, 2, 3]);
+      cc(value);
     }
     await evalFunctionBody(context, (callcc, result, receiver) => {
-      function bind(receiver) {
-        return callcc(receiver);
-      }
-      for (let x of bind(receiver)) {
+      const bind = value => callcc(receiver, value);
+      for (let x of bind([1, 2, 3])) {
         result.push(x);
       }
     });
     assert.deepEqual(result, [1, 2, 3]);
+    // rerun loop
     cc([4, 5, 6]);
     assert.deepEqual(result, [1, 2, 3, 4, 5, 6]);
   });

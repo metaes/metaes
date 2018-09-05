@@ -1,7 +1,7 @@
 import { apply, evaluate, evaluateProp, evaluatePropWrap, evaluateArray } from "../applyEval";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { NotImplementedException, LocatedError, toException } from "../exceptions";
-import { createMetaFunction } from "../metafunction";
+import { createMetaFunction, isMetaFunction, evaluateMetaFunction } from "../metafunction";
 import { getCurrentEnvironment, callWithCurrentContinuation } from "../special";
 import { Environment, getValue, setValue } from "../environment";
 import { IfStatement } from "./statements";
@@ -98,6 +98,8 @@ export function CallExpression(
                     // It should call `c` later at some point, otherwise execution will be stopped.
                     const continuation = args[0];
                     continuation(c, cerr, ...args.slice(1));
+                  } else if (isMetaFunction(callee)) {
+                    evaluateMetaFunction(callee.__meta__, c, cerr, undefined, args);
                   } else {
                     c(apply(callee, undefined, args));
                   }
