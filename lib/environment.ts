@@ -55,7 +55,7 @@ export function setValue(
     if (_env) {
       c((_env.values[name] = value));
     } else {
-      cerr({ message: "environment not found" });
+      cerr({ type: "ReferenceError", value: new ReferenceError(`'${name}' is not defined.`) });
     }
   }
 }

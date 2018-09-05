@@ -41,4 +41,24 @@ describe("Special", () => {
     assert.equal(result, 42);
     assert.containsAllKeys(env, ["values"]);
   });
+
+  it("should continue after call/cc multiple times if user decides to", async () => {
+    const result = [];
+    const context = new MetaesContext(undefined, undefined, {
+      values: { callcc: callWithCurrentContinuation, receiver, result }
+    });
+    let cc;
+    function receiver(_cc) {
+      cc = _cc;
+      cc([1, 2, 3]);
+    }
+    await evalFunctionBody(context, (callcc, result, receiver) => {
+      for (let x of callcc(receiver)) {
+        result.push(x);
+      }
+    });
+    assert.deepEqual(result, [1, 2, 3]);
+    cc([4, 5, 6]);
+    assert.deepEqual(result, [1, 2, 3, 4, 5, 6]);
+  });
 });
