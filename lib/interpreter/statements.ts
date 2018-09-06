@@ -222,11 +222,14 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
                     prev: env,
                     values: {}
                   };
-                  // TODO: currently left-hand side of loop definition is bound to new environment 
-                  // for each iteration. It means it supports `let`/`const` style (creates new scope), 
-                  // but not `var` (where shouldn't be created). 
-                  //
-                  // Should support both semantics.
+
+                  /**
+                   * TODO: currently left-hand side of loop definition is bound to new environment
+                   * for each iteration. It means it supports `let`/`const` style (creates new scope),
+                   * but not `var` (where shouldn't be created).
+                   *
+                   * Should support both semantics.
+                   */
                   setValue(
                     bodyEnv,
                     (<Identifier>e.left.declarations[0].id).name,
