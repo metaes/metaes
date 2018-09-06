@@ -200,7 +200,7 @@ export function ForStatement(e: ForStatement, env, config, _c, cerr) {
   evaluate(e.init, env, config, _init => cerr(NotImplementedException(`${e.type} is not implemented yet`)), cerr);
 }
 
-export const ForOfBinding = "for-of-binding";
+export const ForOfBinding = "-metaes-for-of-binding";
 
 export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
   evaluate(
