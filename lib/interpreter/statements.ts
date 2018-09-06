@@ -208,32 +208,32 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
     right => {
       switch (e.left.type) {
         case "VariableDeclaration":
-          // loopEnv should depend on var vs let/const choice
-          const loopEnv = {
-            prev: env,
-            values: {}
-          };
           // create iterator in new env
           evaluate(
             e.left,
-            loopEnv,
+            env,
             config,
             _ =>
               // TODO: iterate over declarations in e.left
               visitArray(
                 right,
-                (rightItem, c, cerr) =>
+                (rightItem, c, cerr) => {
+                  const bodyEnv = {
+                    prev: env,
+                    values: {}
+                  };
                   setValue(
-                    loopEnv,
+                    bodyEnv,
                     (<Identifier>e.left.declarations[0].id).name,
                     rightItem,
-                    false,
+                    true,
                     value => {
                       callInterceptor({ phase: "exit" }, config, e.left, env, value);
-                      evaluate(e.body, loopEnv, config, c, cerr);
+                      evaluate(e.body, bodyEnv, config, c, cerr);
                     },
                     cerr
-                  ),
+                  );
+                },
                 c,
                 cerr
               ),
