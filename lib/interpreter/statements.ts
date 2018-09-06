@@ -200,57 +200,67 @@ export function ForStatement(e: ForStatement, env, config, _c, cerr) {
   evaluate(e.init, env, config, _init => cerr(NotImplementedException(`${e.type} is not implemented yet`)), cerr);
 }
 
+export const ForOfBinding = "for-of-binding";
+
 export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
   evaluate(
     e.right,
     env,
     config,
     right => {
-      switch (e.left.type) {
-        case "VariableDeclaration":
-          // create iterator in new env
-          evaluate(
-            e.left,
-            env,
-            config,
-            _ =>
-              // TODO: iterate over declarations in e.left
-              visitArray(
-                right,
-                (rightItem, c, cerr) => {
-                  const bodyEnv = {
-                    prev: env,
-                    values: {}
-                  };
+      if (!Array.isArray(right)) {
+        cerr(NotImplementedException("Only arrays as right-hand side of for-of loop are supported for now.", e.right));
+      } else {
+        switch (e.left.type) {
+          case "VariableDeclaration":
+            // create iterator in new env
+            evaluate(
+              e.left,
+              env,
+              config,
+              _ =>
+                // TODO: iterate over declarations in e.left
+                visitArray(
+                  right,
+                  (rightItem, c, cerr) => {
+                    const bodyEnv = {
+                      prev: env,
 
-                  /**
-                   * TODO: currently left-hand side of loop definition is bound to new environment
-                   * for each iteration. It means it supports `let`/`const` style (creates new scope),
-                   * but not `var` (where shouldn't be created).
-                   *
-                   * Should support both semantics.
-                   */
-                  setValue(
-                    bodyEnv,
-                    (<Identifier>e.left.declarations[0].id).name,
-                    rightItem,
-                    true,
-                    value => {
-                      callInterceptor({ phase: "exit" }, config, e.left, env, value);
-                      evaluate(e.body, bodyEnv, config, c, cerr);
-                    },
-                    cerr
-                  );
-                },
-                c,
-                cerr
-              ),
-            cerr
-          );
-          break;
-        default:
-          cerr(NotImplementedException(`Left-hand side of type ${e.left.type} in ${e.type} not implemented yet.`));
-          break;
+                      // Metaes script inaccessible environment variable binding current item of iterable expression.
+                      // It purposedly has ECMAScript incorrect identifier value.
+                      // Can be used by any kind of evaluation observers.
+                      values: { [ForOfBinding]: rightItem }
+                    };
+
+                    /**
+                     * TODO: currently left-hand side of loop definition is bound to new environment
+                     * for each iteration. It means it supports `let`/`const` style (creates new scope),
+                     * but not `var` (where shouldn't be created).
+                     *
+                     * Should support both semantics.
+                     */
+                    setValue(
+                      bodyEnv,
+                      (<Identifier>e.left.declarations[0].id).name,
+                      rightItem,
+                      true,
+                      value => {
+                        callInterceptor({ phase: "exit" }, config, e.left, env, value);
+                        evaluate(e.body, bodyEnv, config, c, cerr);
+                      },
+                      cerr
+                    );
+                  },
+                  c,
+                  cerr
+                ),
+              cerr
+            );
+            break;
+          default:
+            cerr(NotImplementedException(`Left-hand side of type ${e.left.type} in ${e.type} not implemented yet.`));
+            break;
+        }
       }
     },
     cerr
