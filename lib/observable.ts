@@ -207,8 +207,10 @@ function getTopObject(e: ASTNode) {
   }
 }
 
+export type ObservableResult = { object: any; property?: string };
+
 export const createListenerToCollectObservables = (
-  resultsCallback: (result: any) => void,
+  resultsCallback: (result: ObservableResult) => void,
   environment: Environment
 ): EvaluationListener => ({ e, tag: { phase } }, graph) => {
   if (phase === "exit") {
