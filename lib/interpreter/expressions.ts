@@ -94,8 +94,8 @@ export function CallExpression(
                     // Hand over current environment to caller
                     c(env);
                   } else if (callee === callWithCurrentContinuation) {
-                    // Pass continuation to first argument of callWithCurrentContinuation caller
-                    // It should call `c` later at some point, otherwise execution will be stopped.
+                    // Pass continuation to first argument of callWithCurrentContinuation `caller`.
+                    // `caller` takes over control until decides to call `c` or `cerr`.
                     const continuation = args[0];
                     continuation(c, cerr, ...args.slice(1));
                   } else if (isMetaFunction(callee)) {

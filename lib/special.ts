@@ -1,5 +1,5 @@
 import { Environment } from "./environment";
-import { Continuation } from "./types";
+import { Continuation, ErrorContinuation } from "./types";
 
 /**
  * Returns current environment.
@@ -17,6 +17,9 @@ export function getCurrentEnvironment(): Environment {
  * @param args - additional values pased to receiver function.
  */
 // @ts-ignore - to ignore unused arg warning
-export function callWithCurrentContinuation(receiver: (c: Continuation) => void, ...args: any[]): any {
+export function callWithCurrentContinuation(receiver: Receiver, ...args: any[]): any {
   throw new Error("Not intended to be called directly, call from Metaes context.");
 }
+
+type Receiver = (c: Continuation, cerr: ErrorContinuation, value: any) => void;
+
