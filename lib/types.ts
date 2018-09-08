@@ -11,12 +11,16 @@ export type MetaesException = {
 
 export type Range = [number, number];
 
-export type ParsedSource = { raw: string; ast: ASTNode };
+export type Script = {
+  ast: ASTNode;
+  source: Source;
+  scriptId: string;
+};
 
-export type Source = string | ASTNode | ParsedSource;
+export type Source = string | ASTNode | Function;
 
 export type Evaluate = (
-  source: Source | Function,
+  input: Script | Source,
   c?: Continuation | null,
   cerr?: ErrorContinuation | null,
   environment?: Environment | object,
@@ -32,10 +36,10 @@ export type EvaluationTag = { phase: "enter" | "exit"; propertyKey?: string };
 export type EvaluationValue = any | Reference;
 
 export interface Evaluation {
-  scriptId: string;
   e: ASTNode;
   value: EvaluationValue;
   tag: EvaluationTag;
+  script: Script;
   timestamp: number;
   env?: Environment;
 }
@@ -44,7 +48,7 @@ export type Interceptor = (evaluation: Evaluation) => void;
 
 export interface EvaluationConfig {
   interceptor: Interceptor;
-  scriptId: string;
+  script: Script;
 }
 
 export type Continuation = (value?: MetaesException | any) => void;

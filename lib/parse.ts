@@ -1,6 +1,6 @@
 import * as esprima from "esprima";
-import { Range, ParsedSource, Source } from "./types";
 import { Program } from "./nodeTypes";
+import { Range } from "./types";
 
 export type Parser = (source: string, options?: ParserOptions) => Program;
 
@@ -10,10 +10,6 @@ interface EsprimaError {
   description: string;
   index: number;
   column: number;
-}
-
-export function isParsedSource(source: Source): source is ParsedSource {
-  return typeof source === "object" && ("raw" in source && "ast" in source);
 }
 
 export class ParseError extends Error {

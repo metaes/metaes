@@ -1,8 +1,8 @@
-import { parse, isParsedSource } from "./parse";
-import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, EvaluationTag, Source } from "./types";
+import { parse } from "./parse";
+import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, EvaluationTag, Source, Script } from "./types";
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
-import { ExpressionStatement, FunctionNode } from "./nodeTypes";
+import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { Environment, toEnvironment } from "./environment";
 
 export interface Context {
@@ -11,27 +11,39 @@ export interface Context {
 
 let scriptIdsCounter = 0;
 
-export const metaesEval: Evaluate = (source, c?, cerr?, environment = {}, config = {}) => {
+export const nextScriptId = () => "" + scriptIdsCounter++;
+
+export function createScript(source: Source): Script {
+  const scriptId = nextScriptId();
+
+  if (typeof source === "object") {
+    return { source, ast: source, scriptId };
+  } else if (typeof source === "function") {
+    return { source, ast: parseFunction(source), scriptId };
+  } else if (typeof source === "string") {
+    return { source, ast: parse(source), scriptId };
+  } else {
+    throw new Error(`Can't create script from ${source}`);
+  }
+}
+
+export function toScript(input: Source | Script) {
+  return isScript(input) ? input : createScript(input);
+}
+
+export function isScript(script: any): script is Script {
+  return typeof script === "object" && "source" in script && "ast" in script && "scriptId" in script;
+}
+
+export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config = {}) => {
+  script = toScript(script);
   if (!config.interceptor) {
     config.interceptor = function noop() {};
   }
-  if (!config.scriptId) {
-    config.scriptId = "" + scriptIdsCounter++;
-  }
+  config.script = script;
   try {
-    if (typeof source === "object") {
-      if (isParsedSource(source)) {
-        source = source.ast;
-      } else {
-        source = source;
-      }
-    } else if (typeof source === "function") {
-      source = parseFunction(source);
-    } else {
-      source = parse(source);
-    }
     evaluate(
-      source,
+      script.ast,
       toEnvironment(environment),
       config as EvaluationConfig,
       val => c && c(val),
@@ -51,7 +63,7 @@ export class MetaesContext implements Context {
     public c?: Continuation,
     public cerr?: ErrorContinuation,
     public environment: Environment = { values: {} },
-    public config: Partial<EvaluationConfig> = {}
+    public defaultConfig: Partial<EvaluationConfig> = {}
   ) {}
 
   /**
@@ -64,23 +76,30 @@ export class MetaesContext implements Context {
    * @param config
    */
   evaluate(
-    source: Source | Function,
+    input: Script | Source,
     c?: Continuation,
     cerr?: ErrorContinuation,
     environment?: Environment,
     config?: Partial<EvaluationConfig>
   ) {
+    input = toScript(input);
     let env = this.environment;
 
     if (environment) {
       env = environment.prev ? environment : Object.assign({ prev: this.environment }, environment);
     }
-    metaesEval(source, c || this.c, cerr || this.cerr, env, config || this.config);
+    if (!config) {
+      config = { script: input };
+    }
+    if (!config.interceptor) {
+      config.interceptor = this.defaultConfig.interceptor;
+    }
+    metaesEval(input, c || this.c, cerr || this.cerr, env, config);
   }
 }
 
-export const evalToPromise = (context: Context, source: Source | Function, environment?: Environment) =>
-  new Promise<any>((resolve, reject) => context.evaluate(source, resolve, reject, environment));
+export const evalToPromise = (context: Context, input: Script | Source, environment?: Environment) =>
+  new Promise<any>((resolve, reject) => context.evaluate(toScript(input), resolve, reject, environment));
 
 export const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")", { loc: false, range: false });
 
@@ -90,15 +109,14 @@ export const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")", 
  * @param source
  * @param environment
  */
-export const evalFunctionBody = (context: Context, source: Function, environment?: Environment) =>
-  new Promise((resolve, reject) =>
-    context.evaluate(
-      ((parseFunction(source).body[0] as ExpressionStatement).expression as FunctionNode).body,
-      resolve,
-      reject,
-      environment
-    )
-  );
+export const evalFunctionBody = (context: Context, source: Function, environment?: Environment) => {
+  const script = {
+    ast: (((parseFunction(source) as Program).body[0] as ExpressionStatement).expression as FunctionNode).body,
+    scriptId: nextScriptId(),
+    source
+  };
+  return new Promise((resolve, reject) => context.evaluate(script, resolve, reject, environment));
+};
 
 /**
  * Evaluates function in context.
@@ -106,7 +124,7 @@ export const evalFunctionBody = (context: Context, source: Function, environment
  * @param args
  */
 export async function evaluateFunction(context: MetaesContext, source: ((...rest) => void), ...args: any[]) {
-  return (await evalToPromise(context, source)).apply(null, args);
+  return (await evalToPromise(context, createScript(source))).apply(null, args);
 }
 
 export const consoleLoggingMetaesContext = (environment: Environment = { values: {} }) =>
@@ -125,7 +143,7 @@ export const consoleLoggingMetaesContext = (environment: Environment = { values:
 
 export const callInterceptor = (tag: EvaluationTag, config: EvaluationConfig, e: ASTNode, env?: Environment, value?) =>
   config.interceptor({
-    scriptId: config.scriptId,
+    script: config.script,
     e,
     tag,
     value,

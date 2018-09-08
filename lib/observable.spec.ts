@@ -43,6 +43,40 @@ describe("ObservableContext", () => {
     expect(called).to.be.true;
   });
 
+  it("should call trap exactly once using mainHandler", async () => {
+    const value = {};
+    let counter = 0;
+    const context = new ObservableContext(value, {
+      set(observed, key) {
+        if (observed === value && key === "foo") {
+          counter++;
+        }
+      }
+    });
+    const source = `self.foo="bar"`;
+    await context.evaluate(source);
+    expect(counter).equal(1);
+  });
+
+  it("should call trap exactly once using custom handler", async () => {
+    const value = { toObserve: {} };
+    let counter = 0;
+    const context = new ObservableContext(value);
+    context.addHandler({
+      target: value.toObserve,
+      traps: {
+        set(observed, key) {
+          if (observed === value.toObserve && key === "foo") {
+            counter++;
+          }
+        }
+      }
+    });
+    const source = `self.toObserve.foo="bar"`;
+    await context.evaluate(source);
+    expect(counter).equal(1);
+  });
+
   it("should collect trap results after value is set", async () => {
     const value = {};
     let called = false;
