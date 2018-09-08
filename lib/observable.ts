@@ -105,7 +105,11 @@ export class ObservableContext extends MetaesContext {
     const getValue = e => flameGraph.values.get(e);
 
     // handler.set
-    if (evaluation.tag.phase === "enter" && evaluation.e.type === "AssignmentExpression") {
+    if (
+      evaluation.tag.phase === "enter" &&
+      evaluation.e.type === "AssignmentExpression" &&
+      !evaluation.tag.propertyKey
+    ) {
       const assignment = evaluation.e as any;
       this._interceptOnce(flameGraph, evaluation => {
         if (evaluation.tag.phase === "exit" && evaluation.tag.propertyKey === "property") {

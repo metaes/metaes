@@ -23,7 +23,7 @@ export function createScript(source: Source): Script {
   } else if (typeof source === "string") {
     return { source, ast: parse(source), scriptId };
   } else {
-    throw new Error(`Can't create script from ${source}`);
+    throw new Error(`Can't create script from ${source}.`);
   }
 }
 
@@ -37,10 +37,9 @@ export function isScript(script: any): script is Script {
 
 export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config = {}) => {
   script = toScript(script);
-  if (!config.interceptor) {
-    config.interceptor = function noop() {};
-  }
   config.script = script;
+  config.interceptor = config.interceptor || function noop() {};
+
   try {
     evaluate(
       script.ast,
@@ -83,6 +82,7 @@ export class MetaesContext implements Context {
     config?: Partial<EvaluationConfig>
   ) {
     input = toScript(input);
+    
     let env = this.environment;
 
     if (environment) {
@@ -120,6 +120,7 @@ export const evalFunctionBody = (context: Context, source: Function, environment
 
 /**
  * Evaluates function in context.
+ * TODO: creates new script each time - optimize.
  * @param source
  * @param args
  */
