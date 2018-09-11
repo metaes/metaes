@@ -1,7 +1,7 @@
 import { Environment, getValueTag, setValueTag } from "./environment";
 import { MetaesContext } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
-import { Identifier, MemberExpression } from "./nodeTypes";
+import { Identifier, MemberExpression, AssignmentExpression } from "./nodeTypes";
 import { Evaluation } from "./types";
 
 type Traps = {
@@ -106,10 +106,19 @@ export class ObservableContext extends MetaesContext {
 
     // handler.set
     if (evaluation.phase === "enter" && evaluation.e.type === "AssignmentExpression") {
-      const assignment = evaluation.e as any;
+      const assignment = evaluation.e as AssignmentExpression;
       let left;
+
       let right;
       this._interceptOnce(flameGraph, evaluation => {
+        let leftProperty;
+        if (
+          assignment.left.type === "MemberExpression" &&
+          assignment.left.computed &&
+          !(leftProperty = getValue(assignment.left.property))
+        ) {
+          return false;
+        }
         if (
           evaluation.phase === "exit" &&
           (left = getValue(assignment.left.object)) &&
@@ -118,7 +127,7 @@ export class ObservableContext extends MetaesContext {
           for (let i = 0; i < this._handlers.length; i++) {
             const handler = this._handlers[i];
             if (handler.target === left && handler.traps.set) {
-              handler.traps.set(left, assignment.left.property.name, getValue(assignment.right));
+              handler.traps.set(left, leftProperty || assignment.left.property.name, getValue(assignment.right));
             }
           }
           return true;

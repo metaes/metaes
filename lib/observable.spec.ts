@@ -43,6 +43,26 @@ describe("ObservableContext", () => {
     expect(called).to.be.true;
   });
 
+  it("should collect trap results before value is set with computed expression", async () => {
+    const value = {};
+    let called = false;
+    const context = new ObservableContext(value, {
+      set(observedValue, key, args) {
+        expect(observedValue).to.equal(value);
+        expect(key).to.equal("foo");
+        expect(args).to.equal("bar");
+
+        expect(observedValue["foo"]).to.equal(undefined);
+
+        called = true;
+      }
+    });
+    const source = `self['foo']="bar"`;
+    await context.evaluate(source);
+
+    expect(called).to.be.true;
+  });
+
   it("should call trap exactly once using mainHandler", async () => {
     const value = {};
     let counter = 0;
@@ -141,6 +161,38 @@ describe("ObservableContext", () => {
       }
     });
     await context.evaluate(`self.push(1)`);
+
+    expect(called).to.be.true;
+  });
+
+  it("should collect trap results of method call with computed property", async () => {
+    const value = [];
+    let called = false;
+    const context = new ObservableContext(value, {
+      apply(target, methodName, args) {
+        expect(target).to.equal(value);
+        expect(methodName).to.equal(value.push);
+        expect(args).to.eql([1]);
+        called = true;
+      }
+    });
+    await context.evaluate(`self['push'](1)`);
+
+    expect(called).to.be.true;
+  });
+
+  it("should collect trap results of method call with computed property with identifier", async () => {
+    const value = [];
+    let called = false;
+    const context = new ObservableContext(value, {
+      apply(target, methodName, args) {
+        expect(target).to.equal(value);
+        expect(methodName).to.equal(value.push);
+        expect(args).to.eql([1]);
+        called = true;
+      }
+    });
+    await context.evaluate(`let method='pu'+'sh'; self[method](1)`);
 
     expect(called).to.be.true;
   });
