@@ -82,7 +82,7 @@ export class MetaesContext implements Context {
     config?: Partial<EvaluationConfig>
   ) {
     input = toScript(input);
-    
+
     let env = this.environment;
 
     if (environment) {

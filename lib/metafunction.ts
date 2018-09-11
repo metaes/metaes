@@ -18,11 +18,11 @@ export const evaluateMetaFunction = (
       prev: closure,
       values: { this: thisObject, arguments: args }
     };
-    let i = 0;
-    for (let param of e.params) {
+    for (let i = 0; i < e.params.length; i++) {
+      let param = e.params[i];
       switch (param.type) {
         case "Identifier":
-          env.values[param.name] = args[i++];
+          env.values[param.name] = args[i];
           break;
         case "RestElement":
           env.values[param.argument.name] = args.slice(i);

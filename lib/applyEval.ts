@@ -16,14 +16,21 @@ export function evaluateProp(
   callInterceptor({ phase: "enter", propertyKey }, config, e);
 
   const value = e[propertyKey];
-  const createContinuation = (cnt, value) => {
-    callInterceptor({ phase: "exit", propertyKey }, config, e, env);
-    cnt(value);
-  };
-  const _c = createContinuation.bind(null, c);
-  const _cerr = createContinuation.bind(null, cerr);
+  const args = [
+    value,
+    env,
+    config,
+    value => {
+      callInterceptor({ phase: "exit", propertyKey }, config, e, env);
+      c(value);
+    },
+    value => {
+      callInterceptor({ phase: "exit", propertyKey }, config, e, env);
+      cerr(value);
+    }
+  ];
 
-  Array.isArray(value) ? evaluateArray(value, env, config, _c, _cerr) : evaluate(value, env, config, _c, _cerr);
+  Array.isArray(value) ? evaluateArray.apply(null, args) : evaluate.apply(null, args);
 }
 
 // TODO: DRY
@@ -97,49 +104,55 @@ type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void
  * @param cerr
  */
 export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) => {
-  // Array of loop function arguments to be applied next time
-  const tasks: any[] = [];
-  // Indicates if tasks execution is done. Initially it is done.
-  let done = true;
+  if (items.length === 0) {
+    c([]);
+  } else if (items.length === 1) {
+    fn(items[0], value => c([value]), cerr);
+  } else {
+    // Array of loop function arguments to be applied next time
+    const tasks: any[] = [];
+    // Indicates if tasks execution is done. Initially it is done.
+    let done = true;
 
-  // Simple `loop` function executor, just loop over arguments until nothing is left.
-  function execute() {
-    done = false;
-    while (tasks.length) {
-      (<any>loop)(...tasks.shift());
+    // Simple `loop` function executor, just loop over arguments until nothing is left.
+    function execute() {
+      done = false;
+      while (tasks.length) {
+        (<any>loop)(...tasks.shift());
+      }
+      done = true;
     }
-    done = true;
-  }
 
-  const visited = new Set();
+    const visited = new Set();
 
-  function loop(index, accumulated: T[]) {
-    if (index < items.length) {
-      fn(
-        items[index],
-        value => {
-          // If true, it means currently may be happening for example a reevaluation of items 
-          // from certain index using call/cc. Copy accumulated previously results and ignore their tail
-          // after given index as this reevalution may happen in the middle of an array.
-          if (visited.has(index)) {
-            accumulated = accumulated.slice(0, index);
-          }
-          accumulated.push(value);
-          visited.add(index);
-          tasks.push([index + 1, accumulated]);
-          if (done) {
-            execute();
-          }
-        },
-        cerr
-      );
-    } else {
-      c(accumulated);
+    function loop(index, accumulated: T[]) {
+      if (index < items.length) {
+        fn(
+          items[index],
+          value => {
+            // If true, it means currently may be happening for example a reevaluation of items
+            // from certain index using call/cc. Copy accumulated previously results and ignore their tail
+            // after given index as this reevalution may happen in the middle of an array.
+            if (visited.has(index)) {
+              accumulated = accumulated.slice(0, index);
+            }
+            accumulated.push(value);
+            visited.add(index);
+            tasks.push([index + 1, accumulated]);
+            if (done) {
+              execute();
+            }
+          },
+          cerr
+        );
+      } else {
+        c(accumulated);
+      }
     }
-  }
 
-  // start
-  loop(0, []);
+    // start
+    loop(0, []);
+  }
 };
 
 export const evaluateArray = (
