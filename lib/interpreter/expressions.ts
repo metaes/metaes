@@ -95,9 +95,12 @@ export function CallExpression(
                     c(env);
                   } else if (callee === callWithCurrentContinuation) {
                     // Pass continuation to first argument of callWithCurrentContinuation `caller`.
-                    // `caller` takes over control until decides to call `c` or `cerr`.
-                    const continuation = args[0];
-                    continuation(c, cerr, ...args.slice(1));
+                    // `caller` takes over control until decides to call `c` or `cerr`F
+                    try {
+                      args[0](c, cerr, args[1]);
+                    } catch (e) {
+                      cerr({ message: "Error in continuation receiver." });
+                    }
                   } else if (isMetaFunction(callee)) {
                     evaluateMetaFunction(callee.__meta__, c, cerr, undefined, args);
                   } else {
