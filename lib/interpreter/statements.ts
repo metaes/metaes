@@ -1,4 +1,4 @@
-import { evaluate, evaluateProp, evaluateArray, visitArray } from "../applyEval";
+import { evaluate, evaluateArray, visitArray } from "../applyEval";
 import { getValue, setValue } from "../environment";
 import { EvaluationConfig } from "../types";
 import { NotImplementedException, LocatedError } from "../exceptions";
@@ -28,7 +28,6 @@ import {
   WhileStatement,
   Identifier
 } from "../nodeTypes";
-import { callInterceptor } from "../metaes";
 
 function hoistDeclarations(e: Statement[], env, config, c, cerr) {
   visitArray(
@@ -44,7 +43,7 @@ export function BlockStatement(e: BlockStatement_ | Program, env, config, c, cer
     e.body,
     env,
     config,
-    () => evaluateProp("body", e, env, config, blockValues => c(blockValues[blockValues.length - 1]), cerr),
+    () => evaluateArray(e.body, env, config, blockValues => c(blockValues[blockValues.length - 1]), cerr),
     cerr
   );
 }
@@ -66,34 +65,25 @@ export function VariableDeclarator(e: VariableDeclarator, env, config, c, cerr) 
   function id(initValue) {
     switch (e.id.type) {
       case "Identifier":
-        callInterceptor({ phase: "enter" }, config, e.id, env);
-        setValue(
-          env,
-          e.id.name,
-          initValue,
-          true,
-          value => (callInterceptor({ phase: "exit" }, config, e.id, env, value), c(value)),
-          cerr
-        );
+        setValue(env, e.id.name, initValue, true, c, cerr);
         break;
       default:
         cerr(NotImplementedException(`Init ${e.id.type} is not supported yet.`, e));
     }
   }
-  e.init ? evaluateProp("init", e, env, config, id, cerr) : id(undefined);
+  e.init ? evaluate(e.init, env, config, id, cerr) : id(undefined);
 }
 
 export function IfStatement(e: IfStatement | ConditionalExpression, env, config, c, cerr) {
-  evaluateProp(
-    "test",
-    e,
+  evaluate(
+    e.test,
     env,
     config,
     test => {
       if (test) {
-        evaluateProp("consequent", e, env, config, c, cerr);
+        evaluate(e.consequent, env, config, c, cerr);
       } else if (e.alternate) {
-        evaluateProp("alternate", e, env, config, c, cerr);
+        evaluate(e.alternate, env, config, c, cerr);
       } else {
         c();
       }
@@ -103,14 +93,13 @@ export function IfStatement(e: IfStatement | ConditionalExpression, env, config,
 }
 
 export function ExpressionStatement(e: ExpressionStatement, env, config, c, cerr) {
-  evaluateProp("expression", e, env, config, c, cerr);
+  evaluate(e.expression, env, config, c, cerr);
 }
 
 export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, cerr) {
-  evaluateProp("block", e, env, config, c, exception =>
-    evaluateProp(
-      "handler",
-      e,
+  evaluate(e.block, env, config, c, exception =>
+    evaluate(
+      e.handler,
       {
         values: {
           // Use name which is illegal JavaScript identifier.
@@ -120,14 +109,14 @@ export function TryStatement(e: TryStatement, env, config: EvaluationConfig, c, 
         prev: env
       },
       config,
-      () => (e.finalizer ? evaluateProp("finalizer", e, env, config, c, cerr) : c()),
+      () => (e.finalizer ? evaluate(e.finalizer, env, config, c, cerr) : c()),
       cerr
     )
   );
 }
 
 export function ThrowStatement(e: ThrowStatement, env, config, _c, cerr) {
-  evaluateProp("argument", e, env, config, value => cerr({ type: "ThrowStatement", value, location: e }), cerr);
+  evaluate(e.argument, env, config, value => cerr({ type: "ThrowStatement", value, location: e }), cerr);
 }
 
 export function CatchClause(e: CatchClause, env, config, c, cerr) {
@@ -135,9 +124,8 @@ export function CatchClause(e: CatchClause, env, config, c, cerr) {
     env,
     "/exception",
     error =>
-      evaluateProp(
-        "body",
-        e,
+      evaluate(
+        e.body,
         {
           values: { [e.param.name]: error },
           prev: env
@@ -152,7 +140,7 @@ export function CatchClause(e: CatchClause, env, config, c, cerr) {
 
 export function ReturnStatement(e: ReturnStatement, env, config, _c, cerr) {
   e.argument
-    ? evaluateProp("argument", e, env, config, value => cerr({ type: "ReturnStatement", value }), cerr)
+    ? evaluate(e.argument, env, config, value => cerr({ type: "ReturnStatement", value }), cerr)
     : cerr({ type: "ReturnStatement" });
 }
 
@@ -175,16 +163,7 @@ export function ForInStatement(e: ForInStatement, env, config, c, cerr) {
         visitArray(
           Object.keys(right),
           (name, c, cerr) =>
-            setValue(
-              env,
-              leftNode.name,
-              name,
-              false,
-              value => (
-                callInterceptor({ phase: "exit" }, config, leftNode, env, value), evaluate(e.body, env, config, c, cerr)
-              ),
-              cerr
-            ),
+            setValue(env, leftNode.name, name, false, () => evaluate(e.body, env, config, c, cerr), cerr),
           c,
           cerr
         );
@@ -226,9 +205,11 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
                     const bodyEnv = {
                       prev: env,
 
-                      // Metaes script inaccessible environment variable binding current item of iterable expression.
-                      // It purposedly has ECMAScript incorrect identifier value.
-                      // Can be used by any kind of evaluation observers.
+                      /**
+                       * Metaes script inaccessible environment variable binding current item of iterable expression.
+                       * It purposedly has ECMAScript incorrect identifier value.
+                       * Can be used by any kind of evaluation observers.
+                       */
                       values: { [ForOfBinding]: rightItem }
                     };
 
@@ -244,10 +225,7 @@ export function ForOfStatement(e: ForOfStatement, env, config, c, cerr) {
                       (<Identifier>e.left.declarations[0].id).name,
                       rightItem,
                       true,
-                      value => {
-                        callInterceptor({ phase: "exit" }, config, e.left, env, value);
-                        evaluate(e.body, bodyEnv, config, c, cerr);
-                      },
+                      () => evaluate(e.body, bodyEnv, config, c, cerr),
                       cerr
                     );
                   },
@@ -295,14 +273,7 @@ export function ClassDeclaration(e: ClassDeclaration, env, config, c, cerr) {
               if (key === "constructor") {
                 value.prototype = Object.create(superClass.prototype);
                 if (e.id) {
-                  setValue(
-                    env,
-                    e.id.name,
-                    value,
-                    true,
-                    value => (callInterceptor({ phase: "exit" }, config, e.id!, env, value), c(value)),
-                    cerr
-                  );
+                  setValue(env, e.id.name, value, true, c, cerr);
                 } else {
                   cerr(NotImplementedException("Not implemented case"));
                 }

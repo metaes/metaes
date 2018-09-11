@@ -105,21 +105,20 @@ export class ObservableContext extends MetaesContext {
     const getValue = e => flameGraph.values.get(e);
 
     // handler.set
-    if (
-      evaluation.tag.phase === "enter" &&
-      evaluation.e.type === "AssignmentExpression" &&
-      !evaluation.tag.propertyKey
-    ) {
+    if (evaluation.phase === "enter" && evaluation.e.type === "AssignmentExpression") {
       const assignment = evaluation.e as any;
+      let left;
+      let right;
       this._interceptOnce(flameGraph, evaluation => {
-        if (evaluation.tag.phase === "exit" && evaluation.tag.propertyKey === "property") {
-          const left = getValue(assignment.left.object);
-          if (left) {
-            for (let i = 0; i < this._handlers.length; i++) {
-              const handler = this._handlers[i];
-              if (handler.target === left && handler.traps.set) {
-                handler.traps.set(left, getValue(assignment.left.property), getValue(assignment.right));
-              }
+        if (
+          evaluation.phase === "exit" &&
+          (left = getValue(assignment.left.object)) &&
+          (right = getValue(assignment.right))
+        ) {
+          for (let i = 0; i < this._handlers.length; i++) {
+            const handler = this._handlers[i];
+            if (handler.target === left && handler.traps.set) {
+              handler.traps.set(left, assignment.left.property.name, getValue(assignment.right));
             }
           }
           return true;
@@ -128,7 +127,7 @@ export class ObservableContext extends MetaesContext {
       });
     }
 
-    if (evaluation.tag.phase === "exit") {
+    if (evaluation.phase === "exit") {
       // handler.didSet
       if (evaluation.e.type === "AssignmentExpression") {
         const assignment = evaluation.e as any;
@@ -138,19 +137,25 @@ export class ObservableContext extends MetaesContext {
           for (let i = 0; i < this._handlers.length; i++) {
             const handler = this._handlers[i];
             if (handler.target === left && handler.traps.didSet) {
-              handler.traps.didSet(left, getValue(assignment.left.property), getValue(assignment.right));
+              handler.traps.didSet(
+                left,
+                getValue(assignment.left.property) || assignment.left.property.name,
+                getValue(assignment.right)
+              );
             }
           }
         }
       }
 
       // handler.apply
-      if (evaluation.e.type === "CallExpression" && !evaluation.tag.propertyKey) {
+      if (evaluation.e.type === "CallExpression") {
+        // TODO: assuming here call using member expression
         const callNode = evaluation.e as any;
         const callNodeValue = getValue(callNode);
         const object = getValue(callNode.callee.object);
-        const property = getValue(callNode.callee.property);
+        const property = getValue(callNode.callee);
         const args: any[] = callNode.arguments.map(getValue);
+
         for (let i = 0; i < this._handlers.length; i++) {
           const handler = this._handlers[i];
           if (handler.traps.apply) {
@@ -175,9 +180,9 @@ export class ObservableContext extends MetaesContext {
     this._listeners.forEach(listener => listener(evaluation, flameGraph));
   }
 
-  private _flameGraphBuilder(phase: "before" | "after", evaluation: Evaluation) {
+  private _flameGraphBuilder(builderPhase: "before" | "after", evaluation: Evaluation) {
     const {
-      tag,
+      phase,
       script: { scriptId }
     } = evaluation;
     const flameGraph =
@@ -189,8 +194,8 @@ export class ObservableContext extends MetaesContext {
       });
     const stack = flameGraph.executionStack;
 
-    if (phase === "before") {
-      if (tag.phase === "enter") {
+    if (builderPhase === "before") {
+      if (phase === "enter") {
         const node: EvaluationNode = {
           evaluation,
           children: []
@@ -204,7 +209,7 @@ export class ObservableContext extends MetaesContext {
         flameGraph.values.set(evaluation.e, evaluation.value);
       }
     }
-    if (phase === "after" && tag.phase === "exit") {
+    if (builderPhase === "after" && phase === "exit") {
       stack.pop();
     }
   }
@@ -225,7 +230,7 @@ export type ObservableResult = { object: any; property?: string };
 export const createListenerToCollectObservables = (
   resultsCallback: (result: ObservableResult) => void,
   environment: Environment
-): EvaluationListener => ({ e, tag: { phase } }, graph) => {
+): EvaluationListener => ({ e, phase }, graph) => {
   if (phase === "exit") {
     const stack = graph.executionStack;
 

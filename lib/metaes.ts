@@ -1,5 +1,5 @@
 import { parse } from "./parse";
-import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, EvaluationTag, Source, Script } from "./types";
+import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, Source, Script, Phase } from "./types";
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
@@ -142,11 +142,11 @@ export const consoleLoggingMetaesContext = (environment: Environment = { values:
     }
   );
 
-export const callInterceptor = (tag: EvaluationTag, config: EvaluationConfig, e: ASTNode, env?: Environment, value?) =>
+export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNode, env?: Environment, value?) =>
   config.interceptor({
     script: config.script,
     e,
-    tag,
+    phase,
     value,
     timestamp: new Date().getTime(),
     env

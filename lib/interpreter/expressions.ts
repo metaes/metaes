@@ -1,4 +1,4 @@
-import { apply, evaluate, evaluateProp, evaluatePropWrap, evaluateArray } from "../applyEval";
+import { apply, evaluate, evaluateArray } from "../applyEval";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { NotImplementedException, LocatedError, toException } from "../exceptions";
 import { createMetaFunction, isMetaFunction, evaluateMetaFunction } from "../metafunction";
@@ -24,7 +24,6 @@ import {
   UpdateExpression,
   TemplateLiteral
 } from "../nodeTypes";
-import { callInterceptor } from "../metaes";
 
 export function lastArrayItem(array?: any[]) {
   if (array) {
@@ -40,9 +39,8 @@ export function CallExpression(
   c: Continuation,
   cerr: ErrorContinuation
 ) {
-  evaluateProp(
-    "arguments",
-    e,
+  evaluateArray(
+    e.arguments,
     env,
     config,
     args => {
@@ -50,15 +48,13 @@ export function CallExpression(
 
       switch (calleeNode.type) {
         case "MemberExpression":
-          evaluateProp(
-            "callee",
-            e,
+          evaluate(
+            e.callee,
             env,
             config,
             property =>
-              evaluateProp(
-                "object",
-                calleeNode,
+              evaluate(
+                calleeNode["object"],
                 env,
                 config,
                 object => {
@@ -82,9 +78,8 @@ export function CallExpression(
         case "Identifier":
         case "FunctionExpression":
         case "CallExpression":
-          evaluateProp(
-            "callee",
-            e,
+          evaluate(
+            e.callee,
             env,
             config,
             callee => {
@@ -117,9 +112,8 @@ export function CallExpression(
           );
           break;
         case "ArrowFunctionExpression":
-          evaluateProp(
-            "callee",
-            e,
+          evaluate(
+            e.callee,
             env,
             config,
             callee => {
@@ -146,41 +140,28 @@ export function CallExpression(
 }
 
 export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
-  evaluateProp(
-    "object",
-    e,
+  evaluate(
+    e.object,
     env,
     config,
     object => {
       if (e.computed) {
-        evaluateProp("property", e, env, config, property => c(object[property]), cerr);
+        evaluate(e.property, env, config, property => c(object[property]), cerr);
       } else {
         switch (e.property.type) {
           case "Identifier":
             if (e.computed) {
-              evaluateProp("property", e, env, config, value => c(object[value]), cerr);
+              evaluate(e.property, env, config, value => c(object[value]), cerr);
             } else {
               switch (e.property.type) {
                 case "Identifier":
                   const propertyNode = e.property;
-                  evaluatePropWrap(
-                    "property",
-                    (c, _cerr) => {
-                      try {
-                        const value = object[propertyNode.name];
-                        callInterceptor({ phase: "enter" }, config, e.property, env);
-                        callInterceptor({ phase: "exit" }, config, e.property, env, value);
-                        c(value);
-                      } catch (e) {
-                        cerr(toException(e, propertyNode));
-                      }
-                    },
-                    e,
-                    env,
-                    config,
-                    c,
-                    cerr
-                  );
+                  try {
+                    const value = object[propertyNode.name];
+                    c(value);
+                  } catch (e) {
+                    cerr(toException(e, propertyNode));
+                  }
                   break;
                 default:
                   cerr(NotImplementedException(`Not implemented ${e.property["type"]} property type of ${e.type}`));
@@ -188,7 +169,7 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
             }
             break;
           case "Literal":
-            evaluateProp("property", e, { values: object }, config, c, cerr);
+            evaluate(e.property, { values: object }, config, c, cerr);
             break;
           default:
             cerr(NotImplementedException("This kind of member expression is not supported yet."));
@@ -216,9 +197,8 @@ export function FunctionExpression(e: FunctionExpression, env, config, c, cerr) 
 }
 
 export function AssignmentExpression(e: AssignmentExpression, env, config, c, cerr) {
-  evaluateProp(
-    "right",
-    e,
+  evaluate(
+    e.right,
     env,
     config,
     right => {
@@ -226,99 +206,67 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
 
       switch (e_left.type) {
         case "MemberExpression":
-          evaluatePropWrap(
-            "left",
-            (c, cerr) => {
-              evaluateProp(
-                "object",
-                e.left,
-                env,
-                config,
-                object => {
-                  const property = e_left.property;
-                  if (e_left.computed) {
-                    evaluateProp("property", e_left, env, config, key => evalAssignment(object, key, right), cerr);
-                  } else if (property.type === "Identifier") {
-                    evaluatePropWrap(
-                      "property",
-                      (c, _cerr) => {
-                        const value = property.name;
-                        callInterceptor({ phase: "enter" }, config, property, env);
-                        callInterceptor({ phase: "exit" }, config, property, env, value);
-                        c(null);
-                      },
-                      e_left,
-                      env,
-                      config,
-                      () => evalAssignment(object, property.name, right),
-                      cerr
-                    );
-                  } else {
-                    cerr(NotImplementedException("This kind of assignment is not implemented yet.", property));
-                  }
-                  function evalAssignment(object, key, value) {
-                    switch (e.operator) {
-                      case "=":
-                        c((object[key] = value));
-                        break;
-                      case "+=":
-                        c((object[key] += value));
-                        break;
-                      case "-=":
-                        c((object[key] -= value));
-                        break;
-                      case "*=":
-                        c((object[key] *= value));
-                        break;
-                      case "/=":
-                        c((object[key] /= value));
-                        break;
-                      case "%=":
-                        c((object[key] %= value));
-                        break;
-                      case "<<=":
-                        c((object[key] <<= value));
-                        break;
-                      case ">>=":
-                        c((object[key] >>= value));
-                        break;
-                      case ">>>=":
-                        c((object[key] >>>= value));
-                        break;
-                      case "&=":
-                        c((object[key] &= value));
-                        break;
-                      case "|=":
-                        c((object[key] |= value));
-                        break;
-                      case "^=":
-                        c((object[key] ^= value));
-                        break;
-                      default:
-                        cerr(NotImplementedException(e.type + "has not implemented " + e.operator));
-                    }
-                  }
-                },
-                cerr
-              );
-            },
-            e.left,
+          evaluate(
+            e_left.object,
             env,
             config,
-            c,
+            object => {
+              const property = e_left.property;
+              if (e_left.computed) {
+                evaluate(e_left.property, env, config, key => evalAssignment(object, key, right), cerr);
+              } else if (property.type === "Identifier") {
+                evalAssignment(object, property.name, right);
+              } else {
+                cerr(NotImplementedException("This kind of assignment is not implemented yet.", property));
+              }
+              function evalAssignment(object, key, value) {
+                switch (e.operator) {
+                  case "=":
+                    c((object[key] = value));
+                    break;
+                  case "+=":
+                    c((object[key] += value));
+                    break;
+                  case "-=":
+                    c((object[key] -= value));
+                    break;
+                  case "*=":
+                    c((object[key] *= value));
+                    break;
+                  case "/=":
+                    c((object[key] /= value));
+                    break;
+                  case "%=":
+                    c((object[key] %= value));
+                    break;
+                  case "<<=":
+                    c((object[key] <<= value));
+                    break;
+                  case ">>=":
+                    c((object[key] >>= value));
+                    break;
+                  case ">>>=":
+                    c((object[key] >>>= value));
+                    break;
+                  case "&=":
+                    c((object[key] &= value));
+                    break;
+                  case "|=":
+                    c((object[key] |= value));
+                    break;
+                  case "^=":
+                    c((object[key] ^= value));
+                    break;
+                  default:
+                    cerr(NotImplementedException(e.type + "has not implemented " + e.operator));
+                }
+              }
+            },
             cerr
           );
           break;
         case "Identifier":
-          callInterceptor({ phase: "enter" }, config, e.left, right, env);
-          setValue(
-            env,
-            e_left.name,
-            right,
-            false,
-            value => (callInterceptor({ phase: "exit" }, config, e.left, env, value), c(value)),
-            cerr
-          );
+          setValue(env, e_left.name, right, false, c, cerr);
           break;
         default:
           cerr(NotImplementedException("This assignment is not supported yet."));
@@ -361,15 +309,13 @@ export function Property(e: Property, env, config, c, cerr) {
 }
 
 export function BinaryExpression(e: BinaryExpression, env, config, c, cerr) {
-  evaluateProp(
-    "left",
-    e,
+  evaluate(
+    e.left,
     env,
     config,
     left => {
-      evaluateProp(
-        "right",
-        e,
+      evaluate(
+        e.right,
         env,
         config,
         right => {
@@ -449,7 +395,7 @@ export function BinaryExpression(e: BinaryExpression, env, config, c, cerr) {
 }
 
 export function ArrayExpression(e: ArrayExpression, env, config, c, cerr) {
-  evaluateProp("elements", e, env, config, c, cerr);
+  evaluateArray(e.elements, env, config, c, cerr);
 }
 
 export function NewExpression(e: NewExpression, env, config, c, cerr) {

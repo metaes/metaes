@@ -27,18 +27,14 @@ export type Evaluate = (
   config?: Partial<EvaluationConfig>
 ) => void;
 
-/**
- * enter - before ASTNode was evaluated
- * exit - after ASTNode was evaluated
- */
-export type EvaluationTag = { phase: "enter" | "exit"; propertyKey?: string };
-
 export type EvaluationValue = any | Reference;
+
+export type Phase = "enter" | "exit";
 
 export interface Evaluation {
   e: ASTNode;
   value: EvaluationValue;
-  tag: EvaluationTag;
+  phase: Phase;
   script: Script;
   timestamp: number;
   env?: Environment;

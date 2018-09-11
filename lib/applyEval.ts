@@ -5,58 +5,6 @@ import { Environment } from "./environment";
 import { NotImplementedException } from "./exceptions";
 import { callInterceptor } from "./metaes";
 
-export function evaluateProp(
-  propertyKey: string,
-  e: ASTNode,
-  env: Environment,
-  config: EvaluationConfig,
-  c: Continuation,
-  cerr: ErrorContinuation
-) {
-  callInterceptor({ phase: "enter", propertyKey }, config, e);
-
-  const value = e[propertyKey];
-  const args = [
-    value,
-    env,
-    config,
-    value => {
-      callInterceptor({ phase: "exit", propertyKey }, config, e, env);
-      c(value);
-    },
-    value => {
-      callInterceptor({ phase: "exit", propertyKey }, config, e, env);
-      cerr(value);
-    }
-  ];
-
-  Array.isArray(value) ? evaluateArray.apply(null, args) : evaluate.apply(null, args);
-}
-
-// TODO: DRY
-export function evaluatePropWrap(
-  propertyKey: string,
-  body: (c: Continuation, cerr: ErrorContinuation) => void,
-  e: ASTNode,
-  env: Environment,
-  config: EvaluationConfig,
-  c: Continuation,
-  cerr: ErrorContinuation
-) {
-  callInterceptor({ phase: "enter", propertyKey }, config, e, env);
-
-  body(
-    value => {
-      callInterceptor({ phase: "exit", propertyKey }, config, e, env);
-      c(value);
-    },
-    exception => {
-      callInterceptor({ phase: "exit", propertyKey }, config, e, env);
-      cerr(exception);
-    }
-  );
-}
-
 export function evaluate(
   e: ASTNode,
   env: Environment,
@@ -65,21 +13,21 @@ export function evaluate(
   cerr: ErrorContinuation
 ) {
   if (e.type in tokens) {
-    callInterceptor({ phase: "enter" }, config, e, env);
+    callInterceptor("enter", config, e, env);
     try {
       tokens[e.type](
         e,
         env,
         config,
         value => {
-          callInterceptor({ phase: "exit" }, config, e, env, value);
+          callInterceptor("exit", config, e, env, value);
           c(value);
         },
         exception => {
           if (!exception.location) {
             exception.location = e;
           }
-          callInterceptor({ phase: "exit" }, config, e, env, exception);
+          callInterceptor("exit", config, e, env, exception);
           cerr(exception);
         }
       );
@@ -88,9 +36,9 @@ export function evaluate(
     }
   } else {
     const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
-    callInterceptor({ phase: "enter" }, config, e, env);
+    callInterceptor("enter", config, e, env);
     cerr(exception);
-    callInterceptor({ phase: "enter" }, config, e, env, exception);
+    callInterceptor("enter", config, e, env, exception);
   }
 }
 
@@ -110,6 +58,7 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
     fn(items[0], value => c([value]), cerr);
   } else {
     // Array of loop function arguments to be applied next time
+    // TODO: convert to nextOperation or similar, there is always only one? What about callCC
     const tasks: any[] = [];
     // Indicates if tasks execution is done. Initially it is done.
     let done = true;

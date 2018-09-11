@@ -3,7 +3,6 @@ import { NotImplementedException, toException } from "./exceptions";
 import { evaluate } from "./applyEval";
 import { Environment } from "./environment";
 import { FunctionNode } from "./nodeTypes";
-import { callInterceptor } from "./metaes";
 
 export const evaluateMetaFunction = (
   metaFunction: MetaesFunction,
@@ -31,39 +30,16 @@ export const evaluateMetaFunction = (
           throw NotImplementedException(`Not supported type (${param["type"]}) of function param.`, param);
       }
     }
-    callInterceptor({ phase: "enter" }, config, e, env, metaFunction);
-    let _calledAfterInterceptor = false;
 
-    function _interceptorAfter(e, value, env) {
-      if (_calledAfterInterceptor) {
-        return;
+    evaluate(e.body, env, config, c, exception => {
+      switch (exception.type) {
+        case "ReturnStatement":
+          c(exception.value);
+          break;
+        default:
+          cerr(exception);
       }
-      callInterceptor({ phase: "exit" }, config, e, env, value);
-      _calledAfterInterceptor = true;
-    }
-
-    evaluate(
-      e.body,
-      env,
-      config,
-      result => {
-        c(result);
-        _interceptorAfter(e, result, env);
-      },
-      exception => {
-        switch (exception.type) {
-          case "ReturnStatement":
-            c(exception.value);
-            break;
-          default:
-            if (!exception.location) {
-              exception.location = e;
-            }
-            cerr(exception);
-        }
-        _interceptorAfter(e, exception.value, env);
-      }
-    );
+    });
   } catch (e) {
     cerr(e);
   }

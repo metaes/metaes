@@ -28,13 +28,13 @@ describe("ObservableContext", () => {
     let called = false;
     const context = new ObservableContext(value, {
       set(observedValue, key, args) {
-        called = true;
         expect(observedValue).to.equal(value);
-
         expect(key).to.equal("foo");
         expect(args).to.equal("bar");
 
         expect(observedValue["foo"]).to.equal(undefined);
+
+        called = true;
       }
     });
     const source = `self.foo="bar"`;
