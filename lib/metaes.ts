@@ -96,6 +96,18 @@ export class MetaesContext implements Context {
     }
     metaesEval(input, c || this.c, cerr || this.cerr, env, config);
   }
+
+  evalToPromise(input: Script | Source, environment?: Environment) {
+    return evalToPromise(this, input, environment);
+  }
+
+  evalFunctionBody(source: Function, environment?: Environment) {
+    return evalFunctionBody(this, source, environment);
+  }
+
+  evaluateFunction(source: ((...rest) => void), ...args: any[]) {
+    return evaluateFunction(this, source, ...args);
+  }
 }
 
 export const evalToPromise = (context: Context, input: Script | Source, environment?: Environment) =>
