@@ -155,12 +155,10 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
             } else {
               switch (e.property.type) {
                 case "Identifier":
-                  const propertyNode = e.property;
                   try {
-                    const value = object[propertyNode.name];
-                    c(value);
+                    c(object[e.property.name]);
                   } catch (e) {
-                    cerr(toException(e, propertyNode));
+                    cerr(toException(e, e.property));
                   }
                   break;
                 default:
