@@ -136,7 +136,7 @@ describe("Special", () => {
     expect(error.message).equal("Continuation error");
   });
 
-  it.only("should support custom yield expression", async () => {
+  it("should support custom yield expression", async () => {
     const context = new MetaesContext(undefined, undefined, {
       values: { callcc: callWithCurrentContinuation, console, isMetaFunction, getMetaFunction, evaluateMetaFunction }
     });
