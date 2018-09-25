@@ -136,7 +136,7 @@ describe("Special", () => {
     expect(error.message).equal("Continuation error");
   });
 
-  it("should support custom yield expression", async () => {
+  it.only("should support custom yield expression", async () => {
     const context = new MetaesContext(undefined, undefined, {
       values: { callcc: callWithCurrentContinuation, console, isMetaFunction, getMetaFunction, evaluateMetaFunction }
     });
@@ -153,6 +153,7 @@ describe("Special", () => {
         let continuation;
         let value;
         let done = false;
+        let error;
         function start() {
           evaluateMetaFunction(
             getMetaFunction(fn),
@@ -160,8 +161,12 @@ describe("Special", () => {
               done = true;
             },
             e => {
-              value = e.value.value;
-              continuation = e.value.cc;
+              if (e.type === "NextIteration") {
+                value = e.value.value;
+                continuation = e.value.cc;
+              } else {
+                error = e.value;
+              }
             },
             null,
             []
@@ -177,6 +182,9 @@ describe("Special", () => {
               continuation();
             } else {
               start();
+            }
+            if (error) {
+              throw error;
             }
             if (done) {
               return this.next();
