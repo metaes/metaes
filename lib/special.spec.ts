@@ -221,4 +221,50 @@ describe("Special", () => {
       { value: undefined, done: true }
     ]);
   });
+
+  it("should allow to simulate await", async () => {
+    const context = new MetaesContext(undefined, undefined, {
+      values: {
+        awaitReceiver_,
+        callcc: callWithCurrentContinuation,
+        console,
+        isMetaFunction,
+        getMetaFunction,
+        evaluateMetaFunction
+      }
+    });
+
+    function awaitReceiver_(cc, cerr, value) {
+      if (value instanceof Promise) {
+        value.then(cc).catch(e => cerr({ value: e }));
+      } else {
+        cc(value);
+      }
+    }
+
+    const serverData = { "fake-server-data": ["hello", "world"] };
+    const errorMessage = "Can't load data";
+
+    const result = await evalFunctionBody(
+      context,
+      (awaitReceiver_, callcc, loadData, loadFailingData) => {
+        const await_ = (target?) => callcc(awaitReceiver_, target);
+
+        const results: any[] = [];
+        try {
+          await_(loadFailingData());
+        } catch (e) {
+          results.push(e.message);
+        }
+        results.concat([await_(1), 5, await_(loadData())]);
+      },
+      {
+        values: {
+          loadFailingData: () => new Promise((_, reject) => setTimeout(reject, 0, new Error(errorMessage))),
+          loadData: () => new Promise(resolve => setTimeout(resolve, 10, serverData))
+        }
+      }
+    );
+    expect(result).deep.eq([errorMessage, 1, 5, serverData]);
+  });
 });
