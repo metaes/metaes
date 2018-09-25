@@ -88,3 +88,7 @@ export function markAsMetaFunction(fn: Function, meta: MetaesFunction) {
 export function isMetaFunction(fn: Function) {
   return (<any>fn).__meta__;
 }
+
+export function getMetaFunction(fn: Function) {
+  return (<any>fn).__meta__;
+}

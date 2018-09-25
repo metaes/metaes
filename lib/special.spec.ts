@@ -3,6 +3,7 @@ import { describe, it } from "mocha";
 import { Environment } from "./environment";
 import { evalFunctionBody, evaluateFunction, MetaesContext, metaesEval } from "./metaes";
 import { callWithCurrentContinuation, getCurrentEnvironment } from "./special";
+import { isMetaFunction, evaluateMetaFunction, getMetaFunction } from "./metafunction";
 
 describe("Special", () => {
   it("should return current env", () => {
@@ -61,7 +62,7 @@ describe("Special", () => {
     cc([4, 5, 6]);
     assert.deepEqual(result, [1, 2, 3, 4, 5, 6]);
   });
-  
+
   it(`should continue after call/cc multiple times if user decides to. 
       Should execut first time using passed in value`, async () => {
     const result = [];
@@ -95,8 +96,8 @@ describe("Special", () => {
       callcc => {
         let evilGoTo;
         let i = 0;
-        callcc(function(_cc) {
-          evilGoTo = _cc;
+        callcc(function(cc) {
+          evilGoTo = cc;
           evilGoTo();
         });
         i++;
@@ -133,5 +134,83 @@ describe("Special", () => {
       receiver
     );
     expect(error.message).equal("Continuation error");
+  });
+
+  it("should support custom yield expression", async () => {
+    const context = new MetaesContext(undefined, undefined, {
+      values: { callcc: callWithCurrentContinuation, console, isMetaFunction, getMetaFunction, evaluateMetaFunction }
+    });
+
+    const result = await evalFunctionBody(context, (callcc, isMetaFunction, evaluateMetaFunction, getMetaFunction) => {
+      function receiver(cc, ccerr, value) {
+        ccerr({ type: "NextIteration", value: { value, cc } });
+      }
+
+      function getIterator(fn) {
+        if (!isMetaFunction(fn)) {
+          throw "Creating iterator from native function not supported yet";
+        }
+        let continuation;
+        let value;
+        let done = false;
+        function start() {
+          evaluateMetaFunction(
+            getMetaFunction(fn),
+            () => {
+              done = true;
+            },
+            e => {
+              value = e.value.value;
+              continuation = e.value.cc;
+            },
+            null,
+            []
+          );
+        }
+
+        return {
+          next() {
+            if (done) {
+              return { value: void 0, done: true };
+            }
+            if (continuation) {
+              continuation();
+            } else {
+              start();
+            }
+            if (done) {
+              return this.next();
+            }
+            return { value, done };
+          }
+        };
+      }
+      const yield_ = value => callcc(receiver, value);
+
+      function generatorLikeFunction() {
+        for (let i of [1, 2, 3]) {
+          yield_(i);
+        }
+        yield_("another one");
+      }
+      const iterator = getIterator(generatorLikeFunction);
+      const results: any[] = [];
+
+      results.push(iterator.next());
+      results.push(iterator.next());
+      results.push(iterator.next());
+      results.push(iterator.next());
+      results.push(iterator.next());
+
+      results;
+    });
+
+    expect(result).deep.eq([
+      { value: 1, done: false },
+      { value: 2, done: false },
+      { value: 3, done: false },
+      { value: "another one", done: false },
+      { value: undefined, done: true }
+    ]);
   });
 });
