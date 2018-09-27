@@ -36,10 +36,10 @@ const { apply, call } = Function;
 
 export class ObservableContext extends MetaesContext {
   private _listeners: EvaluationListener[] = [];
-  private _handlers: ObserverHandler[] = [];
+  private _handlers: Map<any, Traps[]> = new Map();
   private _flameGraphs: FlameGraphs = {};
 
-  constructor(target: object, mainHandler?: Traps) {
+  constructor(target: object, mainTraps?: Traps) {
     super(
       undefined,
       undefined,
@@ -59,9 +59,22 @@ export class ObservableContext extends MetaesContext {
     );
     ["self", "this"].forEach(name => setValueTag(this.environment, name, "observable", true));
 
-    if (mainHandler) {
-      this._handlers.push({ traps: mainHandler, target });
+    if (mainTraps) {
+      this._addTraps(target, mainTraps);
     }
+  }
+
+  private _addTraps(target: any, traps: Traps) {
+    const trapsCollection = this._handlers.get(target);
+    if (trapsCollection) {
+      trapsCollection.push(traps);
+    } else {
+      this._handlers.set(target, [traps]);
+    }
+  }
+
+  private _getTraps(target: any) {
+    return this._handlers.get(target);
   }
 
   addListener(listener: EvaluationListener) {
@@ -78,7 +91,7 @@ export class ObservableContext extends MetaesContext {
   }
 
   addHandler(handler: ObserverHandler) {
-    this._handlers.push(handler);
+    this._addTraps(handler.target, handler.traps);
   }
 
   interceptor(evaluation: Evaluation) {
@@ -124,11 +137,12 @@ export class ObservableContext extends MetaesContext {
           (left = getValue(assignment.left.object)) &&
           (right = getValue(assignment.right))
         ) {
-          for (let i = 0; i < this._handlers.length; i++) {
-            const handler = this._handlers[i];
-            if (handler.target === left && handler.traps.set) {
-              handler.traps.set(left, leftProperty || assignment.left.property.name, getValue(assignment.right));
-            }
+          let traps;
+          if ((traps = this._getTraps(left))) {
+            traps.forEach(
+              trap =>
+                trap.set && trap.set(left, leftProperty || assignment.left.property.name, getValue(assignment.right))
+            );
           }
           return true;
         }
@@ -142,17 +156,17 @@ export class ObservableContext extends MetaesContext {
         const assignment = evaluation.e as any;
 
         const left = getValue(assignment.left.object);
-        if (left) {
-          for (let i = 0; i < this._handlers.length; i++) {
-            const handler = this._handlers[i];
-            if (handler.target === left && handler.traps.didSet) {
-              handler.traps.didSet(
+        const traps = this._getTraps(left);
+        if (left && traps) {
+          traps.forEach(
+            trap =>
+              trap.didSet &&
+              trap.didSet(
                 left,
                 getValue(assignment.left.property) || assignment.left.property.name,
                 getValue(assignment.right)
-              );
-            }
-          }
+              )
+          );
         }
       }
 
@@ -165,23 +179,22 @@ export class ObservableContext extends MetaesContext {
         const property = getValue(callNode.callee);
         const args: any[] = callNode.arguments.map(getValue);
 
-        for (let i = 0; i < this._handlers.length; i++) {
-          const handler = this._handlers[i];
-          if (handler.traps.apply) {
-            if (handler.target === object) {
-              handler.traps.apply(object, property, args, callNodeValue);
-            } else if (
-              // in this case check if function is called using .call or .apply with
-              // `this` equal to `observer.target`
-              args[0] === handler.target
-            ) {
+        let traps;
+        if ((traps = this._getTraps(object))) {
+          traps.forEach(trap => trap.apply && trap.apply(object, property, args, callNodeValue));
+        }
+        // in this case check if function is called using .call or .apply with
+        // `this` equal to `observer.target`
+        if ((traps = this._getTraps(args[0]))) {
+          traps.forEach(trap => {
+            if (trap.apply) {
               if (property === apply) {
-                handler.traps.apply(args[0], object, args[1], callNodeValue);
+                trap.apply(args[0], object, args[1], callNodeValue);
               } else if (property === call) {
-                handler.traps.apply(args[0], object, args.slice(1), callNodeValue);
+                trap.apply(args[0], object, args.slice(1), callNodeValue);
               }
             }
-          }
+          });
         }
       }
     }
