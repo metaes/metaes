@@ -25,6 +25,7 @@ export type FlameGraph = {
 export type EvaluationNode = {
   evaluation: Evaluation;
   children: EvaluationNode[];
+  endTime?: number;
 };
 
 type EvaluationListener = (node: Evaluation, flameGraph: FlameGraph) => void;
@@ -224,9 +225,22 @@ export class ObservableContext extends MetaesContext {
         };
         const parent = stack[stack.length - 1];
         if (parent) {
-          parent.children.push(node);
+          const value = parent.children.push(node);
+
+          // Manually run trap
+          let traps: Traps[] | undefined;
+          if ((traps = this._getTraps(parent.children))) {
+            traps.forEach(trap => trap.apply && trap.apply(parent.children, parent.children.push, [node], value));
+          }
         }
-        stack.push(node);
+
+        const value = stack.push(node);
+
+        // Manually run trap
+        let traps: Traps[] | undefined;
+        if ((traps = this._getTraps(stack))) {
+          traps.forEach(trap => trap.apply && trap.apply(stack, stack.push, [node], value));
+        }
       } else {
         flameGraph.values.set(evaluation.e, evaluation.value);
       }

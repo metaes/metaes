@@ -154,12 +154,14 @@ export const consoleLoggingMetaesContext = (environment: Environment = { values:
     }
   );
 
+const hasPerformance = typeof performance === "function";
+
 export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNode, env?: Environment, value?) =>
   config.interceptor({
     script: config.script,
     e,
     phase,
     value,
-    timestamp: new Date().getTime(),
+    timestamp: hasPerformance ? performance.now() : new Date().getTime(),
     env
   });
