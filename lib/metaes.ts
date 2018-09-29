@@ -27,8 +27,8 @@ export function createScript(source: Source, cache?: ParseCache): Script {
   }
 }
 
-export function toScript(input: Source | Script) {
-  return isScript(input) ? input : createScript(input);
+export function toScript(input: Source | Script, cache?: ParseCache) {
+  return isScript(input) ? input : createScript(input, cache);
 }
 
 export function isScript(script: any): script is Script {
@@ -62,7 +62,8 @@ export class MetaesContext implements Context {
     public c?: Continuation,
     public cerr?: ErrorContinuation,
     public environment: Environment = { values: {} },
-    public defaultConfig: Partial<EvaluationConfig> = {}
+    public defaultConfig: Partial<EvaluationConfig> = {},
+    public cache?: ParseCache
   ) {}
 
   /**
@@ -81,7 +82,7 @@ export class MetaesContext implements Context {
     environment?: Environment,
     config?: Partial<EvaluationConfig>
   ) {
-    input = toScript(input);
+    input = toScript(input, this.cache);
 
     let env = this.environment;
 
@@ -111,7 +112,7 @@ export class MetaesContext implements Context {
 }
 
 export const evalToPromise = (context: Context, input: Script | Source, environment?: Environment) =>
-  new Promise<any>((resolve, reject) => context.evaluate(toScript(input), resolve, reject, environment));
+  new Promise<any>((resolve, reject) => context.evaluate(input, resolve, reject, environment));
 
 export const parseFunction = (fn: Function, cache?: ParseCache) =>
   parse("(" + fn.toString() + ")", { loc: false, range: false }, cache);
@@ -123,8 +124,9 @@ export const parseFunction = (fn: Function, cache?: ParseCache) =>
  * @param environment
  */
 export const evalFunctionBody = (context: Context, source: Function, environment?: Environment) => {
+  const cache = context instanceof MetaesContext ? context.cache : void 0;
   const script = {
-    ast: (((parseFunction(source) as Program).body[0] as ExpressionStatement).expression as FunctionNode).body,
+    ast: (((parseFunction(source, cache) as Program).body[0] as ExpressionStatement).expression as FunctionNode).body,
     scriptId: nextScriptId(),
     source
   };
@@ -138,7 +140,7 @@ export const evalFunctionBody = (context: Context, source: Function, environment
  * @param args
  */
 export async function evaluateFunction(context: MetaesContext, source: ((...rest) => void), ...args: any[]) {
-  return (await evalToPromise(context, createScript(source))).apply(null, args);
+  return (await evalToPromise(context, source)).apply(null, args);
 }
 
 export const consoleLoggingMetaesContext = (environment: Environment = { values: {} }) =>

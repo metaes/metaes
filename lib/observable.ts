@@ -3,6 +3,7 @@ import { MetaesContext } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
 import { Identifier, MemberExpression, AssignmentExpression } from "./nodeTypes";
 import { Evaluation } from "./types";
+import { createCache } from "./parse";
 
 type Traps = {
   apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
@@ -56,7 +57,8 @@ export class ObservableContext extends MetaesContext {
           }
           this._flameGraphBuilder("after", evaluation);
         }
-      }
+      },
+      createCache()
     );
     ["self", "this"].forEach(name => setValueTag(this.environment, name, "observable", true));
 
