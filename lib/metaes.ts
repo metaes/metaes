@@ -1,4 +1,4 @@
-import { parse } from "./parse";
+import { parse, ParseCache } from "./parse";
 import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, Source, Script, Phase } from "./types";
 import { evaluate } from "./applyEval";
 import { ASTNode } from "./nodes/nodes";
@@ -13,15 +13,15 @@ let scriptIdsCounter = 0;
 
 export const nextScriptId = () => "" + scriptIdsCounter++;
 
-export function createScript(source: Source): Script {
+export function createScript(source: Source, cache?: ParseCache): Script {
   const scriptId = nextScriptId();
 
   if (typeof source === "object") {
     return { source, ast: source, scriptId };
   } else if (typeof source === "function") {
-    return { source, ast: parseFunction(source), scriptId };
+    return { source, ast: parseFunction(source, cache), scriptId };
   } else if (typeof source === "string") {
-    return { source, ast: parse(source), scriptId };
+    return { source, ast: parse(source, {}, cache), scriptId };
   } else {
     throw new Error(`Can't create script from ${source}.`);
   }
@@ -113,7 +113,8 @@ export class MetaesContext implements Context {
 export const evalToPromise = (context: Context, input: Script | Source, environment?: Environment) =>
   new Promise<any>((resolve, reject) => context.evaluate(toScript(input), resolve, reject, environment));
 
-export const parseFunction = (fn: Function) => parse("(" + fn.toString() + ")", { loc: false, range: false });
+export const parseFunction = (fn: Function, cache?: ParseCache) =>
+  parse("(" + fn.toString() + ")", { loc: false, range: false }, cache);
 
 /**
  * Function params are igonred, they are used only to satisfy linters/compilers on client code.
