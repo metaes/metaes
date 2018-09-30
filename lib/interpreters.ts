@@ -1,4 +1,4 @@
-import { interpretersMap } from "./types";
+import { Interpreters } from "./types";
 import {
   BlockStatement,
   CatchClause,
@@ -42,7 +42,7 @@ import {
 } from "./interpreter/expressions";
 import { Identifier, Literal } from "./interpreter/base";
 
-export const tokens: interpretersMap = {
+export const ecmaScriptInterpreters: Interpreters = {
   Identifier,
   Literal,
 

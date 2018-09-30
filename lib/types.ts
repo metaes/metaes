@@ -45,6 +45,7 @@ export type Interceptor = (evaluation: Evaluation) => void;
 export interface EvaluationConfig {
   interceptor: Interceptor;
   script: Script;
+  interpreters: Interpreters;
 }
 
 export type Continuation = (value?: MetaesException | any) => void;
@@ -58,7 +59,7 @@ type Interpreter<T extends ASTNode> = (
   cerr: ErrorContinuation
 ) => void;
 
-export type interpretersMap = {
+export type Interpreters = {
   [key: string]: Interpreter<any>;
 };
 

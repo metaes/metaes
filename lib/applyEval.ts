@@ -1,5 +1,4 @@
 import { Continuation, ErrorContinuation, EvaluationConfig } from "./types";
-import { tokens } from "./interpreters";
 import { ASTNode } from "./nodes/nodes";
 import { Environment } from "./environment";
 import { NotImplementedException } from "./exceptions";
@@ -12,10 +11,10 @@ export function evaluate(
   c: Continuation,
   cerr: ErrorContinuation
 ) {
-  if (e.type in tokens) {
+  if (e.type in config.interpreters) {
     callInterceptor("enter", config, e, env);
     try {
-      tokens[e.type](
+      config.interpreters[e.type](
         e,
         env,
         config,
