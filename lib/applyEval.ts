@@ -11,11 +11,11 @@ export function evaluate(
   c: Continuation,
   cerr: ErrorContinuation
 ) {
+  callInterceptor("enter", config, e, env);
   getValue(
     config.interpreters,
     e.type,
     interpreter => {
-      callInterceptor("enter", config, e, env);
       try {
         interpreter(
           e,
