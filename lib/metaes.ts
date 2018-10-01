@@ -36,10 +36,12 @@ export function isScript(script: any): script is Script {
   return typeof script === "object" && "source" in script && "ast" in script && "scriptId" in script;
 }
 
+function noop() {}
+
 export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config = {}) => {
   script = toScript(script);
   config.script = script;
-  config.interceptor = config.interceptor || function noop() {};
+  config.interceptor = config.interceptor || noop;
   config.interpreters = config.interpreters || ecmaScriptInterpreters;
 
   try {
@@ -162,6 +164,7 @@ export const consoleLoggingMetaesContext = (environment: Environment = { values:
 const hasPerformance = typeof performance === "function";
 
 export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNode, env?: Environment, value?) =>
+  config.interceptor !== noop &&
   config.interceptor({
     script: config.script,
     e,

@@ -44,9 +44,9 @@ export function CallExpression(
     env,
     config,
     args => {
-      let calleeNode = e.callee;
+      let e_callee = e.callee;
 
-      switch (calleeNode.type) {
+      switch (e_callee.type) {
         case "MemberExpression":
           evaluate(
             e.callee,
@@ -54,16 +54,12 @@ export function CallExpression(
             config,
             property =>
               evaluate(
-                calleeNode["object"],
+                e_callee["object"],
                 env,
                 config,
                 object => {
                   if (typeof property === "function") {
-                    try {
-                      c(apply(property as Function, object, args));
-                    } catch (e) {
-                      cerr({ value: e, location: calleeNode });
-                    }
+                    c(apply(property as Function, object, args));
                   } else {
                     cerr({
                       value: new TypeError(typeof property + " is not a function")
@@ -102,7 +98,7 @@ export function CallExpression(
                     c(apply(callee, undefined, args));
                   }
                 } catch (error) {
-                  cerr(toException(error, calleeNode));
+                  cerr(toException(error, e_callee));
                 }
               } else {
                 cerr(new TypeError(callee + " is not a function"));
@@ -121,7 +117,7 @@ export function CallExpression(
                 const cnt = thisValue => c(apply(callee, thisValue, args));
                 getValue(env, "this", cnt, () => cnt(undefined));
               } catch (error) {
-                cerr(toException(error, calleeNode));
+                cerr(toException(error, e_callee));
               }
             },
             cerr
@@ -130,8 +126,8 @@ export function CallExpression(
         default:
           cerr({
             type: "NotImplemented",
-            message: `This kind of callee node ('${calleeNode.type}') is not supported yet.`,
-            location: calleeNode
+            message: `This kind of callee node ('${e_callee.type}') is not supported yet.`,
+            location: e_callee
           });
       }
     },
