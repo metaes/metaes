@@ -66,14 +66,6 @@ export function getValue(env: Environment, name: string, c: Continuation, cerr: 
     if (!_env) {
       break;
     }
-    if (_env.values === null || typeof _env.values === undefined) {
-      try {
-        _env.values[name]; // force error to be thrown
-      } catch (error) {
-        cerr({ value: error });
-        break;
-      }
-    }
     if (name in _env.values) {
       let value = _env.values[name];
 
