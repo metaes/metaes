@@ -41,49 +41,52 @@ import {
   TemplateLiteral
 } from "./interpreter/expressions";
 import { Identifier, Literal } from "./interpreter/base";
+import { Environment } from "./environment";
 
-export const ecmaScriptInterpreters: Interpreters = {
-  Identifier,
-  Literal,
+export const ecmaScriptInterpreters: Environment = {
+  values: {
+    Identifier,
+    Literal,
 
-  // statements
-  Program,
-  BlockStatement,
-  IfStatement,
-  ExpressionStatement,
-  TryStatement,
-  ThrowStatement,
-  CatchClause,
-  VariableDeclaration,
-  VariableDeclarator,
-  ReturnStatement,
-  FunctionDeclaration,
-  ForInStatement,
-  ForOfStatement,
-  WhileStatement,
-  ForStatement,
-  EmptyStatement,
-  ClassDeclaration,
-  ClassBody,
-  DebuggerStatement,
+    // statements
+    Program,
+    BlockStatement,
+    IfStatement,
+    ExpressionStatement,
+    TryStatement,
+    ThrowStatement,
+    CatchClause,
+    VariableDeclaration,
+    VariableDeclarator,
+    ReturnStatement,
+    FunctionDeclaration,
+    ForInStatement,
+    ForOfStatement,
+    WhileStatement,
+    ForStatement,
+    EmptyStatement,
+    ClassDeclaration,
+    ClassBody,
+    DebuggerStatement,
 
-  // expressions
-  CallExpression,
-  MemberExpression,
-  ArrowFunctionExpression,
-  FunctionExpression,
-  AssignmentExpression,
-  ObjectExpression,
-  Property,
-  BinaryExpression,
-  ArrayExpression,
-  NewExpression,
-  SequenceExpression,
-  LogicalExpression,
-  UnaryExpression,
-  UpdateExpression,
-  ThisExpression,
-  ConditionalExpression,
-  MethodDefinition,
-  TemplateLiteral
+    // expressions
+    CallExpression,
+    MemberExpression,
+    ArrowFunctionExpression,
+    FunctionExpression,
+    AssignmentExpression,
+    ObjectExpression,
+    Property,
+    BinaryExpression,
+    ArrayExpression,
+    NewExpression,
+    SequenceExpression,
+    LogicalExpression,
+    UnaryExpression,
+    UpdateExpression,
+    ThisExpression,
+    ConditionalExpression,
+    MethodDefinition,
+    TemplateLiteral
+  }
 };

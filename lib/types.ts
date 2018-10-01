@@ -45,10 +45,10 @@ export type Interceptor = (evaluation: Evaluation) => void;
 export interface EvaluationConfig {
   interceptor: Interceptor;
   script: Script;
-  interpreters: Interpreters;
+  interpreters: Environment;
 }
 
-export type Continuation = (value?: MetaesException | any) => void;
+export type Continuation<T = any> = (value?: T) => void;
 export type ErrorContinuation = (error: MetaesException) => void;
 
 type Interpreter<T extends ASTNode> = (

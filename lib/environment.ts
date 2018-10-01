@@ -4,14 +4,14 @@ export interface Reference {
   id?: string;
 }
 
-export interface EnvironmentBase {
-  values: { [key: string]: any };
+export interface EnvironmentBase<T = any> {
+  values: { [key: string]: T };
   tags?: { [key: string]: any };
   references?: { [key: string]: Reference };
 }
 
-export interface Environment extends EnvironmentBase {
-  prev?: Environment;
+export interface Environment<T = any> extends EnvironmentBase<T> {
+  prev?: Environment<T>;
 }
 
 export function toEnvironment(environment?: any | EnvironmentBase | Environment): Environment {
@@ -40,10 +40,10 @@ export function getEnvironmentForValue(env: Environment, name: string): Environm
   return null;
 }
 
-export function setValue(
-  env: Environment,
+export function setValue<T>(
+  env: Environment<T>,
   name: string,
-  value: any,
+  value: T,
   isDeclaration: boolean,
   c: Continuation,
   cerr: ErrorContinuation
@@ -60,7 +60,7 @@ export function setValue(
   }
 }
 
-export function getValue(env: Environment, name: string, c: Continuation, cerr: ErrorContinuation) {
+export function getValue<T>(env: Environment<T>, name: string, c: Continuation<T>, cerr: ErrorContinuation) {
   let _env: Environment | undefined = env;
   do {
     if (!_env) {

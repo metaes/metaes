@@ -1,6 +1,6 @@
 import { Continuation, ErrorContinuation, EvaluationConfig } from "./types";
 import { ASTNode } from "./nodes/nodes";
-import { Environment } from "./environment";
+import { Environment, getValue } from "./environment";
 import { NotImplementedException } from "./exceptions";
 import { callInterceptor } from "./metaes";
 
@@ -11,34 +11,38 @@ export function evaluate(
   c: Continuation,
   cerr: ErrorContinuation
 ) {
-  if (e.type in config.interpreters) {
-    callInterceptor("enter", config, e, env);
-    try {
-      config.interpreters[e.type](
-        e,
-        env,
-        config,
-        value => {
-          callInterceptor("exit", config, e, env, value);
-          c(value);
-        },
-        exception => {
-          if (!exception.location) {
-            exception.location = e;
+  getValue(
+    config.interpreters,
+    e.type,
+    interpreter => {
+      callInterceptor("enter", config, e, env);
+      try {
+        interpreter(
+          e,
+          env,
+          config,
+          value => {
+            callInterceptor("exit", config, e, env, value);
+            c(value);
+          },
+          exception => {
+            if (!exception.location) {
+              exception.location = e;
+            }
+            callInterceptor("exit", config, e, env, exception);
+            cerr(exception);
           }
-          callInterceptor("exit", config, e, env, exception);
-          cerr(exception);
-        }
-      );
-    } catch (error) {
-      throw error;
+        );
+      } catch (error) {
+        throw error;
+      }
+    },
+    () => {
+      const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
+      cerr(exception);
+      callInterceptor("exit", config, e, env, exception);
     }
-  } else {
-    const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
-    callInterceptor("enter", config, e, env);
-    cerr(exception);
-    callInterceptor("enter", config, e, env, exception);
-  }
+  );
 }
 
 type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;
