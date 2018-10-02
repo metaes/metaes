@@ -80,7 +80,6 @@ export function CallExpression(
                   if (callee === getCurrentEnvironment) {
                     // TODO: it's redundant now, callcc passes all params
                     // Hand over current environment to caller
-
                     c(env);
                   } else if (callee === callWithCurrentContinuation) {
                     // Pass continuation to first argument of callWithCurrentContinuation `caller`.
@@ -142,17 +141,29 @@ export function MemberExpression(e: MemberExpression, c, cerr, env, config) {
     e.object,
     object => {
       if (e.computed) {
-        evaluate(e.property, property => c(object[property]), cerr, env, config);
+        evaluate(
+          e.property,
+          property => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
+          cerr,
+          env,
+          config
+        );
       } else {
         switch (e.property.type) {
           case "Identifier":
             if (e.computed) {
-              evaluate(e.property, value => c(object[value]), cerr, env, config);
+              evaluate(
+                e.property,
+                value => evaluate({ type: "GetProperty", object, property: value }, c, cerr, env, config),
+                cerr,
+                env,
+                config
+              );
             } else {
               switch (e.property.type) {
                 case "Identifier":
                   try {
-                    c(object[e.property.name]);
+                    evaluate({ type: "GetProperty", object, property: e.property.name }, c, cerr, env, config);
                   } catch (e) {
                     cerr(toException(e, e.property));
                   }
@@ -192,7 +203,7 @@ export function FunctionExpression(e: FunctionExpression, c, cerr, env, config) 
   _createMetaFunction(e, c, cerr, env, config);
 }
 
-export function AssignmentExpression(e: AssignmentExpression, c, cerr, env, config) {
+export function AssignmentExpression(e: AssignmentExpression, c, cerr, env, config: EvaluationConfig) {
   evaluate(
     e.right,
     right => {
@@ -205,53 +216,30 @@ export function AssignmentExpression(e: AssignmentExpression, c, cerr, env, conf
             object => {
               const property = e_left.property;
               if (e_left.computed) {
-                evaluate(e_left.property, key => evalAssignment(object, key, right), cerr, env, config);
+                evaluate(
+                  e_left.property,
+                  property =>
+                    evaluate(
+                      { type: "SetProperty", object, property, value: right, operator: e.operator },
+                      c,
+                      cerr,
+                      env,
+                      config
+                    ),
+                  cerr,
+                  env,
+                  config
+                );
               } else if (property.type === "Identifier") {
-                evalAssignment(object, property.name, right);
+                evaluate(
+                  { type: "SetProperty", object, property: property.name, value: right, operator: e.operator },
+                  c,
+                  cerr,
+                  env,
+                  config
+                );
               } else {
                 cerr(NotImplementedException("This kind of assignment is not implemented yet.", property));
-              }
-              function evalAssignment(object, key, value) {
-                switch (e.operator) {
-                  case "=":
-                    c((object[key] = value));
-                    break;
-                  case "+=":
-                    c((object[key] += value));
-                    break;
-                  case "-=":
-                    c((object[key] -= value));
-                    break;
-                  case "*=":
-                    c((object[key] *= value));
-                    break;
-                  case "/=":
-                    c((object[key] /= value));
-                    break;
-                  case "%=":
-                    c((object[key] %= value));
-                    break;
-                  case "<<=":
-                    c((object[key] <<= value));
-                    break;
-                  case ">>=":
-                    c((object[key] >>= value));
-                    break;
-                  case ">>>=":
-                    c((object[key] >>>= value));
-                    break;
-                  case "&=":
-                    c((object[key] &= value));
-                    break;
-                  case "|=":
-                    c((object[key] |= value));
-                    break;
-                  case "^=":
-                    c((object[key] ^= value));
-                    break;
-                  default:
-                    cerr(NotImplementedException(e.type + "has not implemented " + e.operator));
-                }
               }
             },
             cerr,
