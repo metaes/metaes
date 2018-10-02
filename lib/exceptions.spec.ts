@@ -1,5 +1,5 @@
 import { describe, it } from "mocha";
-import { evalFunctionBody, MetaesContext, metaesEval } from "./metaes";
+import { evalFunctionBody, MetaesContext, metaesEval, noop } from "./metaes";
 import { assert } from "chai";
 
 describe("Exceptions", () => {
@@ -16,7 +16,7 @@ describe("Exceptions", () => {
 
   it("should throw ReferenceError", () =>
     new Promise((resolve, _reject) => {
-      metaesEval(`a`, null, x => {
+      metaesEval(`a`, noop, x => {
         assert.equal(x.type, "ReferenceError");
         resolve();
       });

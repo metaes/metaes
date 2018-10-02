@@ -1,4 +1,4 @@
-import { Continuation, ErrorContinuation, EvaluationConfig } from "./types";
+import { Continuation, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
 import { ASTNode } from "./nodes/nodes";
 import { Environment, getValue } from "./environment";
 import { NotImplementedException } from "./exceptions";
@@ -6,21 +6,19 @@ import { callInterceptor } from "./metaes";
 
 export function evaluate(
   e: ASTNode,
-  env: Environment,
-  config: EvaluationConfig,
   c: Continuation,
-  cerr: ErrorContinuation
+  cerr: ErrorContinuation,
+  env: Environment,
+  config: EvaluationConfig
 ) {
   callInterceptor("enter", config, e, env);
   getValue(
     config.interpreters,
     e.type,
-    interpreter => {
+    (interpreter: Interpreter<ASTNode>) => {
       try {
         interpreter(
           e,
-          env,
-          config,
           value => {
             callInterceptor("exit", config, e, env, value);
             c(value);
@@ -31,7 +29,9 @@ export function evaluate(
             }
             callInterceptor("exit", config, e, env, exception);
             cerr(exception);
-          }
+          },
+          env,
+          config
         );
       } catch (error) {
         throw error;
@@ -109,10 +109,10 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
 
 export const evaluateArray = (
   array: ASTNode[],
-  env: Environment,
-  config: EvaluationConfig,
   c: Continuation,
-  cerr: ErrorContinuation
-) => visitArray(array, (e, c, cerr) => evaluate(e, env, config, c, cerr), c, cerr);
+  cerr: ErrorContinuation,
+  env: Environment,
+  config: EvaluationConfig
+) => visitArray(array, (e, c, cerr) => evaluate(e, c, cerr, env, config), c, cerr);
 
 export const apply = (fn: Function, thisObj: any, args: any[]) => fn.apply(thisObj, args);

@@ -36,7 +36,7 @@ export function isScript(script: any): script is Script {
   return typeof script === "object" && "source" in script && "ast" in script && "scriptId" in script;
 }
 
-function noop() {}
+export function noop() {}
 
 export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config = {}) => {
   script = toScript(script);
@@ -47,10 +47,10 @@ export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config
   try {
     evaluate(
       script.ast,
-      toEnvironment(environment),
-      config as EvaluationConfig,
       val => c && c(val),
-      exception => cerr && cerr(exception)
+      exception => cerr && cerr(exception),
+      toEnvironment(environment),
+      config as EvaluationConfig
     );
   } catch (e) {
     if (cerr) {
@@ -99,6 +99,7 @@ export class MetaesContext implements Context {
     if (!config.interceptor) {
       config.interceptor = this.defaultConfig.interceptor;
     }
+
     metaesEval(input, c || this.c, cerr || this.cerr, env, config);
   }
 
@@ -155,7 +156,7 @@ export const consoleLoggingMetaesContext = (environment: Environment = { values:
     e => console.log(e),
     environment,
     {
-      interceptor: evaluation => {
+      interceptor(evaluation) {
         console.log(evaluation);
       }
     }

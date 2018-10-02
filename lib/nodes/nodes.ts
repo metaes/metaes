@@ -4,12 +4,15 @@ export interface NodeLoc {
 }
 
 export interface NodeBase {
-  loc: NodeLoc;
-  range: [number, number];
+  loc?: NodeLoc;
+  range?: [number, number];
 }
 
 export type ASTNode = NodeBase & {
   type: any;
+
+  // Any other node specific props are allowed
+  [key: string]: any;
 };
 
 const isNode = (node: ASTNode, key: string) => {

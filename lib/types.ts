@@ -51,12 +51,12 @@ export interface EvaluationConfig {
 export type Continuation<T = any> = (value?: T) => void;
 export type ErrorContinuation = (error: MetaesException) => void;
 
-type Interpreter<T extends ASTNode> = (
+export type Interpreter<T extends ASTNode> = (
   e: T,
-  env: Environment,
-  config: EvaluationConfig,
   c: Continuation,
-  cerr: ErrorContinuation
+  cerr: ErrorContinuation,
+  env: Environment,
+  config: EvaluationConfig
 ) => void;
 
 export type Interpreters = {

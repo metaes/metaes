@@ -33,8 +33,6 @@ export const evaluateMetaFunction = (
 
     evaluate(
       e.body,
-      env,
-      config,
       value => {
         // use implicit return only if function is arrow function and have expression as a body
         if (e.type === "ArrowFunctionExpression" && e.body.type !== "BlockStatement") {
@@ -52,7 +50,9 @@ export const evaluateMetaFunction = (
           default:
             cerr(exception);
         }
-      }
+      },
+      env,
+      config
     );
   } catch (e) {
     cerr(e);

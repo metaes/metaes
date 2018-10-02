@@ -1,4 +1,3 @@
-import { Interpreters } from "./types";
 import {
   BlockStatement,
   CatchClause,

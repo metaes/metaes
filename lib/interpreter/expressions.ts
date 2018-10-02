@@ -34,15 +34,13 @@ export function lastArrayItem(array?: any[]) {
 
 export function CallExpression(
   e: CallExpression,
-  env: Environment,
-  config: EvaluationConfig,
   c: Continuation,
-  cerr: ErrorContinuation
+  cerr: ErrorContinuation,
+  env: Environment,
+  config: EvaluationConfig
 ) {
   evaluateArray(
     e.arguments,
-    env,
-    config,
     args => {
       let e_callee = e.callee;
 
@@ -50,13 +48,9 @@ export function CallExpression(
         case "MemberExpression":
           evaluate(
             e.callee,
-            env,
-            config,
             property =>
               evaluate(
                 e_callee["object"],
-                env,
-                config,
                 object => {
                   if (typeof property === "function") {
                     c(apply(property as Function, object, args));
@@ -66,9 +60,13 @@ export function CallExpression(
                     });
                   }
                 },
-                cerr
+                cerr,
+                env,
+                config
               ),
-            cerr
+            cerr,
+            env,
+            config
           );
           break;
         case "Identifier":
@@ -76,19 +74,19 @@ export function CallExpression(
         case "CallExpression":
           evaluate(
             e.callee,
-            env,
-            config,
             callee => {
               if (typeof callee === "function") {
                 try {
                   if (callee === getCurrentEnvironment) {
+                    // TODO: it's redundant now, callcc passes all params
                     // Hand over current environment to caller
+
                     c(env);
                   } else if (callee === callWithCurrentContinuation) {
                     // Pass continuation to first argument of callWithCurrentContinuation `caller`.
                     // `caller` takes over control until decides to call `c` or `cerr`F
                     try {
-                      args[0](c, cerr, args[1]);
+                      args[0](c, cerr, args[1], env, config);
                     } catch (e) {
                       cerr({ message: "Error in continuation receiver." });
                     }
@@ -104,14 +102,14 @@ export function CallExpression(
                 cerr(new TypeError(callee + " is not a function"));
               }
             },
-            cerr
+            cerr,
+            env,
+            config
           );
           break;
         case "ArrowFunctionExpression":
           evaluate(
             e.callee,
-            env,
-            config,
             callee => {
               try {
                 const cnt = thisValue => c(apply(callee, thisValue, args));
@@ -120,7 +118,9 @@ export function CallExpression(
                 cerr(toException(error, e_callee));
               }
             },
-            cerr
+            cerr,
+            env,
+            config
           );
           break;
         default:
@@ -131,23 +131,23 @@ export function CallExpression(
           });
       }
     },
-    cerr
+    cerr,
+    env,
+    config
   );
 }
 
-export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
+export function MemberExpression(e: MemberExpression, c, cerr, env, config) {
   evaluate(
     e.object,
-    env,
-    config,
     object => {
       if (e.computed) {
-        evaluate(e.property, env, config, property => c(object[property]), cerr);
+        evaluate(e.property, property => c(object[property]), cerr, env, config);
       } else {
         switch (e.property.type) {
           case "Identifier":
             if (e.computed) {
-              evaluate(e.property, env, config, value => c(object[value]), cerr);
+              evaluate(e.property, value => c(object[value]), cerr, env, config);
             } else {
               switch (e.property.type) {
                 case "Identifier":
@@ -163,18 +163,20 @@ export function MemberExpression(e: MemberExpression, env, config, c, cerr) {
             }
             break;
           case "Literal":
-            evaluate(e.property, { values: object }, config, c, cerr);
+            evaluate(e.property, c, cerr, { values: object }, config);
             break;
           default:
             cerr(NotImplementedException("This kind of member expression is not supported yet."));
         }
       }
     },
-    cerr
+    cerr,
+    env,
+    config
   );
 }
 
-function _createMetaFunction(e: ArrowFunctionExpression | FunctionExpression, env, config, c, cerr) {
+function _createMetaFunction(e: ArrowFunctionExpression | FunctionExpression, c, cerr, env, config) {
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
@@ -182,19 +184,17 @@ function _createMetaFunction(e: ArrowFunctionExpression | FunctionExpression, en
   }
 }
 
-export function ArrowFunctionExpression(e: ArrowFunctionExpression, env, config, c, cerr) {
-  _createMetaFunction(e, env, config, c, cerr);
+export function ArrowFunctionExpression(e: ArrowFunctionExpression, c, cerr, env, config) {
+  _createMetaFunction(e, c, cerr, env, config);
 }
 
-export function FunctionExpression(e: FunctionExpression, env, config, c, cerr) {
-  _createMetaFunction(e, env, config, c, cerr);
+export function FunctionExpression(e: FunctionExpression, c, cerr, env, config) {
+  _createMetaFunction(e, c, cerr, env, config);
 }
 
-export function AssignmentExpression(e: AssignmentExpression, env, config, c, cerr) {
+export function AssignmentExpression(e: AssignmentExpression, c, cerr, env, config) {
   evaluate(
     e.right,
-    env,
-    config,
     right => {
       const e_left = e.left;
 
@@ -202,12 +202,10 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
         case "MemberExpression":
           evaluate(
             e_left.object,
-            env,
-            config,
             object => {
               const property = e_left.property;
               if (e_left.computed) {
-                evaluate(e_left.property, env, config, key => evalAssignment(object, key, right), cerr);
+                evaluate(e_left.property, key => evalAssignment(object, key, right), cerr, env, config);
               } else if (property.type === "Identifier") {
                 evalAssignment(object, property.name, right);
               } else {
@@ -256,7 +254,9 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
                 }
               }
             },
-            cerr
+            cerr,
+            env,
+            config
           );
           break;
         case "Identifier":
@@ -266,27 +266,29 @@ export function AssignmentExpression(e: AssignmentExpression, env, config, c, ce
           cerr(NotImplementedException("This assignment is not supported yet."));
       }
     },
-    cerr
+    cerr,
+    env,
+    config
   );
 }
 
-export function ObjectExpression(e: ObjectExpression, env, config, c, cerr) {
+export function ObjectExpression(e: ObjectExpression, c, cerr, env, config) {
   let object = {};
   evaluateArray(
     e.properties,
-    env,
-    config,
     properties => {
       for (let property of properties) {
         object[property.key] = property.value;
       }
       c(object);
     },
-    cerr
+    cerr,
+    env,
+    config
   );
 }
 
-export function Property(e: Property, env, config, c, cerr) {
+export function Property(e: Property, c, cerr, env, config) {
   let key;
   switch (e.key.type) {
     case "Identifier":
@@ -299,19 +301,15 @@ export function Property(e: Property, env, config, c, cerr) {
       cerr(NotImplementedException("This type or property is not supported yet."));
       return;
   }
-  evaluate(e.value, env, config, value => c({ key, value }), cerr);
+  evaluate(e.value, value => c({ key, value }), cerr, env, config);
 }
 
-export function BinaryExpression(e: BinaryExpression, env, config, c, cerr) {
+export function BinaryExpression(e: BinaryExpression, c, cerr, env, config) {
   evaluate(
     e.left,
-    env,
-    config,
     left => {
       evaluate(
         e.right,
-        env,
-        config,
         right => {
           switch (e.operator) {
             case "+":
@@ -381,22 +379,24 @@ export function BinaryExpression(e: BinaryExpression, env, config, c, cerr) {
               cerr(NotImplementedException(e.type + " not implemented " + e.operator));
           }
         },
-        cerr
+        cerr,
+        env,
+        config
       );
     },
-    cerr
+    cerr,
+    env,
+    config
   );
 }
 
-export function ArrayExpression(e: ArrayExpression, env, config, c, cerr) {
-  evaluateArray(e.elements, env, config, c, cerr);
+export function ArrayExpression(e: ArrayExpression, c, cerr, env, config) {
+  evaluateArray(e.elements, c, cerr, env, config);
 }
 
-export function NewExpression(e: NewExpression, env, config, c, cerr) {
+export function NewExpression(e: NewExpression, c, cerr, env, config) {
   evaluateArray(
     e.arguments,
-    env,
-    config,
     args => {
       let calleeNode = e.callee;
 
@@ -404,8 +404,6 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
         case "MemberExpression":
           evaluate(
             calleeNode,
-            env,
-            config,
             callee => {
               if (typeof callee !== "function") {
                 cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
@@ -417,7 +415,9 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
                 }
               }
             },
-            cerr
+            cerr,
+            env,
+            config
           );
           break;
         case "Identifier":
@@ -442,33 +442,35 @@ export function NewExpression(e: NewExpression, env, config, c, cerr) {
           cerr(NotImplementedException(`This type of callee is not supported yet.`));
       }
     },
-    cerr
+    cerr,
+    env,
+    config
   );
 }
 
-export function SequenceExpression(e: SequenceExpression, env, config, c, cerr) {
-  evaluateArray(e.expressions, env, config, results => (results.length ? c(lastArrayItem(results)) : c()), cerr);
+export function SequenceExpression(e: SequenceExpression, c, cerr, env, config) {
+  evaluateArray(e.expressions, results => (results.length ? c(lastArrayItem(results)) : c()), cerr, env, config);
 }
 
-export function LogicalExpression(e: LogicalExpression, env, config, c, cerr) {
+export function LogicalExpression(e: LogicalExpression, c, cerr, env, config) {
   evaluate(
     e.left,
-    env,
-    config,
     left => {
       if (!left && e.operator === "&&") {
         c(left);
       } else if (left && e.operator === "||") {
         c(left);
       } else {
-        evaluate(e.right, env, config, c, cerr);
+        evaluate(e.right, c, cerr, env, config);
       }
     },
-    cerr
+    cerr,
+    env,
+    config
   );
 }
 
-export function UpdateExpression(e: UpdateExpression, env: Environment, _config, c, cerr) {
+export function UpdateExpression(e: UpdateExpression, c, cerr, env: Environment) {
   switch (e.argument.type) {
     case "Identifier":
       const propName = e.argument.name;
@@ -520,11 +522,9 @@ export function UpdateExpression(e: UpdateExpression, env: Environment, _config,
   }
 }
 
-export function UnaryExpression(e: UnaryExpression, env: Environment, config, c, cerr) {
+export function UnaryExpression(e: UnaryExpression, c, cerr, env: Environment, config) {
   evaluate(
     e.argument,
-    env,
-    config,
     argument => {
       switch (e.operator) {
         case "typeof":
@@ -549,19 +549,21 @@ export function UnaryExpression(e: UnaryExpression, env: Environment, config, c,
           cerr(NotImplementedException("not implemented " + e.operator));
       }
     },
-    error => (error.value instanceof ReferenceError && e.operator === "typeof" ? c("undefined") : cerr(error))
+    error => (error.value instanceof ReferenceError && e.operator === "typeof" ? c("undefined") : cerr(error)),
+    env,
+    config
   );
 }
 
-export function ThisExpression(_e: ThisExpression, env: Environment, _config, c, cerr) {
+export function ThisExpression(_e: ThisExpression, c, cerr, env: Environment) {
   getValue(env, "this", c, cerr);
 }
 
-export function ConditionalExpression(e: ConditionalExpression, env, config, c, cerr) {
-  IfStatement(e, env, config, c, cerr);
+export function ConditionalExpression(e: ConditionalExpression, c, cerr, env, config) {
+  IfStatement(e, c, cerr, env, config);
 }
 
-export function TemplateLiteral(e: TemplateLiteral, _env, _config, c, cerr) {
+export function TemplateLiteral(e: TemplateLiteral, c, cerr) {
   if (e.quasis.length === 1 && e.expressions.length === 0) {
     c(e.quasis[0].value.raw);
   } else {
