@@ -189,7 +189,6 @@ export const ForOfBinding = "-metaes-for-of-binding";
 export function ForOfStatement(e: ForOfStatement, c, cerr, env, config) {
   evaluate(
     e.right,
-
     right => {
       if (!Array.isArray(right)) {
         cerr(NotImplementedException("Only arrays as right-hand side of for-of loop are supported for now.", e.right));

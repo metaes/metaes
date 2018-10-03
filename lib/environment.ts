@@ -79,36 +79,3 @@ export function getValue<T>(env: Environment<T>, name: string, c: Continuation<T
     value: new ReferenceError(`"${name}" is not defined.`)
   });
 }
-
-export function setValueTag(env: Environment, name: string, tagKey: string, tagValue: any) {
-  const _env = getEnvironmentForValue(env, name);
-  if (_env) {
-    _env.tags = _env.tags || {};
-    _env.tags[name] = _env.tags[name] || {};
-    _env.tags[name][tagKey] = tagValue;
-  } else {
-    throw new Error(`Couldn't find environment for ${name} value`);
-  }
-}
-
-export function deleteValueTag(env: Environment, valueName: string, tagKey: string) {
-  const _env = getEnvironmentForValue(env, valueName);
-  if (_env) {
-    try {
-      delete _env.tags![valueName][tagKey];
-    } catch {
-      // ignore
-    }
-  }
-}
-
-export function getValueTag(env: Environment, name: string, key: string) {
-  const _env = getEnvironmentForValue(env, name);
-  if (_env) {
-    try {
-      return _env.tags![name][key];
-    } catch {
-      return null;
-    }
-  }
-}

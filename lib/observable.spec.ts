@@ -1,5 +1,5 @@
 import { describe, it } from "mocha";
-import { ObservableContext, createListenerToCollectObservables } from "./observable";
+import { ObservableContext } from "./observable";
 import { expect } from "chai";
 import { evaluateFunction, evalToPromise } from "./metaes";
 import { zip } from "lodash";
@@ -253,46 +253,4 @@ describe("ObservableContext", () => {
     expect(called).to.be.true;
   });
 
-  it("should collect only observable variables", async () => {
-    const self = {
-      user: { name: "First", lastname: "Lastname", address: { street: "Long" } }
-    };
-    const context = new ObservableContext(self);
-    const task = { name: "test" };
-    const environment = {
-      values: { nonObservableThing: { empty: true }, task },
-      tags: { task: { observable: true } },
-      prev: context.environment
-    };
-    const results: any[] = [];
-    context.addListener(createListenerToCollectObservables(result => results.push(result), environment));
-
-    const sources = [
-      "task.name",
-      "task['name']", // test computed property
-      "self.user.address",
-      "self.user",
-      "self.user.address.street",
-      "self",
-      "nonObservableThing.value1"
-    ];
-    const expected = [
-      { object: task, property: "name" },
-      { object: task, property: "name" },
-      { object: self.user, property: "address" },
-      { object: self, property: "user" },
-      { object: self.user.address, property: "street" },
-      { object: self },
-      null
-    ];
-
-    for (const [source, expectedValue] of zip(sources, expected)) {
-      results.length = 0;
-      await evalToPromise(context, source, environment);
-      if (expectedValue) {
-        expect(results.length).to.equal(1);
-        expect(results[0]).deep.equal(expectedValue);
-      }
-    }
-  });
 });

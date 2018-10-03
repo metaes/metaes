@@ -1,9 +1,8 @@
-import { Environment, getValueTag, setValueTag } from "./environment";
 import { MetaesContext } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
-import { Identifier, MemberExpression, AssignmentExpression } from "./nodeTypes";
-import { Evaluation } from "./types";
+import { AssignmentExpression } from "./nodeTypes";
 import { createCache } from "./parse";
+import { Evaluation } from "./types";
 
 type Traps = {
   apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
@@ -29,7 +28,7 @@ export type EvaluationNode = {
   endTime?: number;
 };
 
-type EvaluationListener = (node: Evaluation, flameGraph: FlameGraph) => void;
+export type EvaluationListener = (node: Evaluation, flameGraph: FlameGraph) => void;
 type FlameGraphs = { [key: string]: FlameGraph };
 
 type InterceptorOnce = (evaluation: Evaluation) => boolean;
@@ -60,8 +59,7 @@ export class ObservableContext extends MetaesContext {
       },
       createCache()
     );
-    ["self", "this"].forEach(name => setValueTag(this.environment, name, "observable", true));
-
+    
     if (mainTraps) {
       this._addTraps(target, mainTraps);
     }
@@ -252,37 +250,3 @@ export class ObservableContext extends MetaesContext {
     }
   }
 }
-
-const isMemberExpression = (e: ASTNode): e is MemberExpression => e.type === "MemberExpression";
-
-function getTopObject(e: ASTNode) {
-  if (isMemberExpression(e)) {
-    return getTopObject(e.object);
-  } else {
-    return e;
-  }
-}
-
-export type ObservableResult = { object: any; property?: string };
-
-export const createListenerToCollectObservables = (
-  resultsCallback: (result: ObservableResult) => void,
-  environment: Environment
-): EvaluationListener => ({ e, phase }, graph) => {
-  if (phase === "exit") {
-    const stack = graph.executionStack;
-
-    // Ignore checking when sitting inside deeper member expression
-    if (stack.length > 1 && stack[stack.length - 2].evaluation.e.type === "MemberExpression") {
-      return;
-    }
-    if (isMemberExpression(e) && getValueTag(environment, getTopObject(e.object).name, "observable")) {
-      const property = e.computed ? graph.values.get(e.property) : e.property.name;
-      resultsCallback({ object: graph.values.get(e.object), property });
-    } else if (e.type === "Identifier") {
-      if (getValueTag(environment, (<Identifier>e).name, "observable")) {
-        resultsCallback({ object: graph.values.get(e) });
-      }
-    }
-  }
-};
