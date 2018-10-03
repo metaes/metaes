@@ -59,7 +59,7 @@ export class ObservableContext extends MetaesContext {
       },
       createCache()
     );
-    
+
     if (mainTraps) {
       this._addTraps(target, mainTraps);
     }

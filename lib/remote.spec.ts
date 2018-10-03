@@ -1,11 +1,11 @@
 import { before, after, describe, it, beforeEach } from "mocha";
 import { assert } from "chai";
-import { createConnector } from "./remote";
+import { createConnector, mergeValues } from "./remote";
 import { evalToPromise, evalFunctionBody } from "./metaes";
 import { runWSServer } from "./server";
 import { environmentToMessage, environmentFromMessage, getReferencesMap } from "./remote";
 import { Context, consoleLoggingMetaesContext } from "./metaes";
-import { Environment, mergeValues } from "./environment";
+import { Environment } from "./environment";
 
 let server, serverAlreadyAskedToStart;
 

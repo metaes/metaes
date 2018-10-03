@@ -1,9 +1,20 @@
 import { Context, metaesEval, evalFunctionBody } from "./metaes";
-import { EnvironmentBase, Environment, mergeValues, Reference } from "./environment";
+import { EnvironmentBase, Environment, Reference } from "./environment";
 import { Continuation, ErrorContinuation, Source, EvaluationConfig } from "./types";
 import { log } from "./logging";
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
+
+export function mergeValues(values: object, environment?: Environment): EnvironmentBase {
+  if (environment) {
+    for (let k of Object.keys(values)) {
+      environment.values[k] = values[k];
+    }
+    return environment;
+  } else {
+    return { values };
+  }
+}
 
 export const getReferencesMap = (context: Context) => {
   let env = referencesMaps.get(context);

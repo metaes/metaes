@@ -18,17 +18,6 @@ export function toEnvironment(environment?: any | EnvironmentBase | Environment)
   return environment ? ("values" in environment ? environment : { values: environment }) : { values: {} };
 }
 
-export function mergeValues(values: object, environment?: Environment): EnvironmentBase {
-  if (environment) {
-    for (let k of Object.keys(values)) {
-      environment.values[k] = values[k];
-    }
-    return environment;
-  } else {
-    return { values };
-  }
-}
-
 export function getEnvironmentForValue(env: Environment, name: string): Environment | null {
   let _env: Environment | undefined = env;
   while (_env) {
