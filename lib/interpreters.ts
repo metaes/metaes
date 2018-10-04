@@ -39,13 +39,14 @@ import {
   UpdateExpression,
   TemplateLiteral
 } from "./interpreter/expressions";
-import { Identifier, Literal, GetProperty, SetProperty } from "./interpreter/base";
+import { Identifier, Literal, GetProperty, SetProperty, Apply } from "./interpreter/base";
 import { Environment } from "./environment";
 
 export const ecmaScriptInterpreters: Environment = {
   values: {
     GetProperty,
     SetProperty,
+    Apply,
     Identifier,
     Literal,
 

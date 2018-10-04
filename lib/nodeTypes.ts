@@ -334,4 +334,35 @@ export interface Line extends NodeBase {
   type: "Line";
 }
 
-export type JavaScriptASTNode = Expression | Property | Statement | VariableDeclarator | Comment | MethodDefinition;
+export interface Apply extends NodeBase {
+  type: "Apply";
+  e: CallExpression;
+  fn: Function | any;
+  thisObj: any;
+  args: any[];
+}
+
+export interface GetProperty extends NodeBase {
+  type: "GetProperty";
+  object: any;
+  property: any;
+}
+
+export interface SetProperty extends NodeBase {
+  type: "SetProperty";
+  object: any;
+  property: any;
+  value: any;
+  operator: string;
+}
+
+type Base = Apply | GetProperty | SetProperty;
+
+export type JavaScriptASTNode =
+  | Base
+  | Expression
+  | Property
+  | Statement
+  | VariableDeclarator
+  | Comment
+  | MethodDefinition;

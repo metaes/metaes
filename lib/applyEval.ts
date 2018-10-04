@@ -114,5 +114,3 @@ export const evaluateArray = (
   env: Environment,
   config: EvaluationConfig
 ) => visitArray(array, (e, c, cerr) => evaluate(e, c, cerr, env, config), c, cerr);
-
-export const apply = (fn: Function, thisObj: any, args: any[]) => fn.apply(thisObj, args);

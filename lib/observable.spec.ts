@@ -1,8 +1,7 @@
-import { describe, it } from "mocha";
-import { ObservableContext } from "./observable";
 import { expect } from "chai";
-import { evaluateFunction, evalToPromise } from "./metaes";
-import { zip } from "lodash";
+import { describe, it } from "mocha";
+import { evaluateFunction } from "./metaes";
+import { ObservableContext } from "./observable";
 
 describe("ObservableContext", () => {
   it("should correctly build tree structure of children", async () => {

@@ -81,14 +81,16 @@ export const createMetaFunction = (e: FunctionNode, closure: Environment, config
     config
   });
 
+const META_KEY = "__meta__";
+
 export function markAsMetaFunction(fn: Function, meta: MetaesFunction) {
-  (<any>fn).__meta__ = meta;
+  (<any>fn)[META_KEY] = meta;
 }
 
 export function isMetaFunction(fn: Function) {
-  return (<any>fn).__meta__;
+  return (<any>fn)[META_KEY];
 }
 
 export function getMetaFunction(fn: Function) {
-  return (<any>fn).__meta__;
+  return (<any>fn)[META_KEY];
 }

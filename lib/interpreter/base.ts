@@ -1,5 +1,5 @@
 import { Environment, getValue } from "../environment";
-import { Identifier, Literal } from "../nodeTypes";
+import { Identifier, Literal, GetProperty, SetProperty, Apply } from "../nodeTypes";
 import { NotImplementedException } from "../exceptions";
 
 export function Identifier(e: Identifier, c, cerr, env: Environment) {
@@ -12,11 +12,19 @@ export function Literal(e: Literal, c) {
   c(e.value);
 }
 
-export function GetProperty({ object, property }, c) {
+export function Apply({ fn, thisObj, args }: Apply, c, cerr) {
+  try {
+    c(fn.apply(thisObj, args));
+  } catch (e) {
+    cerr(e);
+  }
+}
+
+export function GetProperty({ object, property }: GetProperty, c) {
   c(object[property]);
 }
 
-export function SetProperty({ object, property, value, operator }, c, cerr) {
+export function SetProperty({ object, property, value, operator }: SetProperty, c, cerr) {
   switch (operator) {
     case "=":
       c((object[property] = value));

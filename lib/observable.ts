@@ -1,8 +1,8 @@
 import { MetaesContext } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
-import { AssignmentExpression } from "./nodeTypes";
 import { createCache } from "./parse";
 import { Evaluation } from "./types";
+import { Apply } from "./nodeTypes";
 
 type Traps = {
   apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
@@ -59,7 +59,7 @@ export class ObservableContext extends MetaesContext {
       },
       createCache()
     );
-    
+
     if (mainTraps) {
       this._addTraps(target, mainTraps);
     }
@@ -119,36 +119,12 @@ export class ObservableContext extends MetaesContext {
     const getValue = e => flameGraph.values.get(e);
 
     // handler.set
-    if (evaluation.phase === "enter" && evaluation.e.type === "AssignmentExpression") {
-      const assignment = evaluation.e as AssignmentExpression;
-      let left;
-
-      let right;
-      this._interceptOnce(flameGraph, evaluation => {
-        let leftProperty;
-        if (
-          assignment.left.type === "MemberExpression" &&
-          assignment.left.computed &&
-          !(leftProperty = getValue(assignment.left.property))
-        ) {
-          return false;
-        }
-        if (
-          evaluation.phase === "exit" &&
-          (left = getValue(assignment.left.object)) &&
-          (right = getValue(assignment.right))
-        ) {
-          let traps;
-          if ((traps = this._getTraps(left))) {
-            traps.forEach(
-              trap =>
-                trap.set && trap.set(left, leftProperty || assignment.left.property.name, getValue(assignment.right))
-            );
-          }
-          return true;
-        }
-        return false;
-      });
+    if (evaluation.phase === "enter" && evaluation.e.type === "SetProperty") {
+      const { object, property, value } = evaluation.e;
+      let traps;
+      if ((traps = this._getTraps(object))) {
+        traps.forEach(trap => trap.set && trap.set(object, property, value));
+      }
     }
 
     if (evaluation.phase === "exit") {
@@ -170,33 +146,25 @@ export class ObservableContext extends MetaesContext {
           );
         }
       }
+    }
 
-      // handler.apply
-      if (evaluation.e.type === "CallExpression") {
-        // TODO: assuming here call using member expression
-        const callNode = evaluation.e as any;
-        const callNodeValue = getValue(callNode);
-        const object = getValue(callNode.callee.object);
-        const property = getValue(callNode.callee);
-        const args: any[] = callNode.arguments.map(getValue);
+    // handler.apply
+    if (evaluation.phase === "enter" && evaluation.e.type === "Apply") {
+      const { fn, thisObj, args, e: callExpression } = evaluation.e as Apply;
+      const object =
+        callExpression.callee.type === "MemberExpression" ? getValue(callExpression.callee.object) : thisObj;
 
-        let traps;
-        if ((traps = this._getTraps(object))) {
-          traps.forEach(trap => trap.apply && trap.apply(object, property, args, callNodeValue));
-        }
-        // in this case check if function is called using .call or .apply with
-        // `this` equal to `observer.target`
-        if ((traps = this._getTraps(args[0]))) {
-          traps.forEach(trap => {
-            if (trap.apply) {
-              if (property === apply) {
-                trap.apply(args[0], object, args[1], callNodeValue);
-              } else if (property === call) {
-                trap.apply(args[0], object, args.slice(1), callNodeValue);
-              }
-            }
-          });
-        }
+      let traps;
+      if ((traps = this._getTraps(object))) {
+        traps.forEach(trap => trap.apply && trap.apply(thisObj, fn, args));
+      }
+
+      if (fn === call && (traps = this._getTraps(args[0]))) {
+        traps.forEach(trap => trap.apply && trap.apply(args[0], object, args.slice(1)));
+      }
+
+      if (fn === apply && (traps = this._getTraps(args[0]))) {
+        traps.forEach(trap => trap.apply && trap.apply(args[0], object, args[1]));
       }
     }
 

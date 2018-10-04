@@ -1,7 +1,7 @@
-import { apply, evaluate, evaluateArray } from "../applyEval";
+import { evaluate, evaluateArray } from "../applyEval";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { NotImplementedException, LocatedError, toException } from "../exceptions";
-import { createMetaFunction, isMetaFunction, evaluateMetaFunction } from "../metafunction";
+import { createMetaFunction, isMetaFunction, evaluateMetaFunction, getMetaFunction } from "../metafunction";
 import { getCurrentEnvironment, callWithCurrentContinuation } from "../special";
 import { Environment, getValue, setValue } from "../environment";
 import { IfStatement } from "./statements";
@@ -53,7 +53,7 @@ export function CallExpression(
                 e_callee["object"],
                 object => {
                   if (typeof property === "function") {
-                    c(apply(property as Function, object, args));
+                    evaluate({ type: "Apply", e, fn: property, thisObj: object, args }, c, cerr, env, config);
                   } else {
                     cerr({
                       value: new TypeError(typeof property + " is not a function")
@@ -90,9 +90,9 @@ export function CallExpression(
                       cerr({ message: "Error in continuation receiver." });
                     }
                   } else if (isMetaFunction(callee)) {
-                    evaluateMetaFunction(callee.__meta__, c, cerr, undefined, args);
+                    evaluateMetaFunction(getMetaFunction(callee), c, cerr, undefined, args);
                   } else {
-                    c(apply(callee, undefined, args));
+                    evaluate({ type: "Apply", e, fn: callee, args }, c, cerr, env, config);
                   }
                 } catch (error) {
                   cerr(toException(error, e_callee));
@@ -111,7 +111,7 @@ export function CallExpression(
             e.callee,
             callee => {
               try {
-                const cnt = thisValue => c(apply(callee, thisValue, args));
+                const cnt = thisObj => evaluate({ type: "Apply", e, fn: callee, thisObj, args }, c, cerr, env, config);
                 getValue(env, "this", cnt, () => cnt(undefined));
               } catch (error) {
                 cerr(toException(error, e_callee));
@@ -154,7 +154,7 @@ export function MemberExpression(e: MemberExpression, c, cerr, env, config) {
             if (e.computed) {
               evaluate(
                 e.property,
-                value => evaluate({ type: "GetProperty", object, property: value }, c, cerr, env, config),
+                property => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
                 cerr,
                 env,
                 config
