@@ -5,10 +5,10 @@ import { Evaluation } from "./types";
 import { Apply } from "./nodeTypes";
 
 type Traps = {
-  apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
-  get?: (target: object, key: string, value: any) => void;
   set?: (target: object, key: string, args: any) => void;
   didSet?: (target: object, key: string, args: any) => void;
+  apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
+  didApply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
 };
 
 type ObserverHandler = {
@@ -118,53 +118,38 @@ export class ObservableContext extends MetaesContext {
     const flameGraph = this._flameGraphs[evaluation.script.scriptId];
     const getValue = e => flameGraph.values.get(e);
 
-    // handler.set
-    if (evaluation.phase === "enter" && evaluation.e.type === "SetProperty") {
+    let traps;
+
+    // handler.set and handler.didSet
+    if (evaluation.e.type === "SetProperty") {
       const { object, property, value } = evaluation.e;
-      let traps;
+
       if ((traps = this._getTraps(object))) {
-        traps.forEach(trap => trap.set && trap.set(object, property, value));
-      }
-    }
-
-    if (evaluation.phase === "exit") {
-      // handler.didSet
-      if (evaluation.e.type === "AssignmentExpression") {
-        const assignment = evaluation.e as any;
-
-        const left = getValue(assignment.left.object);
-        const traps = this._getTraps(left);
-        if (left && traps) {
-          traps.forEach(
-            trap =>
-              trap.didSet &&
-              trap.didSet(
-                left,
-                getValue(assignment.left.property) || assignment.left.property.name,
-                getValue(assignment.right)
-              )
-          );
-        }
+        const methodName = evaluation.phase === "enter" ? "set" : "didSet";
+        traps.forEach(trap => trap[methodName] && trap[methodName](object, property, value));
       }
     }
 
     // handler.apply
-    if (evaluation.phase === "enter" && evaluation.e.type === "Apply") {
+    if (evaluation.e.type === "Apply") {
+      const methodName = evaluation.phase === "enter" ? "apply" : "didApply";
+
       const { fn, thisObj, args, e: callExpression } = evaluation.e as Apply;
+      const expressionValue = evaluation.phase === "exit" ? getValue(callExpression) : void 0;
       const object =
         callExpression.callee.type === "MemberExpression" ? getValue(callExpression.callee.object) : thisObj;
 
       let traps;
       if ((traps = this._getTraps(object))) {
-        traps.forEach(trap => trap.apply && trap.apply(thisObj, fn, args));
+        traps.forEach(trap => trap[methodName] && trap[methodName](thisObj, fn, args, expressionValue));
       }
 
       if (fn === call && (traps = this._getTraps(args[0]))) {
-        traps.forEach(trap => trap.apply && trap.apply(args[0], object, args.slice(1)));
+        traps.forEach(trap => trap[methodName] && trap[methodName](args[0], object, args.slice(1), expressionValue));
       }
 
       if (fn === apply && (traps = this._getTraps(args[0]))) {
-        traps.forEach(trap => trap.apply && trap.apply(args[0], object, args[1]));
+        traps.forEach(trap => trap[methodName] && trap[methodName](args[0], object, args[1], expressionValue));
       }
     }
 
