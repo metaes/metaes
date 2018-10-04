@@ -1,6 +1,6 @@
 import { MetaesContext, evalToPromise, Context } from "./metaes";
-import { Environment, mergeValues } from "./environment";
-import { environmentFromMessage, environmentToMessage, MetaesMessage, assertMessage } from "./remote";
+import { Environment } from "./environment";
+import { environmentFromMessage, environmentToMessage, MetaesMessage, assertMessage, mergeValues } from "./remote";
 import { Continuation, Source, ErrorContinuation } from "./types";
 import * as WebSocket from "ws";
 import * as express from "express";
