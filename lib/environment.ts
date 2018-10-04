@@ -6,7 +6,6 @@ export interface Reference {
 
 export interface EnvironmentBase<T = any> {
   values: { [key: string]: T };
-  tags?: { [key: string]: any };
   references?: { [key: string]: Reference };
 }
 

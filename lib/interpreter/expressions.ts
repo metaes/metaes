@@ -469,7 +469,6 @@ export function UpdateExpression(e: UpdateExpression, c, cerr, env: Environment)
           // discard found value
           // if value is found, there must be an env for that value, don't check for negative case
           let foundEnv: Environment = env;
-          let value;
           while (!(propName in foundEnv.values)) {
             foundEnv = foundEnv.prev!;
           }
@@ -477,10 +476,10 @@ export function UpdateExpression(e: UpdateExpression, c, cerr, env: Environment)
             if (e.prefix) {
               switch (e.operator) {
                 case "++":
-                  value = ++foundEnv.values[propName];
+                  c(++foundEnv.values[propName]);
                   break;
                 case "--":
-                  value = --foundEnv.values[propName];
+                  c(--foundEnv.values[propName]);
                   break;
                 default:
                   throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
@@ -488,16 +487,15 @@ export function UpdateExpression(e: UpdateExpression, c, cerr, env: Environment)
             } else {
               switch (e.operator) {
                 case "++":
-                  value = foundEnv.values[propName]++;
+                  c(foundEnv.values[propName]++);
                   break;
                 case "--":
-                  value = foundEnv.values[propName]--;
+                  c(foundEnv.values[propName]--);
                   break;
                 default:
                   throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
               }
             }
-            c(value);
           } catch (e) {
             cerr(e);
           }
