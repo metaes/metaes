@@ -5,9 +5,6 @@ import { describe, it, before } from "mocha";
 import { assert } from "chai";
 import { zip } from "lodash";
 import { metaesEval } from "../lib/metaes";
-import { getCurrentEnvironment } from "../lib/special";
-
-global["getCurrentEnvironment"] = getCurrentEnvironment;
 
 const evaluate = (input: string) => new Promise((resolve, reject) => metaesEval(input, resolve, reject, global));
 

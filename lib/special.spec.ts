@@ -1,33 +1,33 @@
 import { assert, expect } from "chai";
 import { describe, it } from "mocha";
-import { Environment } from "./environment";
 import { evalFunctionBody, evaluateFunction, MetaesContext, metaesEval } from "./metaes";
-import { callWithCurrentContinuation, getCurrentEnvironment } from "./special";
+import { callWithCurrentContinuation } from "./special";
 import { isMetaFunction, evaluateMetaFunction, getMetaFunction } from "./metafunction";
 
 describe("Special", () => {
   it("should return current env", () => {
-    function c(result: Environment) {
-      assert.equal(result.values.answer, 42);
-      assert.equal(result.values.getCurrentEnvironment, getCurrentEnvironment);
+    function receiver(_, _c, _cerr, env) {
+      console.log(arguments);
+      assert.equal(env.values.answer, 42);
+      assert.equal(env.values.callWithCurrentContinuation, callWithCurrentContinuation);
     }
     metaesEval(
-      "var answer=42; getCurrentEnvironment()",
-      c,
+      "var answer=42; callWithCurrentContinuation(receiver)",
+      console.log,
       e => {
         throw e;
       },
-      { getCurrentEnvironment }
+      { callWithCurrentContinuation, receiver }
     );
   });
 
   it("should call with current continuation with additional arguments", async () => {
     const context = new MetaesContext(undefined, undefined, {
-      values: { callWithCurrentContinuation, getCurrentEnvironment, receiver }
+      values: { callWithCurrentContinuation, receiver }
     });
 
     let env;
-    function receiver(cc, _cerr, environment) {
+    function receiver(_, cc, _cerr, environment) {
       // remember environment for later check
       env = environment;
       // intentionally continue a bit later
@@ -36,8 +36,7 @@ describe("Special", () => {
 
     const result = await evalFunctionBody(
       context,
-      (callWithCurrentContinuation, getCurrentEnvironment) =>
-        2 * callWithCurrentContinuation(receiver, getCurrentEnvironment())
+      callWithCurrentContinuation => 2 * callWithCurrentContinuation(receiver)
     );
     assert.equal(result, 42);
     assert.containsAllKeys(env, ["values"]);
@@ -49,7 +48,7 @@ describe("Special", () => {
       values: { callcc: callWithCurrentContinuation, receiver, result }
     });
     let cc;
-    function receiver(_cc) {
+    function receiver(_, _cc) {
       cc = _cc;
       cc([1, 2, 3]);
     }
@@ -70,7 +69,7 @@ describe("Special", () => {
       values: { callcc: callWithCurrentContinuation, receiver, result }
     });
     let cc;
-    function receiver(_cc, _cerr, value) {
+    function receiver(value, _cc, _cerr) {
       cc = _cc;
       cc(value);
     }
@@ -96,7 +95,7 @@ describe("Special", () => {
       callcc => {
         let evilGoTo;
         let i = 0;
-        callcc(function(cc) {
+        callcc(function(_, cc) {
           evilGoTo = cc;
           evilGoTo();
         });
@@ -117,7 +116,7 @@ describe("Special", () => {
       values: { callcc: callWithCurrentContinuation, console }
     });
 
-    function receiver(_cc, cerr) {
+    function receiver(_, _cc, cerr) {
       cerr({ value: new Error("Continuation error") });
     }
 
@@ -142,7 +141,7 @@ describe("Special", () => {
     });
 
     const result = await evalFunctionBody(context, (callcc, isMetaFunction, evaluateMetaFunction, getMetaFunction) => {
-      function receiver(cc, ccerr, value) {
+      function receiver(value, cc, ccerr) {
         ccerr({ type: "NextIteration", value: { value, cc } });
       }
 
@@ -234,7 +233,7 @@ describe("Special", () => {
       }
     });
 
-    function awaitReceiver_(cc, cerr, value) {
+    function awaitReceiver_(value, cc, cerr) {
       if (value instanceof Promise) {
         value.then(cc).catch(e => cerr({ value: e }));
       } else {

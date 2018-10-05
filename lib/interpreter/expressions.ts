@@ -45,6 +45,38 @@ export function CallExpression(
       let e_callee = e.callee;
 
       switch (e_callee.type) {
+        case "Identifier":
+        case "FunctionExpression":
+        case "CallExpression":
+          evaluate(
+            e.callee,
+            callee => {
+              if (typeof callee === "function") {
+                try {
+                  if (callee === callWithCurrentContinuation) {
+                    // Pass continuation to continuation receiver.
+                    try {
+                      args[0](args[1], c, cerr, env, config);
+                    } catch (e) {
+                      cerr({ message: "Error in continuation receiver." });
+                    }
+                  } else if (isMetaFunction(callee)) {
+                    evaluateMetaFunction(getMetaFunction(callee), c, cerr, undefined, args);
+                  } else {
+                    evaluate({ type: "Apply", e, fn: callee, args }, c, cerr, env, config);
+                  }
+                } catch (error) {
+                  cerr(toException(error, e_callee));
+                }
+              } else {
+                cerr(new TypeError(callee + " is not a function"));
+              }
+            },
+            cerr,
+            env,
+            config
+          );
+          break;
         case "MemberExpression":
           evaluate(
             e.callee,
@@ -64,43 +96,6 @@ export function CallExpression(
                 env,
                 config
               ),
-            cerr,
-            env,
-            config
-          );
-          break;
-        case "Identifier":
-        case "FunctionExpression":
-        case "CallExpression":
-          evaluate(
-            e.callee,
-            callee => {
-              if (typeof callee === "function") {
-                try {
-                  if (callee === getCurrentEnvironment) {
-                    // TODO: it's redundant now, callcc passes all params
-                    // Hand over current environment to caller
-                    c(env);
-                  } else if (callee === callWithCurrentContinuation) {
-                    // Pass continuation to first argument of callWithCurrentContinuation `caller`.
-                    // `caller` takes over control until decides to call `c` or `cerr`F
-                    try {
-                      args[0](c, cerr, args[1], env, config);
-                    } catch (e) {
-                      cerr({ message: "Error in continuation receiver." });
-                    }
-                  } else if (isMetaFunction(callee)) {
-                    evaluateMetaFunction(getMetaFunction(callee), c, cerr, undefined, args);
-                  } else {
-                    evaluate({ type: "Apply", e, fn: callee, args }, c, cerr, env, config);
-                  }
-                } catch (error) {
-                  cerr(toException(error, e_callee));
-                }
-              } else {
-                cerr(new TypeError(callee + " is not a function"));
-              }
-            },
             cerr,
             env,
             config
@@ -208,8 +203,10 @@ export function AssignmentExpression(e: AssignmentExpression, c, cerr, env, conf
     e.right,
     right => {
       const e_left = e.left;
-
       switch (e_left.type) {
+        case "Identifier":
+          setValue(env, e_left.name, right, false, c, cerr);
+          break;
         case "MemberExpression":
           evaluate(
             e_left.object,
@@ -246,9 +243,6 @@ export function AssignmentExpression(e: AssignmentExpression, c, cerr, env, conf
             env,
             config
           );
-          break;
-        case "Identifier":
-          setValue(env, e_left.name, right, false, c, cerr);
           break;
         default:
           cerr(NotImplementedException("This assignment is not supported yet."));
