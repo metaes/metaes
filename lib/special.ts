@@ -5,11 +5,11 @@ export function callWithCurrentContinuation(
   _receiver: (
     value: any,
     c: Continuation,
-    cerr: ErrorContinuation,
+    cerr?: ErrorContinuation,
     env?: Environment,
     config?: EvaluationConfig
-  ) => void,
-  _value: any
-) {
+  ) => any,
+  _value?: any
+): any {
   throw new Error("Not intended to be called directly, call from Metaes context.");
 }

@@ -58,7 +58,7 @@ export function CallExpression(
                     try {
                       args[0](args[1], c, cerr, env, config);
                     } catch (e) {
-                      cerr({ message: "Error in continuation receiver." });
+                      cerr({ value: e, message: "Error in continuation receiver." });
                     }
                   } else if (isMetaFunction(callee)) {
                     evaluateMetaFunction(getMetaFunction(callee), c, cerr, undefined, args);

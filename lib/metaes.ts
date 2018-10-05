@@ -122,21 +122,27 @@ export const evalToPromise = (context: Context, input: Script | Source, environm
 export const parseFunction = (fn: Function, cache?: ParseCache) =>
   parse("(" + fn.toString() + ")", { loc: false, range: false }, cache);
 
+export const createScriptFromFunctionBody = (source: Function, cache?: ParseCache) => ({
+  ast: (((parseFunction(source, cache) as Program).body[0] as ExpressionStatement).expression as FunctionNode).body,
+  scriptId: nextScriptId(),
+  source
+});
+
 /**
  * Function params are igonred, they are used only to satisfy linters/compilers on client code.
  * @param context
  * @param source
  * @param environment
  */
-export const evalFunctionBody = (context: Context, source: Function, environment?: Environment) => {
-  const cache = context instanceof MetaesContext ? context.cache : void 0;
-  const script = {
-    ast: (((parseFunction(source, cache) as Program).body[0] as ExpressionStatement).expression as FunctionNode).body,
-    scriptId: nextScriptId(),
-    source
-  };
-  return new Promise((resolve, reject) => context.evaluate(script, resolve, reject, environment));
-};
+export const evalFunctionBody = (context: Context, source: Function, environment?: Environment) =>
+  new Promise((resolve, reject) =>
+    context.evaluate(
+      createScriptFromFunctionBody(source, context instanceof MetaesContext ? context.cache : void 0),
+      resolve,
+      reject,
+      environment
+    )
+  );
 
 /**
  * Evaluates function in context.
