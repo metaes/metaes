@@ -1,10 +1,7 @@
 import { evaluate, evaluateArray } from "../applyEval";
-import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
-import { NotImplementedException, LocatedError, toException } from "../exceptions";
-import { createMetaFunction, isMetaFunction, evaluateMetaFunction, getMetaFunction } from "../metafunction";
-import { getCurrentEnvironment, callWithCurrentContinuation } from "../special";
 import { Environment, getValue, setValue } from "../environment";
-import { IfStatement } from "./statements";
+import { LocatedError, NotImplementedException, toException } from "../exceptions";
+import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import {
   ArrayExpression,
   ArrowFunctionExpression,
@@ -19,11 +16,14 @@ import {
   ObjectExpression,
   Property,
   SequenceExpression,
+  TemplateLiteral,
   ThisExpression,
   UnaryExpression,
-  UpdateExpression,
-  TemplateLiteral
+  UpdateExpression
 } from "../nodeTypes";
+import { callWithCurrentContinuation } from "../special";
+import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
+import { IfStatement } from "./statements";
 
 export function lastArrayItem(array?: any[]) {
   if (array) {

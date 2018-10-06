@@ -1,7 +1,6 @@
 import { evaluate, evaluateArray, visitArray } from "../applyEval";
 import { getValue, setValue } from "../environment";
-import { EvaluationConfig } from "../types";
-import { NotImplementedException, LocatedError } from "../exceptions";
+import { LocatedError, NotImplementedException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import {
   BlockStatement as BlockStatement_,
@@ -16,6 +15,7 @@ import {
   ForOfStatement,
   ForStatement,
   FunctionDeclaration,
+  Identifier,
   IfStatement,
   MethodDefinition,
   Program,
@@ -25,9 +25,9 @@ import {
   TryStatement,
   VariableDeclaration,
   VariableDeclarator,
-  WhileStatement,
-  Identifier
+  WhileStatement
 } from "../nodeTypes";
+import { EvaluationConfig } from "../types";
 
 function hoistDeclarations(e: Statement[], c, cerr, env, config) {
   visitArray(

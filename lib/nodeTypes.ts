@@ -29,7 +29,7 @@ export interface CallExpression extends NodeBase {
 export interface AssignmentExpression extends NodeBase {
   type: "AssignmentExpression";
   right: Expression;
-  left: Identifier | MemberExpression;
+  left: Identifier | MemberExpression | ObjectPattern;
   operator: "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=";
 }
 
@@ -124,6 +124,10 @@ export interface Property extends NodeBase {
   type: "Property";
   key: Identifier | Literal;
   value: Expression;
+  computed: boolean;
+  shorthand: boolean;
+  method: boolean;
+  kind: "init";
 }
 
 export interface Program extends NodeBase {
