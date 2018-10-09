@@ -40,6 +40,8 @@ export class ObservableContext extends MetaesContext {
   private _handlers: Map<any, Traps[]> = new Map();
   private _flameGraphs: FlameGraphs = {};
 
+  private _globalExecutionStack: EvaluationNode[] = [];
+
   constructor(target: object, mainTraps?: Traps) {
     super(
       undefined,
@@ -176,6 +178,7 @@ export class ObservableContext extends MetaesContext {
           evaluation,
           children: []
         };
+        this._globalExecutionStack.push(node);
         const parent = stack[stack.length - 1];
         if (parent) {
           const value = parent.children.push(node);
@@ -200,6 +203,7 @@ export class ObservableContext extends MetaesContext {
     }
     if (builderPhase === "after" && phase === "exit") {
       stack.pop();
+      this._globalExecutionStack.pop();
     }
   }
 }

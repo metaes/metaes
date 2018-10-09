@@ -94,7 +94,7 @@ export class MetaesContext implements Context {
       env = environment.prev ? environment : Object.assign({ prev: this.environment }, environment);
     }
     if (!config) {
-      config = { script: input };
+      config = Object.assign({}, this.defaultConfig, { script: input });
     }
     if (!config.interceptor) {
       config.interceptor = this.defaultConfig.interceptor;
@@ -178,5 +178,6 @@ export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNo
     phase,
     value,
     timestamp: hasPerformance ? performance.now() : new Date().getTime(),
-    env
+    env,
+    config
   });

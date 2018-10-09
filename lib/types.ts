@@ -3,6 +3,7 @@ import { Environment, Reference } from "./environment";
 import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
+  // TODO: ThrowStatement not needed?
   type?: "Error" | "ReturnStatement" | "NotImplemented" | "ThrowStatement" | "ReferenceError";
   message?: string;
   value?: Error | any;
@@ -15,6 +16,11 @@ export type Script = {
   ast: ASTNode;
   source: Source;
   scriptId: string;
+  
+  /**
+   * Callstack at the moment of script creation.
+   */
+  initiator?: string[];
 };
 
 export type Source = string | ASTNode | Function;
