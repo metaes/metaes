@@ -9,7 +9,8 @@ export const evaluateMetaFunction = (
   c: Continuation,
   cerr: ErrorContinuation,
   thisObject: any,
-  args: any[]
+  args: any[],
+  executionTimeConfig?: EvaluationConfig
 ) => {
   const { e, closure, config } = metaFunction;
   try {
@@ -52,7 +53,7 @@ export const evaluateMetaFunction = (
         }
       },
       env,
-      config
+      Object.assign({}, executionTimeConfig, config)
     );
   } catch (e) {
     cerr(e);

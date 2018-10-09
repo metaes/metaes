@@ -107,8 +107,8 @@ export class MetaesContext implements Context {
     return evalToPromise(this, input, environment);
   }
 
-  evalFunctionBody(source: Function, environment?: Environment) {
-    return evalFunctionBody(this, source, environment);
+  evalFunctionBody(source: Function, environment?: Environment, config?: EvaluationConfig) {
+    return evalFunctionBody(this, source, environment, config);
   }
 
   evaluateFunction(source: ((...rest) => void), ...args: any[]) {
@@ -134,13 +134,19 @@ export const createScriptFromFunctionBody = (source: Function, cache?: ParseCach
  * @param source
  * @param environment
  */
-export const evalFunctionBody = (context: Context, source: Function, environment?: Environment) =>
+export const evalFunctionBody = (
+  context: Context,
+  source: Function,
+  environment?: Environment,
+  config?: EvaluationConfig
+) =>
   new Promise((resolve, reject) =>
     context.evaluate(
       createScriptFromFunctionBody(source, context instanceof MetaesContext ? context.cache : void 0),
       resolve,
       reject,
-      environment
+      environment,
+      config
     )
   );
 

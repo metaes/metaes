@@ -61,7 +61,7 @@ export function CallExpression(
                       cerr({ value: e, message: "Error in continuation receiver." });
                     }
                   } else if (isMetaFunction(callee)) {
-                    evaluateMetaFunction(getMetaFunction(callee), c, cerr, undefined, args);
+                    evaluateMetaFunction(getMetaFunction(callee), c, cerr, undefined, args, config);
                   } else {
                     evaluate({ type: "Apply", e, fn: callee, args }, c, cerr, env, config);
                   }
