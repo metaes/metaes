@@ -1,5 +1,5 @@
-import { ASTNode } from "./nodes/nodes";
 import { Environment, Reference } from "./environment";
+import { ASTNode } from "./nodes/nodes";
 import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
@@ -16,7 +16,7 @@ export type Script = {
   ast: ASTNode;
   source: Source;
   scriptId: string;
-  
+
   /**
    * Callstack at the moment of script creation.
    */

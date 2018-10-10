@@ -1,16 +1,15 @@
-import { before, after, describe, it, beforeEach } from "mocha";
 import { assert } from "chai";
-import { createConnector, mergeValues } from "./remote";
-import { evalToPromise, evalFunctionBody } from "./metaes";
-import { runWSServer } from "./server";
-import { environmentToMessage, environmentFromMessage, getReferencesMap } from "./remote";
-import { Context, consoleLoggingMetaesContext } from "./metaes";
+import { after, before, beforeEach, describe, it } from "mocha";
 import { Environment } from "./environment";
+import { consoleLoggingMetaesContext, Context, evalFunctionBody, evalToPromise } from "./metaes";
+import { createConnector, environmentFromMessage, environmentToMessage, getReferencesMap, mergeValues } from "./remote";
+import { runWSServer } from "./server";
 
 let server, serverAlreadyAskedToStart;
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
 export const testServerPort = 8082;
+
 export async function createTestServer(port: number = testServerPort) {
   if (serverAlreadyAskedToStart && !server) {
     // periodically check if server is assigned

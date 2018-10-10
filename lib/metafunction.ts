@@ -1,8 +1,8 @@
-import { EvaluationConfig, MetaesFunction, Continuation, ErrorContinuation } from "./types";
-import { NotImplementedException, toException } from "./exceptions";
 import { evaluate } from "./applyEval";
 import { Environment } from "./environment";
+import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
+import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
 
 export const evaluateMetaFunction = (
   metaFunction: MetaesFunction,

@@ -1,8 +1,8 @@
 import { assert, expect } from "chai";
 import { describe, it } from "mocha";
 import { evalFunctionBody, evaluateFunction, MetaesContext, metaesEval } from "./metaes";
+import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "./metafunction";
 import { callWithCurrentContinuation } from "./special";
-import { isMetaFunction, evaluateMetaFunction, getMetaFunction } from "./metafunction";
 
 describe("Special", () => {
   it("should return current env", () => {

@@ -1,6 +1,6 @@
+import { assert, expect } from "chai";
 import { describe, it } from "mocha";
 import { metaesEval } from "./metaes";
-import { assert, expect } from "chai";
 
 describe("Meta functions", () => {
   it("should return correct value in simple case", () => {

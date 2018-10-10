@@ -1,6 +1,6 @@
 import { Environment, getValue } from "../environment";
-import { Identifier, Literal, GetProperty, SetProperty, Apply } from "../nodeTypes";
 import { NotImplementedException } from "../exceptions";
+import { Apply, GetProperty, Identifier, Literal, SetProperty } from "../nodeTypes";
 
 export function Identifier(e: Identifier, c, cerr, env: Environment) {
   getValue(env, e.name, c, exception => {

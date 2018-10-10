@@ -1,6 +1,6 @@
+import { assert } from "chai";
 import { describe, it } from "mocha";
 import { evalFunctionBody, MetaesContext, metaesEval, noop } from "./metaes";
-import { assert } from "chai";
 
 describe("Exceptions", () => {
   it("should throw on AwaitExpression use", () =>

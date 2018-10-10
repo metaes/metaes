@@ -1,8 +1,8 @@
-import { Continuation, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
-import { ASTNode } from "./nodes/nodes";
 import { Environment, getValue } from "./environment";
 import { NotImplementedException } from "./exceptions";
 import { callInterceptor } from "./metaes";
+import { ASTNode } from "./nodes/nodes";
+import { Continuation, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
 
 export function evaluate(
   e: ASTNode,

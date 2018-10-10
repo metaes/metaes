@@ -1,3 +1,24 @@
+import { Environment } from "./environment";
+import { Apply, GetProperty, Identifier, Literal, SetProperty } from "./interpreter/base";
+import {
+  ArrayExpression,
+  ArrowFunctionExpression,
+  AssignmentExpression,
+  BinaryExpression,
+  CallExpression,
+  ConditionalExpression,
+  FunctionExpression,
+  LogicalExpression,
+  MemberExpression,
+  NewExpression,
+  ObjectExpression,
+  Property,
+  SequenceExpression,
+  TemplateLiteral,
+  ThisExpression,
+  UnaryExpression,
+  UpdateExpression
+} from "./interpreter/expressions";
 import {
   BlockStatement,
   CatchClause,
@@ -20,27 +41,6 @@ import {
   VariableDeclarator,
   WhileStatement
 } from "./interpreter/statements";
-import {
-  ArrayExpression,
-  ArrowFunctionExpression,
-  AssignmentExpression,
-  BinaryExpression,
-  CallExpression,
-  ConditionalExpression,
-  FunctionExpression,
-  LogicalExpression,
-  MemberExpression,
-  NewExpression,
-  ObjectExpression,
-  Property,
-  SequenceExpression,
-  ThisExpression,
-  UnaryExpression,
-  UpdateExpression,
-  TemplateLiteral
-} from "./interpreter/expressions";
-import { Identifier, Literal, GetProperty, SetProperty, Apply } from "./interpreter/base";
-import { Environment } from "./environment";
 
 export const ecmaScriptInterpreters: Environment = {
   values: {

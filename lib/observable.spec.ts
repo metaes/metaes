@@ -251,5 +251,4 @@ describe("ObservableContext", () => {
     expect(value.length).to.equal(1);
     expect(called).to.be.true;
   });
-
 });

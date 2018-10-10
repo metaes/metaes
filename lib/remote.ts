@@ -1,7 +1,7 @@
-import { Context, metaesEval, evalFunctionBody } from "./metaes";
-import { EnvironmentBase, Environment, Reference } from "./environment";
-import { Continuation, ErrorContinuation, Source, EvaluationConfig } from "./types";
+import { Environment, EnvironmentBase, Reference } from "./environment";
 import { log } from "./logging";
+import { Context, evalFunctionBody, metaesEval } from "./metaes";
+import { Continuation, ErrorContinuation, EvaluationConfig, Source } from "./types";
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
 

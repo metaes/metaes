@@ -1,10 +1,10 @@
-import { parse, ParseCache } from "./parse";
-import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, Source, Script, Phase } from "./types";
 import { evaluate } from "./applyEval";
-import { ASTNode } from "./nodes/nodes";
-import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { Environment, toEnvironment } from "./environment";
 import { ecmaScriptInterpreters } from "./interpreters";
+import { ASTNode } from "./nodes/nodes";
+import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
+import { parse, ParseCache } from "./parse";
+import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, Phase, Script, Source } from "./types";
 
 export interface Context {
   evaluate: Evaluate;
