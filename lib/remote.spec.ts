@@ -31,7 +31,7 @@ export async function createTestServer(port: number = testServerPort) {
 
 // TODO: merge it with `evaluation` tests and run first with "normal" context, then with remote
 // behind websockets
-describe("Remote websocket messaging", () => {
+describe.only("Remote websocket messaging", () => {
   let connection;
   before(async () => {
     await createTestServer(8083);

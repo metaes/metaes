@@ -50,8 +50,9 @@ export type Interceptor = (evaluation: Evaluation) => void;
 
 export interface EvaluationConfig {
   interceptor: Interceptor;
-  script: Script;
   interpreters: Environment;
+  script: Script;
+  // TODO: add field for additional config fields. Useful for next layers of interpreters on top of metaes
 }
 
 export type Continuation<T = any> = (value?: T) => void;

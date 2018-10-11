@@ -1,7 +1,7 @@
 import { Environment, EnvironmentBase, Reference } from "./environment";
 import { log } from "./logging";
-import { Context, evalFunctionBody, metaesEval } from "./metaes";
-import { Continuation, ErrorContinuation, EvaluationConfig, Source } from "./types";
+import { Context, evalFunctionBody, metaesEval, isScript, toScript } from "./metaes";
+import { Continuation, ErrorContinuation, EvaluationConfig, Source, Script } from "./types";
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
 
@@ -25,7 +25,7 @@ export const getReferencesMap = (context: Context) => {
   return env;
 };
 
-export type MetaesMessage = { source: Source; env?: EnvironmentBase };
+export type MetaesMessage = { script: Script; env?: EnvironmentBase };
 
 export function environmentFromMessage(context: Context, environment: EnvironmentBase): Environment {
   const referencesMap = getReferencesMap(context);
@@ -66,8 +66,8 @@ export function environmentToMessage(context: Context, environment: EnvironmentB
 }
 
 export function assertMessage(message: MetaesMessage): MetaesMessage {
-  if (typeof message.source !== "string" && typeof message.source !== "object") {
-    throw new Error("Message should contain `source` value of type string or object.");
+  if (!isScript(message.script)) {
+    throw new Error("Message should contain a script instance");
   }
   if (message.env && typeof message.env !== "object") {
     throw new Error("Message should contain `env` value of type object.");
@@ -115,7 +115,7 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
             log("[Client: raw message]", e.data);
             log("[Client: message]", message);
             log("[Client: env is]", env);
-            metaesEval(message.source, env.values.c, env.values.cerr, env);
+            metaesEval(message.script, env.values.c, env.values.cerr, env);
           } else {
             log("[Client: ignored message without env:]", message);
           }
@@ -133,9 +133,10 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
             environment?: Environment,
             _config?: EvaluationConfig
           ) => {
+            console.log("s", source);
             try {
               send({
-                source,
+                script: toScript(source),
                 env: environmentToMessage(context, mergeValues({ c, cerr }, environment))
               });
             } catch (e) {
