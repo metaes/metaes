@@ -1,7 +1,8 @@
 import { Environment, EnvironmentBase, Reference } from "./environment";
 import { log } from "./logging";
-import { Context, evalFunctionBody, metaesEval, isScript, toScript } from "./metaes";
-import { Continuation, ErrorContinuation, EvaluationConfig, Source, Script } from "./types";
+import { Context, evalFunctionBody, isScript, metaesEval } from "./metaes";
+import { ASTNode } from "./nodes/nodes";
+import { Continuation, ErrorContinuation, EvaluationConfig, Script, Source } from "./types";
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
 
@@ -25,7 +26,7 @@ export const getReferencesMap = (context: Context) => {
   return env;
 };
 
-export type MetaesMessage = { script: Script; env?: EnvironmentBase };
+export type MetaesMessage = { input: Script | string | ASTNode; env?: EnvironmentBase };
 
 export function environmentFromMessage(context: Context, environment: EnvironmentBase): Environment {
   const referencesMap = getReferencesMap(context);
@@ -66,11 +67,14 @@ export function environmentToMessage(context: Context, environment: EnvironmentB
 }
 
 export function assertMessage(message: MetaesMessage): MetaesMessage {
-  if (!isScript(message.script)) {
-    throw new Error("Message should contain a script instance");
-  }
   if (message.env && typeof message.env !== "object") {
     throw new Error("Message should contain `env` value of type object.");
+  }
+  if (typeof message.input === "function") {
+    throw new Error("Message input can't be a function");
+  }
+  if (!(isScript(message.input) || typeof message.input === "object" || typeof message.input === "string")) {
+    throw new Error("Incorrect message input");
   }
   return message;
 }
@@ -110,12 +114,13 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
       client.addEventListener("message", e => {
         try {
           const message = assertMessage(JSON.parse(e.data) as MetaesMessage);
+          
           if (message.env) {
             const env = environmentFromMessage(context, message.env);
             log("[Client: raw message]", e.data);
             log("[Client: message]", message);
             log("[Client: env is]", env);
-            metaesEval(message.script, env.values.c, env.values.cerr, env);
+            metaesEval(message.input, env.values.c, env.values.cerr, env);
           } else {
             log("[Client: ignored message without env:]", message);
           }
@@ -127,16 +132,18 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
       client.addEventListener("open", async () => {
         context = {
           evaluate: (
-            source: Source,
+            input: Source,
             c?: Continuation,
             cerr?: ErrorContinuation,
             environment?: Environment,
             _config?: EvaluationConfig
           ) => {
-            console.log("s", source);
+            if (typeof input === "function") {
+              input = input.toString();
+            }
             try {
               send({
-                script: toScript(source),
+                input,
                 env: environmentToMessage(context, mergeValues({ c, cerr }, environment))
               });
             } catch (e) {

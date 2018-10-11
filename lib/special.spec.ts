@@ -7,7 +7,6 @@ import { callWithCurrentContinuation } from "./special";
 describe("Special", () => {
   it("should return current env", () => {
     function receiver(_, _c, _cerr, env) {
-      console.log(arguments);
       assert.equal(env.values.answer, 42);
       assert.equal(env.values.callWithCurrentContinuation, callWithCurrentContinuation);
     }

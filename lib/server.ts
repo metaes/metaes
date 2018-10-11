@@ -42,7 +42,7 @@ export const runWSServer = (port: number = config.port) =>
         evaluate: (input: Source, _c?: Continuation, _cerr?: ErrorContinuation, environment?: Environment) => {
           log("[Server: in evaluate/environment", environment);
           const message = {
-            source: input,
+            input: typeof input === "function" ? input.toString() : input,
             env: environmentToMessage(clientContext, mergeValues({}, environment))
           };
           log("[Server sending message]", JSON.stringify(message));
@@ -53,13 +53,13 @@ export const runWSServer = (port: number = config.port) =>
       connection.on("message", async message => {
         let environment;
         try {
-          const { source, env } = assertMessage(JSON.parse(message)) as MetaesMessage;
+          const { input, env } = assertMessage(JSON.parse(message)) as MetaesMessage;
           environment = env ? environmentFromMessage(clientContext, env) : { values: {} };
           log("[Server: got raw message]:", message);
 
           log("[Server: client environmentFromJSON]", environment);
 
-          const result = await evalToPromise(localContext, source, environment);
+          const result = await evalToPromise(localContext, input, environment);
           log("[Server: result]", result);
 
           clientContext.evaluate(
