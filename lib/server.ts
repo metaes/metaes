@@ -32,22 +32,37 @@ export const runWSServer = (port: number = config.port) =>
   new Promise((resolve, _reject) => {
     const server = http.createServer();
     const app = express();
+    app.use(bodyParser.json());
     app.use(bodyParser.text());
     app.use(helmet());
 
     // HTTP
     app.post("/", (req, res) => {
+      const useJSON = req.headers["content-type"].indexOf("application/json") >= 0;
       try {
-        const { input, env } = assertMessage(JSON.parse(req.body)) as MetaesMessage;
-        localContext.evaluate(
-          input,
-          value => res.send(JSON.stringify({ input: `c(${JSON.stringify(value)})` })),
-          error => res.send(JSON.stringify({ input: `cerr(${JSON.stringify(error)})` })),
-          env
-        );
+        if (useJSON) {
+          const { input, env } = assertMessage(req.body) as MetaesMessage;
+
+          localContext.evaluate(
+            input,
+            value => res.send(JSON.stringify({ input: `c(${JSON.stringify(value)})` })),
+            error => res.send(JSON.stringify({ input: `cerr(${JSON.stringify(error)})` })),
+            env
+          );
+        } else {
+          localContext.evaluate(
+            req.body,
+            value => res.send(JSON.stringify(value)),
+            error => res.status(400).send(JSON.stringify(error))
+          );
+        }
       } catch (e) {
         const error = { message: Array.isArray(e) ? e.map(e => e.message) : e.message };
-        res.send(JSON.stringify({ input: `cerr(${JSON.stringify(error)})` }));
+        if (useJSON) {
+          res.send(JSON.stringify({ input: `cerr(${JSON.stringify(error)})` }));
+        } else {
+          res.status(400).send(JSON.stringify(error));
+        }
       }
     });
 

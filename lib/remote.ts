@@ -6,6 +6,7 @@ import { Continuation, ErrorContinuation, EvaluationConfig, Script, Source } fro
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
 
+// TODO: instead use env.prev and while stringification take into account if prev is present (recursively)
 export function mergeValues(values: object, environment?: Environment): EnvironmentBase {
   if (environment) {
     for (let k of Object.keys(values)) {
@@ -110,10 +111,12 @@ export const createHTTPConnector = (url: string): Context => {
   if (typeof fetch === "undefined" && typeof global === "object") {
     global.fetch = require("node-fetch");
   }
-  async function send(message: MetaesMessage) {
+
+  function send(message: MetaesMessage) {
     const stringified = JSON.stringify(assertMessage(message));
     log("[Client: sending message]", stringified);
-    return fetch(url, { method: "POST", body: stringified }).then(d => d.text());
+    const config = { method: "POST", body: stringified, headers: { "content-type": "application/json" } };
+    return fetch(url, config).then(d => d.text());
   }
 
   const context = {
@@ -132,7 +135,6 @@ export const createHTTPConnector = (url: string): Context => {
           input,
           env: environmentToMessage(context, mergeValues({ c, cerr }, environment))
         });
-
         const message = JSON.parse(raw);
         assertMessage(message);
         metaesEval(message.input, null, log, { values: { c, cerr } });

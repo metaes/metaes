@@ -169,3 +169,17 @@ function defineTestsFor(describeName: string, contextGetter: () => Promise<Conte
     });
   });
 }
+
+describe("Raw HTTP calls", () => {
+  let server;
+
+  before(async () => {
+    server = await createTestServer(config.port);
+  });
+
+  after(() => new Promise(resolve => server.close(resolve)));
+
+  it("Should return response using string query", async () => {
+    console.log(await fetch(`http://localhost:` + config.port, { method: "post", body: "2+2" }).then(d => d.text()));
+  });
+});
