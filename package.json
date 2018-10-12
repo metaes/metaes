@@ -31,6 +31,7 @@
   "dependencies": {
     "@types/chai": "^4.1.2",
     "esprima": "^4.0.0",
+    "node-fetch": "^2.2.0",
     "websocket": "^1.0.25",
     "ws": "^4.0.0"
   }

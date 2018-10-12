@@ -3,6 +3,7 @@ import { log } from "./logging";
 import { Context, evalFunctionBody, isScript, metaesEval, MetaesContext } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
 import { Continuation, ErrorContinuation, EvaluationConfig, Script, Source } from "./types";
+import { config } from "./server";
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
 
@@ -96,7 +97,10 @@ function createRemoteFunction(context: Context, id: string) {
   return fn;
 }
 
-export const createHTTPConnector = (url: string = "/"): Context => {
+export const createHTTPConnector = (url: string = `http://localhost:${config.port}`): Context => {
+  if (typeof fetch === "undefined" && typeof global === "object") {
+    global.fetch = require("node-fetch");
+  }
   async function send(message: MetaesMessage) {
     const stringified = JSON.stringify(assertMessage(message));
     log("[Client: sending message]", stringified);

@@ -81,7 +81,7 @@ describe("Environment operations", () => {
 });
 
 defineTestsFor("Remote WebSocket messaging", () => createWSConnector(W3CWebSocket)(`ws://localhost:8083`));
-//defineTestsFor("Remote HTTP messaging", () => Promise.resolve(createHTTPConnector()));
+defineTestsFor("Remote HTTP messaging", () => Promise.resolve(createHTTPConnector()));
 
 function defineTestsFor(describeName: string, contextGetter: () => Promise<Context>) {
   describe(describeName, () => {

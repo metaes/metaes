@@ -9,7 +9,7 @@ import { Context, evalToPromise, MetaesContext } from "./metaes";
 import { assertMessage, environmentFromMessage, environmentToMessage, mergeValues, MetaesMessage } from "./remote";
 import { Continuation, ErrorContinuation, Source } from "./types";
 
-const config = {
+export const config = {
   port: 8082
 };
 
