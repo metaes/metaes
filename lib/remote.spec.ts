@@ -10,7 +10,7 @@ import {
   mergeValues,
   createHTTPConnector
 } from "./remote";
-import { runWSServer } from "./server";
+import { runWSServer, config } from "./server";
 
 let server, serverAlreadyAskedToStart;
 
@@ -80,21 +80,27 @@ describe("Environment operations", () => {
   });
 });
 
-defineTestsFor("Remote WebSocket messaging", () => createWSConnector(W3CWebSocket)(`ws://localhost:8083`));
-defineTestsFor("Remote HTTP messaging", () => Promise.resolve(createHTTPConnector()));
+describe("Remote", () => {
+  let server;
+
+  before(async () => {
+    server = await createTestServer(config.port);
+  });
+
+  after(() => new Promise(resolve => server.close(resolve)));
+
+  defineTestsFor("Remote WebSocket messaging", () => createWSConnector(W3CWebSocket)(`ws://localhost:8082`));
+  defineTestsFor("Remote HTTP messaging", () => {
+    return Promise.resolve(createHTTPConnector("http://localhost:" + config.port));
+  });
+});
 
 function defineTestsFor(describeName: string, contextGetter: () => Promise<Context>) {
   describe(describeName, () => {
     let context;
-    let server;
-
     before(async () => {
-      server = await createTestServer(8083);
       context = await contextGetter();
     });
-
-    after(() => server.close());
-
     it("should correctly deliver primitive success value", async () =>
       assert.equal(4, await evalToPromise(context, "2+2")));
 

@@ -32,12 +32,23 @@ export const runWSServer = (port: number = config.port) =>
   new Promise((resolve, _reject) => {
     const server = http.createServer();
     const app = express();
-    app.use(bodyParser.json());
+    app.use(bodyParser.text());
     app.use(helmet());
 
     // HTTP
-    app.get("/", (req, res) => {
-      console.log(req);
+    app.post("/", (req, res) => {
+      try {
+        const { input, env } = assertMessage(JSON.parse(req.body)) as MetaesMessage;
+        localContext.evaluate(
+          input,
+          value => res.send(JSON.stringify({ input: `c(${JSON.stringify(value)})` })),
+          error => res.send(JSON.stringify({ input: `cerr(${JSON.stringify(error)})` })),
+          env
+        );
+      } catch (e) {
+        const error = { message: Array.isArray(e) ? e.map(e => e.message) : e.message };
+        res.send(JSON.stringify({ input: `cerr(${JSON.stringify(error)})` }));
+      }
     });
 
     // WS
@@ -92,8 +103,10 @@ export const runWSServer = (port: number = config.port) =>
     });
 
     server.on("request", app);
+    server.on("error", e => log("[Server: caught error]", e));
+
     server.listen(port, () => {
-      log("[Server: Listening on " + server.address().port + "]");
+      log("[Server: Listening on " + JSON.stringify(server.address()) + "]");
       resolve(server);
     });
   });

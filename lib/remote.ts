@@ -1,9 +1,8 @@
 import { Environment, EnvironmentBase, Reference } from "./environment";
 import { log } from "./logging";
-import { Context, evalFunctionBody, isScript, metaesEval, MetaesContext } from "./metaes";
+import { Context, evalFunctionBody, isScript, metaesEval } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
 import { Continuation, ErrorContinuation, EvaluationConfig, Script, Source } from "./types";
-import { config } from "./server";
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
 
@@ -68,14 +67,24 @@ export function environmentToMessage(context: Context, environment: EnvironmentB
 }
 
 export function assertMessage(message: MetaesMessage): MetaesMessage {
+  const errors: Error[] = [];
+  if (!message.input) {
+    errors.push(new Error("Message should contain at least empty environment"));
+  }
   if (message.env && typeof message.env !== "object") {
-    throw new Error("Message should contain `env` value of type object.");
+    errors.push(new Error("Message should contain `env` value of type object."));
+  }
+  if (!message.input) {
+    errors.push(new Error("Message should define an `input` field."));
   }
   if (typeof message.input === "function") {
-    throw new Error("Message input can't be a function");
+    errors.push(new Error("Message `input` field can't be a function"));
   }
   if (!(isScript(message.input) || typeof message.input === "object" || typeof message.input === "string")) {
-    throw new Error("Incorrect message input");
+    errors.push(new Error("Message input is not valid"));
+  }
+  if (errors.length) {
+    throw errors;
   }
   return message;
 }
@@ -97,14 +106,14 @@ function createRemoteFunction(context: Context, id: string) {
   return fn;
 }
 
-export const createHTTPConnector = (url: string = `http://localhost:${config.port}`): Context => {
+export const createHTTPConnector = (url: string): Context => {
   if (typeof fetch === "undefined" && typeof global === "object") {
     global.fetch = require("node-fetch");
   }
   async function send(message: MetaesMessage) {
     const stringified = JSON.stringify(assertMessage(message));
     log("[Client: sending message]", stringified);
-    return fetch({ url, body: stringified });
+    return fetch(url, { method: "POST", body: stringified }).then(d => d.text());
   }
 
   const context = {
@@ -119,10 +128,14 @@ export const createHTTPConnector = (url: string = `http://localhost:${config.por
         input = input.toString();
       }
       try {
-        await send({
+        const raw = await send({
           input,
           env: environmentToMessage(context, mergeValues({ c, cerr }, environment))
         });
+
+        const message = JSON.parse(raw);
+        assertMessage(message);
+        metaesEval(message.input, null, log, { values: { c, cerr } });
       } catch (e) {
         if (cerr) {
           cerr(e);
