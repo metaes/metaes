@@ -1,6 +1,6 @@
 import { Environment, EnvironmentBase, Reference } from "./environment";
 import { log } from "./logging";
-import { Context, evalFunctionBody, isScript, metaesEval } from "./metaes";
+import { Context, evalFunctionBody, isScript, metaesEval, MetaesContext } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
 import { Continuation, ErrorContinuation, EvaluationConfig, Script, Source } from "./types";
 
@@ -96,7 +96,41 @@ function createRemoteFunction(context: Context, id: string) {
   return fn;
 }
 
-export const createConnector = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>
+export const createHTTPConnector = (url: string = "/"): Context => {
+  async function send(message: MetaesMessage) {
+    const stringified = JSON.stringify(assertMessage(message));
+    log("[Client: sending message]", stringified);
+    return fetch({ url, body: stringified });
+  }
+
+  const context = {
+    async evaluate(
+      input: Source,
+      c?: Continuation,
+      cerr?: ErrorContinuation,
+      environment?: Environment,
+      _config?: EvaluationConfig
+    ) {
+      if (typeof input === "function") {
+        input = input.toString();
+      }
+      try {
+        await send({
+          input,
+          env: environmentToMessage(context, mergeValues({ c, cerr }, environment))
+        });
+      } catch (e) {
+        if (cerr) {
+          cerr(e);
+        }
+        log("[Client: Sending message error]", e);
+      }
+    }
+  };
+  return context;
+};
+
+export const createWSConnector = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>
   new Promise<Context>((resolve, reject) => {
     const connect = () => {
       const client = new WebSocketConstructor(connectionString);
@@ -114,7 +148,7 @@ export const createConnector = (WebSocketConstructor: typeof WebSocket) => (conn
       client.addEventListener("message", e => {
         try {
           const message = assertMessage(JSON.parse(e.data) as MetaesMessage);
-          
+
           if (message.env) {
             const env = environmentFromMessage(context, message.env);
             log("[Client: raw message]", e.data);

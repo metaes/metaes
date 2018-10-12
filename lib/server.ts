@@ -35,6 +35,12 @@ export const runWSServer = (port: number = config.port) =>
     app.use(bodyParser.json());
     app.use(helmet());
 
+    // HTTP
+    app.get("/", (req, res) => {
+      console.log(req);
+    });
+
+    // WS
     const webSocketServer = new WebSocket.Server({ server });
 
     webSocketServer.on("connection", connection => {
