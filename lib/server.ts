@@ -41,7 +41,7 @@ export const runWSServer = (port: number = config.port) =>
       const useJSON = req.headers["content-type"].indexOf("application/json") >= 0;
       try {
         if (useJSON) {
-          const { input, env } = assertMessage(req.body) as MetaesMessage;
+          const { input, env } = assertMessage(req.body, false) as MetaesMessage;
           localContext.evaluate(
             input,
             value => res.send(JSON.stringify(value)),
@@ -57,11 +57,7 @@ export const runWSServer = (port: number = config.port) =>
         }
       } catch (e) {
         const error = { message: Array.isArray(e) ? e.map(e => e.message) : e.message };
-        if (useJSON) {
-          res.send(JSON.stringify({ input: `cerr(${JSON.stringify(error)})` }));
-        } else {
-          res.status(400).send(JSON.stringify(error));
-        }
+        res.status(400).send(JSON.stringify(error));
       }
     });
 

@@ -1,41 +1,20 @@
 import { assert } from "chai";
 import { after, before, beforeEach, describe, it } from "mocha";
 import { Environment } from "./environment";
-import { consoleLoggingMetaesContext, Context, evalFunctionBody, evalToPromise, metaesEval } from "./metaes";
+import { consoleLoggingMetaesContext, Context, evalFunctionBody, evalToPromise } from "./metaes";
 import {
+  createHTTPConnector,
   createWSConnector,
   environmentFromMessage,
   environmentToMessage,
   getReferencesMap,
   mergeValues,
-  createHTTPConnector,
   patchNodeFetch
 } from "./remote";
-import { runWSServer, config } from "./server";
-
-let server, serverAlreadyAskedToStart;
+import { config, runWSServer } from "./server";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
 export const testServerPort = 8082;
-
-export async function createTestServer(port: number = testServerPort) {
-  if (serverAlreadyAskedToStart && !server) {
-    // periodically check if server is assigned
-    return new Promise(resolve => {
-      let interval = setInterval(() => {
-        if (server) {
-          clearInterval(interval);
-          resolve(server);
-        }
-      }, 10);
-    });
-  } else if (server) {
-    return Promise.resolve(server);
-  } else {
-    serverAlreadyAskedToStart = true;
-    return (server = await runWSServer(port));
-  }
-}
 
 describe("Environment operations", () => {
   let context: Context;
@@ -85,7 +64,7 @@ describe("Remote", () => {
   let server;
 
   before(async () => {
-    server = await createTestServer(config.port);
+    server = await runWSServer(config.port);
   });
 
   after(() => new Promise(resolve => server.close(resolve)));
@@ -175,7 +154,7 @@ describe("Raw HTTP calls", () => {
   let server, url;
 
   before(async () => {
-    server = await createTestServer(config.port);
+    server = await runWSServer(config.port);
     url = `http://localhost:` + config.port;
     patchNodeFetch();
   });
@@ -186,7 +165,7 @@ describe("Raw HTTP calls", () => {
     assert.equal(await fetch(url, { method: "post", body: "2+2" }).then(d => d.text()), "4");
   });
 
-  it("Should throw when using JSON query", async () => {
+  it("Should throw when using string query", async () => {
     const { json, status } = await fetch(url, { method: "post", body: "throw 1" }).then(async response => ({
       json: await response.json(),
       status: response.status
