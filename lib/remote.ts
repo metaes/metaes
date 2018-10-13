@@ -6,6 +6,12 @@ import { Continuation, ErrorContinuation, EvaluationConfig, Script, Source } fro
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
 
+export function patchNodeFetch() {
+  if (typeof fetch === "undefined" && typeof global === "object") {
+    global.fetch = require("node-fetch");
+  }
+}
+
 // TODO: instead use env.prev and while stringification take into account if prev is present (recursively)
 export function mergeValues(values: object, environment?: Environment): EnvironmentBase {
   if (environment) {
@@ -67,14 +73,9 @@ export function environmentToMessage(context: Context, environment: EnvironmentB
   return Object.keys(references).length ? { references, values } : { values };
 }
 
-export function assertMessage(message: MetaesMessage): MetaesMessage {
+export function assertMessage(message: MetaesMessage, requiresEnvironment = true): MetaesMessage {
   const errors: Error[] = [];
-  if (!message.input) {
-    errors.push(new Error("Message should contain at least empty environment"));
-  }
-  if (message.env && typeof message.env !== "object") {
-    errors.push(new Error("Message should contain `env` value of type object."));
-  }
+
   if (!message.input) {
     errors.push(new Error("Message should define an `input` field."));
   }
@@ -83,6 +84,14 @@ export function assertMessage(message: MetaesMessage): MetaesMessage {
   }
   if (!(isScript(message.input) || typeof message.input === "object" || typeof message.input === "string")) {
     errors.push(new Error("Message input is not valid"));
+  }
+  if (requiresEnvironment) {
+    if (!message.env) {
+      errors.push(new Error("Message should contain at least empty environment"));
+    }
+    if (message.env && typeof message.env !== "object") {
+      errors.push(new Error("Message should contain `env` value of type object."));
+    }
   }
   if (errors.length) {
     throw errors;
@@ -108,15 +117,14 @@ function createRemoteFunction(context: Context, id: string) {
 }
 
 export const createHTTPConnector = (url: string): Context => {
-  if (typeof fetch === "undefined" && typeof global === "object") {
-    global.fetch = require("node-fetch");
-  }
+  patchNodeFetch();
 
   function send(message: MetaesMessage) {
-    const stringified = JSON.stringify(assertMessage(message));
-    log("[Client: sending message]", stringified);
+    log("[Client: sending message]", message);
+    const stringified = JSON.stringify(assertMessage(message, false));
+    log("[Client: sending message, after validation]", stringified);
     const config = { method: "POST", body: stringified, headers: { "content-type": "application/json" } };
-    return fetch(url, config).then(d => d.text());
+    return fetch(url, config).then(async response => ({ text: await response.text(), status: response.status }));
   }
 
   const context = {
@@ -131,13 +139,18 @@ export const createHTTPConnector = (url: string): Context => {
         input = input.toString();
       }
       try {
-        const raw = await send({
+        const { status, text } = await send({
           input,
           env: environmentToMessage(context, mergeValues({ c, cerr }, environment))
         });
-        const message = JSON.parse(raw);
-        assertMessage(message);
-        metaesEval(message.input, null, log, { values: { c, cerr } });
+        log("[Client: Got response, raw]", text);
+        const value = JSON.parse(text);
+        log("[Client: Got response, parsed]", value);
+        if (status === 400) {
+          cerr && cerr(value);
+        } else {
+          c && c(value);
+        }
       } catch (e) {
         if (cerr) {
           cerr(e);

@@ -42,11 +42,10 @@ export const runWSServer = (port: number = config.port) =>
       try {
         if (useJSON) {
           const { input, env } = assertMessage(req.body) as MetaesMessage;
-
           localContext.evaluate(
             input,
-            value => res.send(JSON.stringify({ input: `c(${JSON.stringify(value)})` })),
-            error => res.send(JSON.stringify({ input: `cerr(${JSON.stringify(error)})` })),
+            value => res.send(JSON.stringify(value)),
+            error => res.status(400).send(JSON.stringify(error)),
             env
           );
         } else {

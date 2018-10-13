@@ -1,14 +1,15 @@
 import { assert } from "chai";
 import { after, before, beforeEach, describe, it } from "mocha";
 import { Environment } from "./environment";
-import { consoleLoggingMetaesContext, Context, evalFunctionBody, evalToPromise } from "./metaes";
+import { consoleLoggingMetaesContext, Context, evalFunctionBody, evalToPromise, metaesEval } from "./metaes";
 import {
   createWSConnector,
   environmentFromMessage,
   environmentToMessage,
   getReferencesMap,
   mergeValues,
-  createHTTPConnector
+  createHTTPConnector,
+  patchNodeFetch
 } from "./remote";
 import { runWSServer, config } from "./server";
 
@@ -171,15 +172,49 @@ function defineTestsFor(describeName: string, contextGetter: () => Promise<Conte
 }
 
 describe("Raw HTTP calls", () => {
-  let server;
+  let server, url;
 
   before(async () => {
     server = await createTestServer(config.port);
+    url = `http://localhost:` + config.port;
+    patchNodeFetch();
   });
 
   after(() => new Promise(resolve => server.close(resolve)));
 
   it("Should return response using string query", async () => {
-    console.log(await fetch(`http://localhost:` + config.port, { method: "post", body: "2+2" }).then(d => d.text()));
+    assert.equal(await fetch(url, { method: "post", body: "2+2" }).then(d => d.text()), "4");
+  });
+
+  it("Should throw when using JSON query", async () => {
+    const { json, status } = await fetch(url, { method: "post", body: "throw 1" }).then(async response => ({
+      json: await response.json(),
+      status: response.status
+    }));
+    assert.equal(json.type, "ThrowStatement");
+    assert.equal(status, 400);
+  });
+
+  it("Should return response using object", async () => {
+    const response = await fetch(url, {
+      method: "post",
+      body: JSON.stringify({ input: "2+2" }),
+      headers: { "content-type": "application/json" }
+    }).then(d => d.json());
+
+    assert.deepEqual(response, 4);
+  });
+
+  it("Should throw when using JSON query", async () => {
+    const { json, status } = await fetch(url, {
+      method: "post",
+      body: JSON.stringify({ input: "throw 1" }),
+      headers: { "content-type": "application/json" }
+    }).then(async response => ({
+      json: await response.json(),
+      status: response.status
+    }));
+    assert.equal(json.type, "ThrowStatement");
+    assert.equal(status, 400);
   });
 });
