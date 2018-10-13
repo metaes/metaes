@@ -138,6 +138,9 @@ export const createHTTPConnector = (url: string): Context => {
       if (typeof input === "function") {
         input = input.toString();
       }
+      if (isScript(input) && typeof input.source === "function") {
+        input.source = input.source.toString();
+      }
       try {
         const { status, text } = await send({
           input,
@@ -206,6 +209,9 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket) => (co
           ) => {
             if (typeof input === "function") {
               input = input.toString();
+            }
+            if (isScript(input) && typeof input.source === "function") {
+              input.source = input.source.toString();
             }
             try {
               send({
