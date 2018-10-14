@@ -13,7 +13,7 @@ export const config = {
   port: 8082
 };
 
-const localContext = new MetaesContext(
+const testContext = new MetaesContext(
   value => {
     console.log("[value]");
     console.log(value);
@@ -28,7 +28,7 @@ const localContext = new MetaesContext(
   }
 );
 
-export const runWSServer = (port: number = config.port) =>
+export const runWSServer = (port: number = config.port, context = testContext) =>
   new Promise((resolve, _reject) => {
     const server = http.createServer();
     const app = express();
@@ -43,14 +43,14 @@ export const runWSServer = (port: number = config.port) =>
         if (useJSON) {
           const { input, env } = assertMessage(req.body, false) as MetaesMessage;
           log("[Server: got message]", { input, env });
-          localContext.evaluate(
+          context.evaluate(
             input,
             value => res.send(JSON.stringify(value)),
             error => res.status(400).send(JSON.stringify(error)),
             env
           );
         } else {
-          localContext.evaluate(
+          context.evaluate(
             req.body,
             value => res.send(JSON.stringify(value)),
             error => res.status(400).send(JSON.stringify(error))
@@ -87,7 +87,7 @@ export const runWSServer = (port: number = config.port) =>
 
           log("[Server: client environmentFromJSON]", environment);
 
-          const result = await evalToPromise(localContext, input, environment);
+          const result = await evalToPromise(context, input, environment);
           log("[Server: result]", result);
 
           clientContext.evaluate(
