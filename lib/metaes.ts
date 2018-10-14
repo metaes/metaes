@@ -1,6 +1,6 @@
 import { evaluate } from "./applyEval";
 import { Environment, toEnvironment } from "./environment";
-import { ecmaScriptInterpreters } from "./interpreters";
+import { EcmaScriptInterpreters } from "./interpreters";
 import { ASTNode } from "./nodes/nodes";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
@@ -42,7 +42,7 @@ export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config
   script = toScript(script);
   config.script = script;
   config.interceptor = config.interceptor || noop;
-  config.interpreters = config.interpreters || ecmaScriptInterpreters;
+  config.interpreters = config.interpreters || EcmaScriptInterpreters;
 
   try {
     evaluate(

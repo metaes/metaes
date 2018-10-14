@@ -42,7 +42,7 @@ import {
   WhileStatement
 } from "./interpreter/statements";
 
-export const ecmaScriptInterpreters: Environment = {
+export const EcmaScriptInterpreters: Environment = {
   values: {
     GetProperty,
     SetProperty,
