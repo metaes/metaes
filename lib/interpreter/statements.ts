@@ -32,7 +32,8 @@ import { EvaluationConfig } from "../types";
 function hoistDeclarations(e: Statement[], c, cerr, env, config) {
   visitArray(
     e.filter(e => e.type === "FunctionDeclaration") as FunctionDeclaration[],
-    (e, c, cerr) => evaluate(e, value => setValue(env, e.id.name, value, true, c, cerr), cerr, env, config),
+    (e, c, cerr) =>
+      evaluate(e, value => setValue({ name: e.id.name, value, isDeclaration: true }, c, cerr, env), cerr, env, config),
     c,
     cerr
   );
@@ -65,7 +66,7 @@ export function VariableDeclarator(e: VariableDeclarator, c, cerr, env, config) 
   function id(initValue) {
     switch (e.id.type) {
       case "Identifier":
-        setValue(env, e.id.name, initValue, true, c, cerr);
+        setValue({ name: e.id.name, value: initValue, isDeclaration: true }, c, cerr, env);
         break;
       default:
         cerr(NotImplementedException(`Init ${e.id.type} is not supported yet.`, e));
@@ -166,7 +167,12 @@ export function ForInStatement(e: ForInStatement, c, cerr, env, config) {
         visitArray(
           Object.keys(right),
           (name, c, cerr) =>
-            setValue(env, leftNode.name, name, false, () => evaluate(e.body, c, cerr, env, config), cerr),
+            setValue(
+              { name: leftNode.name, value: name, isDeclaration: false },
+              () => evaluate(e.body, c, cerr, env, config),
+              cerr,
+              env
+            ),
           c,
           cerr
         );
@@ -222,12 +228,14 @@ export function ForOfStatement(e: ForOfStatement, c, cerr, env, config) {
                      * Should support both semantics.
                      */
                     setValue(
-                      bodyEnv,
-                      (<Identifier>e.left.declarations[0].id).name,
-                      rightItem,
-                      true,
+                      {
+                        name: (<Identifier>e.left.declarations[0].id).name,
+                        value: rightItem,
+                        isDeclaration: true
+                      },
                       () => evaluate(e.body, c, cerr, bodyEnv, config),
-                      cerr
+                      cerr,
+                      bodyEnv
                     );
                   },
                   c,
@@ -274,7 +282,7 @@ export function ClassDeclaration(e: ClassDeclaration, c, cerr, env, config) {
               if (key === "constructor") {
                 value.prototype = Object.create(superClass.prototype);
                 if (e.id) {
-                  setValue(env, e.id.name, value, true, c, cerr);
+                  setValue({ name: e.id.name, value, isDeclaration: true }, c, cerr, env);
                 } else {
                   cerr(NotImplementedException("Not implemented case"));
                 }

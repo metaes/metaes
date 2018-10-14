@@ -205,7 +205,7 @@ export function AssignmentExpression(e: AssignmentExpression, c, cerr, env, conf
       const e_left = e.left;
       switch (e_left.type) {
         case "Identifier":
-          setValue(env, e_left.name, right, false, c, cerr);
+          setValue({ name: e_left.name, value: right, isDeclaration: false }, c, cerr, env);
           break;
         case "MemberExpression":
           evaluate(

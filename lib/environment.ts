@@ -28,13 +28,17 @@ export function getEnvironmentForValue(env: Environment, name: string): Environm
   return null;
 }
 
+type SetValue<T> = {
+  name: string;
+  value: T;
+  isDeclaration: boolean;
+};
+
 export function setValue<T>(
-  env: Environment<T>,
-  name: string,
-  value: T,
-  isDeclaration: boolean,
+  { name, value, isDeclaration }: SetValue<T>,
   c: Continuation,
-  cerr: ErrorContinuation
+  cerr: ErrorContinuation,
+  env: Environment<T>
 ) {
   if (isDeclaration) {
     c((env.values[name] = value));
