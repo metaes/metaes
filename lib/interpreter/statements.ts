@@ -269,7 +269,7 @@ export function ForOfStatement(e: ForOfStatement, c, cerr, env, config) {
 
 export function WhileStatement(e: WhileStatement, c, cerr, env, config) {
   (function loop() {
-    evaluate(e.test, test => (test ? evaluate(e.body, c, cerr, env, config) : c()), cerr, env, config);
+    evaluate(e.test, test => (test ? evaluate(e.body, loop, cerr, env, config) : c()), cerr, env, config);
   })();
 }
 
