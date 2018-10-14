@@ -13,7 +13,6 @@ export function evaluate(
 ) {
   callInterceptor("enter", config, e, env);
   getValue(
-    config.interpreters,
     e.type,
     (interpreter: Interpreter<ASTNode>) => {
       try {
@@ -41,7 +40,8 @@ export function evaluate(
       const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
       cerr(exception);
       callInterceptor("exit", config, e, env, exception);
-    }
+    },
+    config.interpreters
   );
 }
 

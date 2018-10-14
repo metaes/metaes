@@ -3,9 +3,14 @@ import { NotImplementedException } from "../exceptions";
 import { Apply, GetProperty, Identifier, Literal, SetProperty } from "../nodeTypes";
 
 export function Identifier(e: Identifier, c, cerr, env: Environment) {
-  getValue(env, e.name, c, exception => {
-    (exception.location = e), cerr(exception);
-  });
+  getValue(
+    e.name,
+    c,
+    exception => {
+      (exception.location = e), cerr(exception);
+    },
+    env
+  );
 }
 
 export function Literal(e: Literal, c) {

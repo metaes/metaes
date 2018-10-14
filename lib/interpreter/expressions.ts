@@ -107,7 +107,7 @@ export function CallExpression(
             callee => {
               try {
                 const cnt = thisObj => evaluate({ type: "Apply", e, fn: callee, thisObj, args }, c, cerr, env, config);
-                getValue(env, "this", cnt, () => cnt(undefined));
+                getValue("this", cnt, () => cnt(undefined), env);
               } catch (error) {
                 cerr(toException(error, e_callee));
               }
@@ -404,7 +404,6 @@ export function NewExpression(e: NewExpression, c, cerr, env, config) {
           break;
         case "Identifier":
           getValue(
-            env,
             calleeNode.name,
             callee => {
               if (typeof callee !== "function") {
@@ -417,7 +416,8 @@ export function NewExpression(e: NewExpression, c, cerr, env, config) {
                 }
               }
             },
-            cerr
+            cerr,
+            env
           );
           break;
         default:
@@ -457,7 +457,6 @@ export function UpdateExpression(e: UpdateExpression, c, cerr, env: Environment)
     case "Identifier":
       const propName = e.argument.name;
       getValue(
-        env,
         propName,
         _ => {
           // discard found value
@@ -494,7 +493,8 @@ export function UpdateExpression(e: UpdateExpression, c, cerr, env: Environment)
             cerr(e);
           }
         },
-        cerr
+        cerr,
+        env
       );
       break;
     default:
@@ -536,7 +536,7 @@ export function UnaryExpression(e: UnaryExpression, c, cerr, env: Environment, c
 }
 
 export function ThisExpression(_e: ThisExpression, c, cerr, env: Environment) {
-  getValue(env, "this", c, cerr);
+  getValue("this", c, cerr, env);
 }
 
 export function ConditionalExpression(e: ConditionalExpression, c, cerr, env, config) {

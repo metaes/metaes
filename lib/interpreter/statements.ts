@@ -126,7 +126,6 @@ export function ThrowStatement(e: ThrowStatement, _c, cerr, env, config) {
 
 export function CatchClause(e: CatchClause, c, cerr, env, config) {
   getValue(
-    env,
     "/exception",
     error =>
       evaluate(
@@ -139,7 +138,8 @@ export function CatchClause(e: CatchClause, c, cerr, env, config) {
         },
         config
       ),
-    cerr
+    cerr,
+    env
   );
 }
 

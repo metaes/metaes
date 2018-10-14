@@ -48,7 +48,7 @@ export function setValue<T>(
   }
 }
 
-export function getValue<T>(env: Environment<T>, name: string, c: Continuation<T>, cerr: ErrorContinuation) {
+export function getValue<T>(name: string, c: Continuation<T>, cerr: ErrorContinuation, env: Environment<T>) {
   let _env: Environment | undefined = env;
   do {
     if (!_env) {
