@@ -1,10 +1,10 @@
-import { Environment, getValue } from "../environment";
+import { Environment, GetValue } from "../environment";
 import { NotImplementedException } from "../exceptions";
 import { Apply, GetProperty, Identifier, Literal, SetProperty } from "../nodeTypes";
 
 export function Identifier(e: Identifier, c, cerr, env: Environment) {
-  getValue(
-    e.name,
+  GetValue(
+    { name: e.name },
     c,
     exception => {
       (exception.location = e), cerr(exception);

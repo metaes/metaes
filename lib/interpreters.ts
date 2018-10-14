@@ -1,4 +1,4 @@
-import { Environment } from "./environment";
+import { Environment, SetValue, GetValue } from "./environment";
 import { Apply, GetProperty, Identifier, Literal, SetProperty } from "./interpreter/base";
 import {
   ArrayExpression,
@@ -49,6 +49,9 @@ export const ecmaScriptInterpreters: Environment = {
     Apply,
     Identifier,
     Literal,
+
+    SetValue,
+    GetValue,
 
     // statements
     Program,

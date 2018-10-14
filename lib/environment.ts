@@ -28,14 +28,14 @@ export function getEnvironmentForValue(env: Environment, name: string): Environm
   return null;
 }
 
-type SetValue<T> = {
+type SetValueT<T> = {
   name: string;
   value: T;
   isDeclaration: boolean;
 };
 
-export function setValue<T>(
-  { name, value, isDeclaration }: SetValue<T>,
+export function SetValue<T>(
+  { name, value, isDeclaration }: SetValueT<T>,
   c: Continuation,
   cerr: ErrorContinuation,
   env: Environment<T>
@@ -52,7 +52,12 @@ export function setValue<T>(
   }
 }
 
-export function getValue<T>(name: string, c: Continuation<T>, cerr: ErrorContinuation, env: Environment<T>) {
+export function GetValue<T>(
+  { name }: { name: string },
+  c: Continuation<T>,
+  cerr: ErrorContinuation,
+  env: Environment<T>
+) {
   let _env: Environment | undefined = env;
   do {
     if (!_env) {

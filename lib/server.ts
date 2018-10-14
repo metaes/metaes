@@ -32,6 +32,7 @@ export const runWSServer = (port: number = config.port, context = testContext) =
   new Promise((resolve, _reject) => {
     const server = http.createServer();
     const app = express();
+
     app.use(bodyParser.json());
     app.use(bodyParser.text());
     app.use(helmet());

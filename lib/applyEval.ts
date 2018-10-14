@@ -1,4 +1,4 @@
-import { Environment, getValue } from "./environment";
+import { Environment, GetValue } from "./environment";
 import { NotImplementedException } from "./exceptions";
 import { callInterceptor } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
@@ -12,8 +12,8 @@ export function evaluate(
   config: EvaluationConfig
 ) {
   callInterceptor("enter", config, e, env);
-  getValue(
-    e.type,
+  GetValue(
+    { name: e.type },
     (interpreter: Interpreter<ASTNode>) => {
       try {
         interpreter(

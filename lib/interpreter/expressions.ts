@@ -1,5 +1,5 @@
 import { evaluate, evaluateArray } from "../applyEval";
-import { Environment, getValue, setValue } from "../environment";
+import { Environment, GetValue } from "../environment";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import {
@@ -107,7 +107,7 @@ export function CallExpression(
             callee => {
               try {
                 const cnt = thisObj => evaluate({ type: "Apply", e, fn: callee, thisObj, args }, c, cerr, env, config);
-                getValue("this", cnt, () => cnt(undefined), env);
+                GetValue({ name: "this" }, cnt, () => cnt(undefined), env);
               } catch (error) {
                 cerr(toException(error, e_callee));
               }
@@ -205,7 +205,7 @@ export function AssignmentExpression(e: AssignmentExpression, c, cerr, env, conf
       const e_left = e.left;
       switch (e_left.type) {
         case "Identifier":
-          setValue({ name: e_left.name, value: right, isDeclaration: false }, c, cerr, env);
+          evaluate({ type: "SetValue", name: e_left.name, value: right, isDeclaration: false }, c, cerr, env, config);
           break;
         case "MemberExpression":
           evaluate(
@@ -403,8 +403,8 @@ export function NewExpression(e: NewExpression, c, cerr, env, config) {
           );
           break;
         case "Identifier":
-          getValue(
-            calleeNode.name,
+          GetValue(
+            { name: calleeNode.name },
             callee => {
               if (typeof callee !== "function") {
                 cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
@@ -456,8 +456,8 @@ export function UpdateExpression(e: UpdateExpression, c, cerr, env: Environment)
   switch (e.argument.type) {
     case "Identifier":
       const propName = e.argument.name;
-      getValue(
-        propName,
+      GetValue(
+        { name: propName },
         _ => {
           // discard found value
           // if value is found, there must be an env for that value, don't check for negative case
@@ -536,7 +536,7 @@ export function UnaryExpression(e: UnaryExpression, c, cerr, env: Environment, c
 }
 
 export function ThisExpression(_e: ThisExpression, c, cerr, env: Environment) {
-  getValue("this", c, cerr, env);
+  GetValue({ name: "this" }, c, cerr, env);
 }
 
 export function ConditionalExpression(e: ConditionalExpression, c, cerr, env, config) {
