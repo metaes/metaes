@@ -68,10 +68,10 @@ describe("Example Proxy implementation", async () => {
   };
 
   const ERROR_MESSAGE = "Can't write to proxied object";
-  let value, self, context;
+  let context;
 
   beforeEach(() => {
-    value = { a: 1, b: 2 };
+    let value = { a: 1, b: 2 };
     let proxied = new Proxy(value, {
       get(object, property) {
         return object[property] + "mln";
@@ -80,19 +80,21 @@ describe("Example Proxy implementation", async () => {
         throw new Error(ERROR_MESSAGE);
       }
     });
-    self = { value, proxied };
+    let self = { value, proxied };
     context = new MetaesContext(undefined, console.error, { values: { self, console } }, { interpreters });
   });
 
-  it("should standard get operations", async () => {
-    assert.deepEqual(await context.evalFunctionBody(() => [self.value.a, self.value.b]), [1, 2]);
+  it("should support standard get operations", async () => {
+    assert.deepEqual(await context.evalFunctionBody(self => [self.value.a, self.value.b]), [1, 2]);
   });
+
   it("should support custom get operations", async () => {
-    assert.deepEqual(await context.evalFunctionBody(() => [self.proxied.a, self.proxied.b]), ["1mln", "2mln"]);
+    assert.deepEqual(await context.evalFunctionBody(self => [self.proxied.a, self.proxied.b]), ["1mln", "2mln"]);
   });
+
   it("should support custom set operations", async () => {
     try {
-      await context.evalFunctionBody(() => {
+      await context.evalFunctionBody(self => {
         self.proxied.a = "a new value";
       });
     } catch (e) {
