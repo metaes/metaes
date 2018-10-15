@@ -152,7 +152,6 @@ export const evalFunctionBody = (
 
 /**
  * Evaluates function in context.
- * TODO: creates new script each time - optimize.
  * @param source
  * @param args
  */

@@ -1,5 +1,5 @@
 import { Environment, GetValue } from "./environment";
-import { NotImplementedException } from "./exceptions";
+import { NotImplementedException, toException } from "./exceptions";
 import { callInterceptor } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
 import { Continuation, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
@@ -23,6 +23,7 @@ export function evaluate(
             c(value);
           },
           exception => {
+            exception = toException(exception);
             if (!exception.location) {
               exception.location = e;
             }

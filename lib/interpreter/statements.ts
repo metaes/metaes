@@ -140,7 +140,11 @@ export function CatchClause(e: CatchClause, c, cerr, env, config) {
         c,
         cerr,
         {
-          values: { [e.param.name]: error },
+          values: {
+            // TODO: add more tests
+            // In case error is an exception, just use its value
+            [e.param.name]: error ? error.value || error : error
+          },
           prev: env
         },
         config
