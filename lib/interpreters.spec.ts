@@ -102,14 +102,16 @@ describe("Example Proxy implementation", async () => {
   });
 });
 
-describe("Example of remote context for database access", () => {
-  class Table {
-    constructor(public name: string) {}
+describe("Example remote context for database access", () => {
+  class MetaArray {
+    push(args, c, cerr) {}
 
-    GetProperty();
+    GetProperty(key, c, cerr) {}
+    SetProperty({ key, value }, c, cerr) {}
   }
+
   let env = {
-    posts: new Table("posts"),
-    users: new Table("users")
+    posts: [],
+    users: []
   };
 });
