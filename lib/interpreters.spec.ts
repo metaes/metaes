@@ -3,7 +3,6 @@ import { before, beforeEach, describe, it } from "mocha";
 import { GetProperty, SetProperty } from "./interpreter/base";
 import { EcmaScriptInterpreters } from "./interpreters";
 import { MetaesContext } from "./metaes";
-import { createReadStream } from "fs";
 
 describe("Interpreters", () => {
   let context: MetaesContext;
@@ -103,7 +102,7 @@ describe("Example Proxy implementation", async () => {
   });
 });
 
-describe("Example remote context for database access", () => {
+describe("Example of remote context for database access", () => {
   class Table {
     constructor(public name: string) {}
 

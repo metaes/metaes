@@ -31,6 +31,7 @@ export function GetProperty({ object, property }: GetProperty, c) {
   c(object[property]);
 }
 
+// TODO: when not using `=` should also incorporate GetValue
 export function SetProperty({ object, property, value, operator }: SetProperty, c, cerr) {
   switch (operator) {
     case "=":
