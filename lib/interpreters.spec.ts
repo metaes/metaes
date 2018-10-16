@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { before, beforeEach, describe, it } from "mocha";
-import { GetProperty, SetProperty } from "./interpreter/base";
+import { GetProperty, SetProperty, Apply } from "./interpreter/base";
 import { EcmaScriptInterpreters } from "./interpreters";
 import { MetaesContext } from "./metaes";
 
@@ -104,14 +104,116 @@ describe("Example Proxy implementation", async () => {
 
 describe("Example remote context for database access", () => {
   class MetaArray {
-    push(args, c, cerr) {}
+    constructor(private _internalArray: any[]) {}
 
-    GetProperty(key, c, cerr) {}
-    SetProperty({ key, value }, c, cerr) {}
+    push(args, c, _cerr) {
+      // a bit later
+      setTimeout(() => {
+        c(this._internalArray.push(...args));
+      });
+    }
+    slice(args, c, _cerr) {
+      c(this._internalArray.slice(args[0], args[1]));
+    }
+
+    length(c, _cerr) {
+      c(10);
+    }
+
+    GetProperty({ property }, c, cerr) {
+      if (property === "length") {
+        this.length(c, cerr);
+      } else if (typeof property === "number" && typeof this._internalArray[property] === "number") {
+        c(this._internalArray[property] + "$");
+      } else {
+        c(this._internalArray[property]);
+      }
+    }
+    SetProperty({ property, value }, c, cerr) {
+      try {
+        c((this._internalArray[property] = value));
+      } catch (e) {
+        cerr(e);
+      }
+    }
+    Apply({ fn, args }, c, cerr) {
+      if (fn.name === "push") {
+        this.push(args, c, cerr);
+      } else if (fn.name === "slice") {
+        this.slice(args, c, cerr);
+      } else {
+        c(fn.apply(this._internalArray, args));
+      }
+    }
   }
 
-  let env = {
-    posts: [],
-    users: []
+  let interpreters = {
+    values: {
+      GetProperty({ object }) {
+        if (object instanceof MetaArray) {
+          object.GetProperty.apply(object, arguments);
+        } else {
+          GetProperty.apply(null, arguments);
+        }
+      },
+      SetProperty({ object }) {
+        if (object instanceof MetaArray) {
+          object.SetProperty.apply(object, arguments);
+        } else {
+          SetProperty.apply(null, arguments);
+        }
+      },
+      Apply({ thisObj }) {
+        if (thisObj instanceof MetaArray) {
+          thisObj.Apply.apply(thisObj, arguments);
+        } else {
+          Apply.apply(null, arguments);
+        }
+      }
+    },
+    prev: EcmaScriptInterpreters
   };
+
+  let context;
+
+  beforeEach(() => {
+    let self = {
+      users: new MetaArray([])
+    };
+    context = new MetaesContext(undefined, console.error, { values: { self, console } }, { interpreters });
+  });
+
+  it("should support custom push method call", async () => {
+    assert.deepEqual(
+      await context.evalFunctionBody(self => {
+        self.users.push({ name: "new user" });
+        self.users[0];
+      }),
+      { name: "new user" }
+    );
+  });
+
+  it("should support custom slice method call", async () => {
+    assert.deepEqual(
+      await context.evalFunctionBody(self => {
+        self.users.push({ name: "new user1" }, { name: "new user2" }, { name: "new user3" }, { name: "new user4" });
+        self.users.slice(1, 3);
+      }),
+      [{ name: "new user2" }, { name: "new user3" }]
+    );
+  });
+
+  it("should support custom array length", async () => {
+    assert.equal(await context.evalFunctionBody(self => self.users.length), 10);
+  });
+
+  it("should support assigning to and getting from number property", async () => {
+    assert.equal(
+      await context.evalFunctionBody(self => {
+        self.users[0] = 1;
+        self.users[0];
+      }),
+      "1$"
+    );
+  });
 });
