@@ -178,11 +178,10 @@ const hasPerformance = typeof performance === "function";
 export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNode, env?: Environment, value?) =>
   config.interceptor !== noop &&
   config.interceptor({
-    script: config.script,
+    config,
     e,
     phase,
     value,
     timestamp: hasPerformance ? performance.now() : new Date().getTime(),
-    env,
-    config
+    env
   });

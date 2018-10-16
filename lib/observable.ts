@@ -7,8 +7,8 @@ import { Evaluation } from "./types";
 type Traps = {
   set?: (target: object, key: string, args: any) => void;
   didSet?: (target: object, key: string, args: any) => void;
-  apply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
-  didApply?: (target: object, methodName: string, args: any[], expressionValue: any) => void;
+  apply?: (target: object, method: Function, args: any[], expressionValue: any) => void;
+  didApply?: (target: object, method: Function, args: any[], expressionValue: any) => void;
 };
 
 type ObserverHandler = {
@@ -98,7 +98,7 @@ export class ObservableContext extends MetaesContext {
   }
 
   interceptor(evaluation: Evaluation) {
-    const flameGraph = this._flameGraphs[evaluation.script.scriptId];
+    const flameGraph = this._flameGraphs[evaluation.config.script.scriptId];
 
     this._mainInterceptor(evaluation);
     for (let i = 0; i < flameGraph.oneTimeInterceptors.length; i++) {
@@ -117,7 +117,7 @@ export class ObservableContext extends MetaesContext {
   }
 
   _mainInterceptor(evaluation: Evaluation) {
-    const flameGraph = this._flameGraphs[evaluation.script.scriptId];
+    const flameGraph = this._flameGraphs[evaluation.config.script.scriptId];
     const getValue = e => flameGraph.values.get(e);
 
     let traps;
@@ -161,7 +161,9 @@ export class ObservableContext extends MetaesContext {
   private _flameGraphBuilder(builderPhase: "before" | "after", evaluation: Evaluation) {
     const {
       phase,
-      script: { scriptId }
+      config: {
+        script: { scriptId }
+      }
     } = evaluation;
     const flameGraph =
       this._flameGraphs[scriptId] ||

@@ -41,7 +41,7 @@ export interface Evaluation {
   e: ASTNode;
   value: EvaluationValue;
   phase: Phase;
-  script: Script;
+  config: EvaluationConfig;
   timestamp: number;
   env?: Environment;
 }

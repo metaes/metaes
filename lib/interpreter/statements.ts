@@ -3,7 +3,7 @@ import { GetValue } from "../environment";
 import { LocatedError, NotImplementedException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
-import { EvaluationConfig } from "../types";
+import { EvaluationConfig, MetaesException } from "../types";
 
 function hoistDeclarations(e: NodeTypes.Statement[], c, cerr, env, config) {
   visitArray(
@@ -110,7 +110,7 @@ export function ThrowStatement(e: NodeTypes.ThrowStatement, _c, cerr, env, confi
 export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
   GetValue(
     { name: "/exception" },
-    error =>
+    (error: MetaesException | Error) =>
       evaluate(
         e.body,
         c,
@@ -119,7 +119,7 @@ export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
           values: {
             // TODO: add more tests
             // In case error is an exception, just use its value
-            [e.param.name]: error ? error.value || error : error
+            [e.param.name]: error ? Object.hasOwnProperty.call(error, "value") || error : error
           },
           prev: env
         },
