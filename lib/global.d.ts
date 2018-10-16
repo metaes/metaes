@@ -2,6 +2,8 @@ declare interface Object {
   entries: Function;
 }
 
-declare interface NodeJS {
-  Global: { fetch?: Function };
+declare namespace NodeJS {
+  interface Global {
+    fetch?: Function;
+  }
 }
