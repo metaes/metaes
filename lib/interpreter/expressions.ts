@@ -2,25 +2,7 @@ import { evaluate, evaluateArray } from "../applyEval";
 import { Environment, GetValue } from "../environment";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
-import {
-  ArrayExpression,
-  ArrowFunctionExpression,
-  AssignmentExpression,
-  BinaryExpression,
-  CallExpression,
-  ConditionalExpression,
-  FunctionExpression,
-  LogicalExpression,
-  MemberExpression,
-  NewExpression,
-  ObjectExpression,
-  Property,
-  SequenceExpression,
-  TemplateLiteral,
-  ThisExpression,
-  UnaryExpression,
-  UpdateExpression
-} from "../nodeTypes";
+import * as NodeTypes from "../nodeTypes";
 import { callWithCurrentContinuation } from "../special";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { IfStatement } from "./statements";
@@ -33,7 +15,7 @@ export function lastArrayItem(array?: any[]) {
 }
 
 export function CallExpression(
-  e: CallExpression,
+  e: NodeTypes.CallExpression,
   c: Continuation,
   cerr: ErrorContinuation,
   env: Environment,
@@ -131,7 +113,7 @@ export function CallExpression(
   );
 }
 
-export function MemberExpression(e: MemberExpression, c, cerr, env, config) {
+export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, config) {
   evaluate(
     e.object,
     object => {
@@ -182,7 +164,13 @@ export function MemberExpression(e: MemberExpression, c, cerr, env, config) {
   );
 }
 
-function _createMetaFunction(e: ArrowFunctionExpression | FunctionExpression, c, cerr, env, config) {
+function _createMetaFunction(
+  e: NodeTypes.ArrowFunctionExpression | NodeTypes.FunctionExpression,
+  c,
+  cerr,
+  env,
+  config
+) {
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
@@ -190,15 +178,15 @@ function _createMetaFunction(e: ArrowFunctionExpression | FunctionExpression, c,
   }
 }
 
-export function ArrowFunctionExpression(e: ArrowFunctionExpression, c, cerr, env, config) {
+export function ArrowFunctionExpression(e: NodeTypes.ArrowFunctionExpression, c, cerr, env, config) {
   _createMetaFunction(e, c, cerr, env, config);
 }
 
-export function FunctionExpression(e: FunctionExpression, c, cerr, env, config) {
+export function FunctionExpression(e: NodeTypes.FunctionExpression, c, cerr, env, config) {
   _createMetaFunction(e, c, cerr, env, config);
 }
 
-export function AssignmentExpression(e: AssignmentExpression, c, cerr, env, config: EvaluationConfig) {
+export function AssignmentExpression(e: NodeTypes.AssignmentExpression, c, cerr, env, config: EvaluationConfig) {
   evaluate(
     e.right,
     right => {
@@ -254,7 +242,7 @@ export function AssignmentExpression(e: AssignmentExpression, c, cerr, env, conf
   );
 }
 
-export function ObjectExpression(e: ObjectExpression, c, cerr, env, config) {
+export function ObjectExpression(e: NodeTypes.ObjectExpression, c, cerr, env, config) {
   let object = {};
   evaluateArray(
     e.properties,
@@ -270,7 +258,7 @@ export function ObjectExpression(e: ObjectExpression, c, cerr, env, config) {
   );
 }
 
-export function Property(e: Property, c, cerr, env, config) {
+export function Property(e: NodeTypes.Property, c, cerr, env, config) {
   let key;
   switch (e.key.type) {
     case "Identifier":
@@ -286,7 +274,7 @@ export function Property(e: Property, c, cerr, env, config) {
   evaluate(e.value, value => c({ key, value }), cerr, env, config);
 }
 
-export function BinaryExpression(e: BinaryExpression, c, cerr, env, config) {
+export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, config) {
   evaluate(
     e.left,
     left => {
@@ -372,11 +360,11 @@ export function BinaryExpression(e: BinaryExpression, c, cerr, env, config) {
   );
 }
 
-export function ArrayExpression(e: ArrayExpression, c, cerr, env, config) {
+export function ArrayExpression(e: NodeTypes.ArrayExpression, c, cerr, env, config) {
   evaluateArray(e.elements, c, cerr, env, config);
 }
 
-export function NewExpression(e: NewExpression, c, cerr, env, config) {
+export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) {
   evaluateArray(
     e.arguments,
     args => {
@@ -430,11 +418,11 @@ export function NewExpression(e: NewExpression, c, cerr, env, config) {
   );
 }
 
-export function SequenceExpression(e: SequenceExpression, c, cerr, env, config) {
+export function SequenceExpression(e: NodeTypes.SequenceExpression, c, cerr, env, config) {
   evaluateArray(e.expressions, results => (results.length ? c(lastArrayItem(results)) : c()), cerr, env, config);
 }
 
-export function LogicalExpression(e: LogicalExpression, c, cerr, env, config) {
+export function LogicalExpression(e: NodeTypes.LogicalExpression, c, cerr, env, config) {
   evaluate(
     e.left,
     left => {
@@ -452,7 +440,7 @@ export function LogicalExpression(e: LogicalExpression, c, cerr, env, config) {
   );
 }
 
-export function UpdateExpression(e: UpdateExpression, c, cerr, env: Environment) {
+export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: Environment) {
   switch (e.argument.type) {
     case "Identifier":
       const propName = e.argument.name;
@@ -502,7 +490,7 @@ export function UpdateExpression(e: UpdateExpression, c, cerr, env: Environment)
   }
 }
 
-export function UnaryExpression(e: UnaryExpression, c, cerr, env: Environment, config) {
+export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Environment, config) {
   evaluate(
     e.argument,
     argument => {
@@ -535,18 +523,38 @@ export function UnaryExpression(e: UnaryExpression, c, cerr, env: Environment, c
   );
 }
 
-export function ThisExpression(_e: ThisExpression, c, cerr, env: Environment) {
+export function ThisExpression(_e: NodeTypes.ThisExpression, c, cerr, env: Environment) {
   GetValue({ name: "this" }, c, cerr, env);
 }
 
-export function ConditionalExpression(e: ConditionalExpression, c, cerr, env, config) {
+export function ConditionalExpression(e: NodeTypes.ConditionalExpression, c, cerr, env, config) {
   IfStatement(e, c, cerr, env, config);
 }
 
-export function TemplateLiteral(e: TemplateLiteral, c, cerr) {
+export function TemplateLiteral(e: NodeTypes.TemplateLiteral, c, cerr) {
   if (e.quasis.length === 1 && e.expressions.length === 0) {
     c(e.quasis[0].value.raw);
   } else {
     cerr(NotImplementedException(`Only single-quasis and expression-free template literals are supported for now.`));
   }
 }
+
+export default {
+  CallExpression,
+  MemberExpression,
+  ArrowFunctionExpression,
+  FunctionExpression,
+  AssignmentExpression,
+  ObjectExpression,
+  Property,
+  BinaryExpression,
+  ArrayExpression,
+  NewExpression,
+  SequenceExpression,
+  LogicalExpression,
+  UpdateExpression,
+  UnaryExpression,
+  ThisExpression,
+  ConditionalExpression,
+  TemplateLiteral
+};

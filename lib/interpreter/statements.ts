@@ -2,36 +2,12 @@ import { evaluate, evaluateArray, visitArray } from "../applyEval";
 import { GetValue } from "../environment";
 import { LocatedError, NotImplementedException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
-import {
-  BlockStatement as BlockStatement_,
-  CatchClause,
-  ClassBody,
-  ClassDeclaration,
-  ConditionalExpression,
-  DebuggerStatement,
-  EmptyStatement,
-  ExpressionStatement,
-  ForInStatement,
-  ForOfStatement,
-  ForStatement,
-  FunctionDeclaration,
-  Identifier,
-  IfStatement,
-  MethodDefinition,
-  Program,
-  ReturnStatement,
-  Statement,
-  ThrowStatement,
-  TryStatement,
-  VariableDeclaration,
-  VariableDeclarator,
-  WhileStatement
-} from "../nodeTypes";
+import * as NodeTypes from "../nodeTypes";
 import { EvaluationConfig } from "../types";
 
-function hoistDeclarations(e: Statement[], c, cerr, env, config) {
+function hoistDeclarations(e: NodeTypes.Statement[], c, cerr, env, config) {
   visitArray(
-    e.filter(e => e.type === "FunctionDeclaration") as FunctionDeclaration[],
+    e.filter(e => e.type === "FunctionDeclaration") as NodeTypes.FunctionDeclaration[],
     (e, c, cerr) =>
       evaluate(
         e,
@@ -45,7 +21,7 @@ function hoistDeclarations(e: Statement[], c, cerr, env, config) {
   );
 }
 
-export function BlockStatement(e: BlockStatement_ | Program, c, cerr, env, config) {
+export function BlockStatement(e: NodeTypes.BlockStatement | NodeTypes.Program, c, cerr, env, config) {
   hoistDeclarations(
     e.body,
     () => evaluateArray(e.body, blockValues => c(blockValues[blockValues.length - 1]), cerr, env, config),
@@ -55,20 +31,20 @@ export function BlockStatement(e: BlockStatement_ | Program, c, cerr, env, confi
   );
 }
 
-export function Program(e: Program, c, cerr, env, config) {
+export function Program(e: NodeTypes.Program, c, cerr, env, config) {
   BlockStatement(e, c, cerr, env, config);
 }
 
-export function VariableDeclaration(e: VariableDeclaration, c, cerr, env, config) {
+export function VariableDeclaration(e: NodeTypes.VariableDeclaration, c, cerr, env, config) {
   visitArray(
     e.declarations,
-    (declarator: VariableDeclarator, c, cerr) => evaluate(declarator, c, cerr, env, config),
+    (declarator: NodeTypes.VariableDeclarator, c, cerr) => evaluate(declarator, c, cerr, env, config),
     c,
     cerr
   );
 }
 
-export function VariableDeclarator(e: VariableDeclarator, c, cerr, env, config) {
+export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env, config) {
   function id(initValue) {
     switch (e.id.type) {
       case "Identifier":
@@ -81,7 +57,7 @@ export function VariableDeclarator(e: VariableDeclarator, c, cerr, env, config) 
   e.init ? evaluate(e.init, id, cerr, env, config) : id(undefined);
 }
 
-export function IfStatement(e: IfStatement | ConditionalExpression, c, cerr, env, config) {
+export function IfStatement(e: NodeTypes.IfStatement | NodeTypes.ConditionalExpression, c, cerr, env, config) {
   evaluate(
     e.test,
     test => {
@@ -99,11 +75,11 @@ export function IfStatement(e: IfStatement | ConditionalExpression, c, cerr, env
   );
 }
 
-export function ExpressionStatement(e: ExpressionStatement, c, cerr, env, config) {
+export function ExpressionStatement(e: NodeTypes.ExpressionStatement, c, cerr, env, config) {
   evaluate(e.expression, c, cerr, env, config);
 }
 
-export function TryStatement(e: TryStatement, c, cerr, env, config: EvaluationConfig) {
+export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: EvaluationConfig) {
   evaluate(
     e.block,
     c,
@@ -127,11 +103,11 @@ export function TryStatement(e: TryStatement, c, cerr, env, config: EvaluationCo
   );
 }
 
-export function ThrowStatement(e: ThrowStatement, _c, cerr, env, config) {
+export function ThrowStatement(e: NodeTypes.ThrowStatement, _c, cerr, env, config) {
   evaluate(e.argument, value => cerr({ type: "ThrowStatement", value, location: e }), cerr, env, config);
 }
 
-export function CatchClause(e: CatchClause, c, cerr, env, config) {
+export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
   GetValue(
     { name: "/exception" },
     error =>
@@ -154,13 +130,13 @@ export function CatchClause(e: CatchClause, c, cerr, env, config) {
   );
 }
 
-export function ReturnStatement(e: ReturnStatement, _c, cerr, env, config) {
+export function ReturnStatement(e: NodeTypes.ReturnStatement, _c, cerr, env, config) {
   e.argument
     ? evaluate(e.argument, value => cerr({ type: "ReturnStatement", value }), cerr, env, config)
     : cerr({ type: "ReturnStatement" });
 }
 
-export function FunctionDeclaration(e: FunctionDeclaration, c, cerr, env, config) {
+export function FunctionDeclaration(e: NodeTypes.FunctionDeclaration, c, cerr, env, config) {
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
@@ -168,7 +144,7 @@ export function FunctionDeclaration(e: FunctionDeclaration, c, cerr, env, config
   }
 }
 
-export function ForInStatement(e: ForInStatement, c, cerr, env, config) {
+export function ForInStatement(e: NodeTypes.ForInStatement, c, cerr, env, config) {
   evaluate(
     e.right,
     right => {
@@ -197,13 +173,13 @@ export function ForInStatement(e: ForInStatement, c, cerr, env, config) {
   );
 }
 
-export function ForStatement(e: ForStatement, _c, cerr, env, config) {
+export function ForStatement(e: NodeTypes.ForStatement, _c, cerr, env, config) {
   evaluate(e.init, _init => cerr(NotImplementedException(`${e.type} is not implemented yet`)), cerr, env, config);
 }
 
 export const ForOfBinding = "-metaes-for-of-binding";
 
-export function ForOfStatement(e: ForOfStatement, c, cerr, env, config) {
+export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config) {
   evaluate(
     e.right,
     right => {
@@ -241,7 +217,7 @@ export function ForOfStatement(e: ForOfStatement, c, cerr, env, config) {
                     evaluate(
                       {
                         type: "SetValue",
-                        name: (<Identifier>e.left.declarations[0].id).name,
+                        name: (<NodeTypes.Identifier>e.left.declarations[0].id).name,
                         value: rightItem,
                         isDeclaration: true
                       },
@@ -271,18 +247,18 @@ export function ForOfStatement(e: ForOfStatement, c, cerr, env, config) {
   );
 }
 
-export function WhileStatement(e: WhileStatement, c, cerr, env, config) {
+export function WhileStatement(e: NodeTypes.WhileStatement, c, cerr, env, config) {
   (function loop() {
     evaluate(e.test, test => (test ? evaluate(e.body, loop, cerr, env, config) : c()), cerr, env, config);
   })();
 }
 
-export function EmptyStatement(_e: EmptyStatement, c) {
+export function EmptyStatement(_e: NodeTypes.EmptyStatement, c) {
   c();
 }
 
 // TODO: clean up, fix error
-export function ClassDeclaration(e: ClassDeclaration, c, cerr, env, config) {
+export function ClassDeclaration(e: NodeTypes.ClassDeclaration, c, cerr, env, config) {
   evaluate(
     e.superClass,
     superClass =>
@@ -316,11 +292,11 @@ export function ClassDeclaration(e: ClassDeclaration, c, cerr, env, config) {
   );
 }
 
-export function ClassBody(e: ClassBody, c, cerr, env, config) {
+export function ClassBody(e: NodeTypes.ClassBody, c, cerr, env, config) {
   evaluateArray(e.body, c, cerr, env, config);
 }
 
-export function MethodDefinition(e: MethodDefinition, c, cerr, env, config) {
+export function MethodDefinition(e: NodeTypes.MethodDefinition, c, cerr, env, config) {
   evaluate(
     e.value,
     value =>
@@ -333,7 +309,30 @@ export function MethodDefinition(e: MethodDefinition, c, cerr, env, config) {
   );
 }
 
-export function DebuggerStatement(_e: DebuggerStatement, c) {
+export function DebuggerStatement(_e: NodeTypes.DebuggerStatement, c) {
   debugger;
   c();
 }
+
+export default {
+  BlockStatement,
+  Program,
+  VariableDeclarator,
+  VariableDeclaration,
+  IfStatement,
+  ExpressionStatement,
+  TryStatement,
+  ThrowStatement,
+  CatchClause,
+  ReturnStatement,
+  FunctionDeclaration,
+  ForInStatement,
+  ForStatement,
+  ForOfStatement,
+  WhileStatement,
+  EmptyStatement,
+  ClassDeclaration,
+  ClassBody,
+  MethodDefinition,
+  DebuggerStatement
+};
