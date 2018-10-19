@@ -155,7 +155,7 @@ export const evalFunctionBody = (
  * @param source
  * @param args
  */
-export async function evaluateFunction(context: MetaesContext, source: ((...rest) => void), ...args: any[]) {
+export async function evaluateFunction<T extends any[]>(context: MetaesContext, source: ((...T) => void), ...args: T) {
   return (await evalToPromise(context, source)).apply(null, args);
 }
 
