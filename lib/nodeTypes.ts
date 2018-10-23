@@ -151,6 +151,12 @@ export interface VariableDeclarator extends NodeBase {
   init: Expression;
 }
 
+export interface AssignmentPattern extends NodeBase {
+  type: "AssignmentPattern";
+  left: Identifier;
+  right: Expression;
+}
+
 export interface ObjectPattern extends NodeBase {
   type: "ObjectPattern";
   properties: Property[];

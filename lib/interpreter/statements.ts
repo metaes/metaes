@@ -50,11 +50,48 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
       case "Identifier":
         evaluate({ type: "SetValue", name: e.id.name, value: initValue, isDeclaration: true }, c, cerr, env, config);
         break;
+      case "ObjectPattern":
+        visitArray(
+          e.id.properties,
+          (property, c, cerr) => {
+            if (property.value) {
+              evaluate(property, c, cerr, env, config);
+            } else {
+              console.log("evaluate me", property);
+            }
+          },
+          c,
+          cerr
+        );
+        break;
       default:
         cerr(NotImplementedException(`Init ${e.id.type} is not supported yet.`, e));
     }
   }
   e.init ? evaluate(e.init, id, cerr, env, config) : id(undefined);
+}
+
+export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, config) {
+  evaluate(
+    e.right,
+    right => {
+      switch (e.left.type) {
+        case "Identifier":
+          evaluate({ type: "SetValue", name: e.left.name, value: right, isDeclaration: true }, c, cerr, env, config);
+          break;
+        default:
+          cerr(
+            NotImplementedException(
+              `${e.left.type} is not supported as AssignmentPattern left-hand side value.`,
+              e.left
+            )
+          );
+      }
+    },
+    cerr,
+    env,
+    config
+  );
 }
 
 export function IfStatement(e: NodeTypes.IfStatement | NodeTypes.ConditionalExpression, c, cerr, env, config) {
@@ -319,6 +356,7 @@ export default {
   Program,
   VariableDeclarator,
   VariableDeclaration,
+  AssignmentPattern,
   IfStatement,
   ExpressionStatement,
   TryStatement,
