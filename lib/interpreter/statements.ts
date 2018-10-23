@@ -54,18 +54,11 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
         visitArray(
           e.id.properties,
           (property, c, cerr) => {
-            if (property.value) {
-              // For example: let {x} = obj;
-              // Don't want to try evaluate {x:x} as expanded property, so skip property evaluation.
-              if (property.shorthand && property.key.type === "Identifier" && property.value.type === "Identifier") {
-                const name = property.key.name;
-                evaluate({ type: "SetValue", name, value: initValue[name], isDeclaration: true }, c, cerr, env, config);
-              } else {
-                evaluate(property, c, cerr, env, config);
-              }
-            } else {
-              switch (property.key.type) {
-                case "Identifier":
+            if (property.key.type === "Identifier") {
+              if (property.value) {
+                // For example: let {x} = obj;
+                // Don't want to try evaluate {x:x} as expanded property, so skip property evaluation.
+                if (property.shorthand && property.value.type === "Identifier") {
                   const name = property.key.name;
                   evaluate(
                     { type: "SetValue", name, value: initValue[name], isDeclaration: true },
@@ -74,11 +67,22 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
                     env,
                     config
                   );
-                  break;
-                default:
-                  cerr(NotImplementedException(`Property key of '${e.id.type}' type is not supported yet.`, e));
-                  break;
+                } else {
+                  const name = property.key.name;
+                  const setValue = value =>
+                    evaluate({ type: "SetValue", name, value, isDeclaration: true }, c, cerr, env, config);
+                  initValue[name] ? setValue(initValue[name]) : evaluate(property.value, setValue, cerr, env, config);
+                }
+              } else {
+                evaluate(property, c, cerr, env, config);
               }
+            } else {
+              cerr(
+                NotImplementedException(
+                  `Property key of '${property.key.type}' type is not supported yet.`,
+                  property.key
+                )
+              );
             }
           },
           c,
