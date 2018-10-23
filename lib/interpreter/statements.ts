@@ -55,9 +55,30 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
           e.id.properties,
           (property, c, cerr) => {
             if (property.value) {
-              evaluate(property, c, cerr, env, config);
+              // For example: let {x} = obj;
+              // Don't want to try evaluate {x:x} as expanded property, so skip property evaluation.
+              if (property.shorthand && property.key.type === "Identifier" && property.value.type === "Identifier") {
+                const name = property.key.name;
+                evaluate({ type: "SetValue", name, value: initValue[name], isDeclaration: true }, c, cerr, env, config);
+              } else {
+                evaluate(property, c, cerr, env, config);
+              }
             } else {
-              console.log("evaluate me", property);
+              switch (property.key.type) {
+                case "Identifier":
+                  const name = property.key.name;
+                  evaluate(
+                    { type: "SetValue", name, value: initValue[name], isDeclaration: true },
+                    c,
+                    cerr,
+                    env,
+                    config
+                  );
+                  break;
+                default:
+                  cerr(NotImplementedException(`Property key of '${e.id.type}' type is not supported yet.`, e));
+                  break;
+              }
             }
           },
           c,
@@ -65,7 +86,7 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
         );
         break;
       default:
-        cerr(NotImplementedException(`Init ${e.id.type} is not supported yet.`, e));
+        cerr(NotImplementedException(`Init '${e.id.type}' is not supported yet.`, e));
     }
   }
   e.init ? evaluate(e.init, id, cerr, env, config) : id(undefined);
