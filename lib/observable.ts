@@ -39,7 +39,6 @@ export class ObservableContext extends MetaesContext {
   private _listeners: EvaluationListener[] = [];
   private _handlers: Map<any, Traps[]> = new Map();
   private _flameGraphs: FlameGraphs = {};
-
   private _globalExecutionStack: EvaluationNode[] = [];
 
   constructor(target: object, mainTraps?: Traps) {
