@@ -266,3 +266,6 @@ describe("Special", () => {
     expect(result).deep.eq([errorMessage, 1, 5, serverData]);
   });
 });
+
+// TODO: add example when config interpreters are modified in a function scope and change how code is executed. 
+// Using call/cc and config.interpreters

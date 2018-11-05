@@ -141,6 +141,10 @@ export function ExpressionStatement(e: NodeTypes.ExpressionStatement, c, cerr, e
   evaluate(e.expression, c, cerr, env, config);
 }
 
+// Use name which is illegal JavaScript identifier.
+// It will disallow collision with user names.
+const EXCEPTION_NAME = "/exception";
+
 export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: EvaluationConfig) {
   evaluate(
     e.block,
@@ -152,9 +156,7 @@ export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: Ev
         cerr,
         {
           values: {
-            // Use name which is illegal JavaScript identifier.
-            // It will disallow collision with user names.
-            "/exception": exception.value
+            [EXCEPTION_NAME]: exception.value
           },
           prev: env
         },
@@ -171,7 +173,7 @@ export function ThrowStatement(e: NodeTypes.ThrowStatement, _c, cerr, env, confi
 
 export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
   GetValue(
-    { name: "/exception" },
+    { name: EXCEPTION_NAME },
     (error: MetaesException | Error) =>
       evaluate(
         e.body,
@@ -239,7 +241,7 @@ export function ForStatement(e: NodeTypes.ForStatement, _c, cerr, env, config) {
   evaluate(e.init, _init => cerr(NotImplementedException(`${e.type} is not implemented yet`)), cerr, env, config);
 }
 
-export const ForOfBinding = "-metaes-for-of-binding";
+export const FOR_OF_BINDING = "-metaes-for-of-binding";
 
 export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config) {
   evaluate(
@@ -266,7 +268,7 @@ export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config
                        * It purposedly has ECMAScript incorrect identifier value.
                        * Can be used by any kind of evaluation observers.
                        */
-                      values: { [ForOfBinding]: rightItem }
+                      values: { [FOR_OF_BINDING]: rightItem }
                     };
 
                     /**
