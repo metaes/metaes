@@ -88,8 +88,9 @@ export function CallExpression(
             e.callee,
             callee => {
               try {
-                const cnt = thisObj => evaluate({ type: "Apply", e, fn: callee, thisObj, args }, c, cerr, env, config);
-                GetValue({ name: "this" }, cnt, () => cnt(undefined), env);
+                const cnt = (thisObj?) =>
+                  evaluate({ type: "Apply", e, fn: callee, thisObj, args }, c, cerr, env, config);
+                GetValue({ name: "this" }, cnt, () => cnt(), env);
               } catch (error) {
                 cerr(toException(error, e_callee));
               }

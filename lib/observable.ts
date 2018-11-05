@@ -18,7 +18,6 @@ type ObserverHandler = {
 
 export type FlameGraph = {
   executionStack: EvaluationNode[];
-  oneTimeInterceptors: InterceptorOnce[];
   values: Map<ASTNode, any>;
 };
 
@@ -30,8 +29,6 @@ export type EvaluationNode = {
 
 export type EvaluationListener = (node: Evaluation, flameGraph: FlameGraph) => void;
 type FlameGraphs = { [key: string]: FlameGraph };
-
-type InterceptorOnce = (evaluation: Evaluation) => boolean;
 
 const { apply, call } = Function;
 
@@ -50,7 +47,7 @@ export class ObservableContext extends MetaesContext {
         interceptor: (evaluation: Evaluation) => {
           this._flameGraphBuilder("before", evaluation);
           try {
-            this.interceptor(evaluation);
+            this._interceptor(evaluation);
           } catch (e) {
             // TODO: use logger
             console.log(e);
@@ -88,34 +85,11 @@ export class ObservableContext extends MetaesContext {
     this._listeners.splice(index, 1);
   }
 
-  _interceptOnce(graph: FlameGraph, fn: InterceptorOnce) {
-    graph.oneTimeInterceptors.push(fn);
-  }
-
   addHandler(handler: ObserverHandler) {
     this._addTraps(handler.target, handler.traps);
   }
 
-  interceptor(evaluation: Evaluation) {
-    const flameGraph = this._flameGraphs[evaluation.config.script.scriptId];
-
-    this._mainInterceptor(evaluation);
-    for (let i = 0; i < flameGraph.oneTimeInterceptors.length; i++) {
-      const interceptor = flameGraph.oneTimeInterceptors[i];
-      let done = false;
-      try {
-        done = interceptor(evaluation);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        if (done) {
-          flameGraph.oneTimeInterceptors.splice(i, 1);
-        }
-      }
-    }
-  }
-
-  _mainInterceptor(evaluation: Evaluation) {
+  _interceptor(evaluation: Evaluation) {
     const flameGraph = this._flameGraphs[evaluation.config.script.scriptId];
     const getValue = e => flameGraph.values.get(e);
 
@@ -136,7 +110,7 @@ export class ObservableContext extends MetaesContext {
       const methodName = evaluation.phase === "enter" ? "apply" : "didApply";
 
       const { fn, thisObj, args, e: callExpression } = evaluation.e as Apply;
-      const expressionValue = evaluation.phase === "exit" ? getValue(callExpression) : void 0;
+      const expressionValue = evaluation.phase === "exit" ? getValue(evaluation.e) : void 0;
       const object =
         callExpression.callee.type === "MemberExpression" ? getValue(callExpression.callee.object) : thisObj;
 
@@ -168,7 +142,6 @@ export class ObservableContext extends MetaesContext {
       this._flameGraphs[scriptId] ||
       (this._flameGraphs[scriptId] = {
         executionStack: [],
-        oneTimeInterceptors: [],
         values: new Map()
       });
     const stack = flameGraph.executionStack;
