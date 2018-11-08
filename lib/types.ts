@@ -16,11 +16,6 @@ export type Script = {
   ast: ASTNode;
   source: Source;
   scriptId: string;
-
-  /**
-   * Callstack at the moment of script creation.
-   */
-  initiator?: string[];
 };
 
 export type Source = string | ASTNode | Function;
