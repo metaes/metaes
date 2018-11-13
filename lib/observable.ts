@@ -42,7 +42,7 @@ export class ObservableContext extends MetaesContext {
     super(
       undefined,
       undefined,
-      { values: { this: target, self: target } },
+      { values: target },
       {
         interceptor: (evaluation: Evaluation) => {
           this._flameGraphBuilder("before", evaluation);
