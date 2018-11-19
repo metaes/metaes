@@ -76,6 +76,10 @@ export class ObservableContext extends MetaesContext {
     return this._handlers.get(target);
   }
 
+  get handlers() {
+    return this._handlers;
+  }
+
   addListener(listener: EvaluationListener) {
     this._listeners.push(listener);
   }
