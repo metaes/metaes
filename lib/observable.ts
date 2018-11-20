@@ -57,7 +57,6 @@ export class ObservableContext extends MetaesContext {
       },
       createCache()
     );
-
     if (mainTraps) {
       this._addTraps(target, mainTraps);
     }
@@ -107,6 +106,9 @@ export class ObservableContext extends MetaesContext {
         const methodName = evaluation.phase === "enter" ? "set" : "didSet";
         traps.forEach(trap => trap[methodName] && trap[methodName](object, property, value));
       }
+    }
+    if (evaluation.e.type === "AssignmentExpression" && evaluation.e.left.type === "Identifier") {
+      console.log(evaluation);
     }
 
     // handler.apply
