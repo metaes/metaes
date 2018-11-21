@@ -3,6 +3,7 @@ import { ASTNode } from "./nodes/nodes";
 import { Apply } from "./nodeTypes";
 import { createCache } from "./parse";
 import { Evaluation } from "./types";
+import { Environment } from "./environment";
 
 type Traps = {
   set?: (target: object, key: string, args: any) => void;
@@ -108,22 +109,19 @@ export class ObservableContext extends MetaesContext {
       }
     }
     if (evaluation.e.type === "AssignmentExpression" && evaluation.e.left.type === "Identifier") {
-      let _env = evaluation.env!;
-      while (_env.prev) {
-        _env = _env.prev;
+      let _env: Environment | undefined = evaluation.env;
+      while (_env) {
         if (evaluation.e.left.name in _env.values) {
+          const object = _env.values;
+          if ((traps = this._getTraps(object))) {
+            const methodName = evaluation.phase === "enter" ? "set" : "didSet";
+            traps.forEach(
+              trap => trap[methodName] && trap[methodName](object, evaluation.e.left.name, getValue(evaluation.e.right))
+            );
+          }
           break;
         }
-      }
-      // Check only for global environment
-      if (!_env.prev) {
-        const object = _env.values;
-        if ((traps = this._getTraps(object))) {
-          const methodName = evaluation.phase === "enter" ? "set" : "didSet";
-          traps.forEach(
-            trap => trap[methodName] && trap[methodName](object, evaluation.e.left.name, getValue(evaluation.e.right))
-          );
-        }
+        _env = _env.prev;
       }
     }
 

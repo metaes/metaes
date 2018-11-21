@@ -52,7 +52,23 @@ describe("ObservableContext", () => {
     });
     const source = `foo=true`;
     await context.evaluate(source);
+
     expect(results[0]).to.deep.equal([value, "foo", true]);
+  });
+
+  it("should collect trap results of assignment expression in local scope", async () => {
+    const value = { foo: false };
+    const results: any[] = [];
+    const context = new ObservableContext(value, {
+      didSet() {
+        results.push([...arguments]);
+      }
+    });
+    const source = `(()=>{var foo; foo="value"})()`;
+    await context.evaluate(source);
+
+    // Local foo was not observed
+    expect(results.length).to.equal(0);
   });
 
   it("should collect trap results before value is set with computed expression", async () => {
