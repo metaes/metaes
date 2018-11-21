@@ -56,7 +56,7 @@ describe("ObservableContext", () => {
     expect(results[0]).to.deep.equal([value, "foo", true]);
   });
 
-  it("should collect trap results of assignment expression in local scope", async () => {
+  it("should not collect trap results of assignment expression in local scope", async () => {
     const value = { foo: false };
     const results: any[] = [];
     const context = new ObservableContext(value, {
