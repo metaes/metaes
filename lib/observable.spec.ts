@@ -42,6 +42,19 @@ describe("ObservableContext", () => {
     expect(called).to.be.true;
   });
 
+  it("should collect trap results of assignment expression in global scope", async () => {
+    const value = { foo: false };
+    const results: any[] = [];
+    const context = new ObservableContext(value, {
+      didSet() {
+        results.push([...arguments]);
+      }
+    });
+    const source = `foo=true`;
+    await context.evaluate(source);
+    expect(results[0]).to.deep.equal([value, "foo", true]);
+  });
+
   it("should collect trap results before value is set with computed expression", async () => {
     const value = {};
     let called = false;

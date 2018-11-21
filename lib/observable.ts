@@ -108,7 +108,23 @@ export class ObservableContext extends MetaesContext {
       }
     }
     if (evaluation.e.type === "AssignmentExpression" && evaluation.e.left.type === "Identifier") {
-      console.log(evaluation);
+      let _env = evaluation.env!;
+      while (_env.prev) {
+        _env = _env.prev;
+        if (evaluation.e.left.name in _env.values) {
+          break;
+        }
+      }
+      // Check only for global environment
+      if (!_env.prev) {
+        const object = _env.values;
+        if ((traps = this._getTraps(object))) {
+          const methodName = evaluation.phase === "enter" ? "set" : "didSet";
+          traps.forEach(
+            trap => trap[methodName] && trap[methodName](object, evaluation.e.left.name, getValue(evaluation.e.right))
+          );
+        }
+      }
     }
 
     // handler.apply
