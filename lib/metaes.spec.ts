@@ -1,6 +1,6 @@
 import { assert, expect } from "chai";
 import { beforeEach, describe, it } from "mocha";
-import { Context, evalFunctionBody, MetaesContext } from "./metaes";
+import { Context, evalFunctionBodyAsPromise, MetaesContext } from "./metaes";
 
 describe("Evaluation", () => {
   let context: Context;
@@ -16,12 +16,12 @@ describe("Evaluation", () => {
   });
 
   it("should correctly execute scripting context", async () => {
-    assert.equal(await evalFunctionBody(context, a => a * 2, { values: { a: 1 } }), 2);
+    assert.equal(await evalFunctionBodyAsPromise({ context, source: a => a * 2 }, { values: { a: 1 } }), 2);
   });
 
   it("should correctly execute cooperatively", async () => {
     [1, 2, 3, 4, 5, 6].forEach(async i =>
-      assert.equal(await evalFunctionBody(context, a => a * 2, { values: { a: i } }), i * 2)
+      assert.equal(await evalFunctionBodyAsPromise({ context, source: a => a * 2 }, { values: { a: i } }), i * 2)
     );
   });
 });

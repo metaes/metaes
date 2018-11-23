@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
-import { evalFunctionBody, MetaesContext, metaesEval, noop } from "./metaes";
+import { evalFunctionBodyAsPromise, MetaesContext, metaesEval, noop } from "./metaes";
 
 describe("Exceptions", () => {
   it("should throw on AwaitExpression use", () =>
@@ -28,8 +28,11 @@ describe("Exceptions", () => {
   describe("From blocks", () => {
     it("should exit block statement", async () => {
       try {
-        await evalFunctionBody(new MetaesContext(), function() {
-          throw 1;
+        await evalFunctionBodyAsPromise({
+          context: new MetaesContext(),
+          source: function() {
+            throw 1;
+          }
         });
         throw new Error("Didn't throw");
       } catch (e) {
@@ -39,10 +42,13 @@ describe("Exceptions", () => {
 
     it("should exit block statement when throwing from nested function", async () => {
       try {
-        await evalFunctionBody(new MetaesContext(), function() {
-          (() => {
-            throw 1;
-          })();
+        await evalFunctionBodyAsPromise({
+          context: new MetaesContext(),
+          source: function() {
+            (() => {
+              throw 1;
+            })();
+          }
         });
       } catch (e) {
         assert.equal(e.type, "ThrowStatement");
@@ -51,15 +57,18 @@ describe("Exceptions", () => {
 
     it("should continue after try/catch block", async () => {
       assert.equal(
-        await evalFunctionBody(new MetaesContext(), function() {
-          try {
-            (async () => {
-              throw 1;
-            })();
-          } catch (e) {
-            // ignore
+        await evalFunctionBodyAsPromise({
+          context: new MetaesContext(),
+          source: function() {
+            try {
+              (async () => {
+                throw 1;
+              })();
+            } catch (e) {
+              // ignore
+            }
+            "hello";
           }
-          "hello";
         }),
         "hello"
       );
@@ -70,14 +79,17 @@ describe("Exceptions", () => {
       let a;
 
       assert.isTrue(
-        (await evalFunctionBody(new MetaesContext(), function() {
-          let error;
-          try {
-            a; //
-          } catch (e) {
-            error = e;
+        (await evalFunctionBodyAsPromise({
+          context: new MetaesContext(),
+          source: function() {
+            let error;
+            try {
+              a; //
+            } catch (e) {
+              error = e;
+            }
+            error;
           }
-          error;
         })) instanceof ReferenceError
       );
     });

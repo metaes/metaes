@@ -1,7 +1,13 @@
 import { assert } from "chai";
 import { after, before, beforeEach, describe, it } from "mocha";
 import { Environment } from "./environment";
-import { consoleLoggingMetaesContext, Context, evalFunctionBody, evalToPromise } from "./metaes";
+import {
+  consoleLoggingMetaesContext,
+  Context,
+  evalFunctionBody,
+  evalAsPromise,
+  evalFunctionBodyAsPromise
+} from "./metaes";
 import {
   createHTTPConnector,
   createWSConnector,
@@ -82,16 +88,16 @@ function defineTestsFor(describeName: string, contextGetter: () => Promise<Conte
       context = await contextGetter();
     });
     it("should correctly deliver primitive success value", async () =>
-      assert.equal(4, await evalToPromise(context, "2+2")));
+      assert.equal(4, await evalAsPromise(context, "2+2")));
 
     it("should correctly deliver primitive success value in multiple simultaneous contexts", async () => {
-      assert.equal(4, await evalToPromise(context, "2+2"));
-      assert.equal(2, await evalToPromise(context, "1+1"));
+      assert.equal(4, await evalAsPromise(context, "2+2"));
+      assert.equal(2, await evalAsPromise(context, "1+1"));
     });
 
     it("should correctly deliver primitive success value using environment in multiple simultaneous contexts", async () => {
-      assert.equal(4, await evalToPromise(context, "a+b", { values: { a: 1, b: 3 } }));
-      assert.equal(2, await evalToPromise(context, "a-b", { values: { a: 4, b: 2 } }));
+      assert.equal(4, await evalAsPromise(context, "a+b", { values: { a: 1, b: 3 } }));
+      assert.equal(2, await evalAsPromise(context, "a-b", { values: { a: 4, b: 2 } }));
     });
 
     it("should correctly deliver primitive success value using continuation", () =>
@@ -113,13 +119,13 @@ function defineTestsFor(describeName: string, contextGetter: () => Promise<Conte
     });
 
     it("should correctly deliver primitive success value and use env", async () =>
-      assert.equal(4, await evalToPromise(context, "2+a", { values: { a: 2 } })));
+      assert.equal(4, await evalAsPromise(context, "2+a", { values: { a: 2 } })));
 
     it("should correctly deliver non-primitve success value and use env", async () => {
       let value = [1, 2, 3];
       assert.equal(
         value.toString(),
-        (await evalToPromise(context, "a", {
+        (await evalAsPromise(context, "a", {
           values: { a: [1, 2, 3] }
         })).toString()
       );
@@ -130,9 +136,12 @@ function defineTestsFor(describeName: string, contextGetter: () => Promise<Conte
         require("child_process")
           .execSync("cat tsconfig.json")
           .toString(),
-        await evalFunctionBody(context, (child_process, command) => child_process.execSync(command).toString(), {
-          values: { command: "cat tsconfig.json" }
-        })
+        await evalFunctionBodyAsPromise(
+          { context, source: (child_process, command) => child_process.execSync(command).toString() },
+          {
+            values: { command: "cat tsconfig.json" }
+          }
+        )
       );
     });
 

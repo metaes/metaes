@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { describe, it } from "mocha";
-import { evaluateFunction } from "./metaes";
+import { evalFunction } from "./metaes";
 import { ObservableContext } from "./observable";
 
 describe("ObservableContext", () => {
@@ -8,7 +8,7 @@ describe("ObservableContext", () => {
     const value = {};
     const context = new ObservableContext(value);
 
-    await evaluateFunction(context, () => (self["foo"] = "bar"));
+    await evalFunction({ context, source: () => (self["foo"] = "bar") });
 
     expect(value["foo"]).to.equal("bar");
   });
