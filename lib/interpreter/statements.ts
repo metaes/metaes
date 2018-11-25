@@ -241,7 +241,7 @@ export function ForStatement(e: NodeTypes.ForStatement, _c, cerr, env, config) {
   evaluate(e.init, _init => cerr(NotImplementedException(`${e.type} is not implemented yet`)), cerr, env, config);
 }
 
-export const FOR_OF_BINDING = "-metaes-for-of-binding";
+export const FOR_OF_RIGHT_VALUE = "for-of-right-value";
 
 export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config) {
   evaluate(
@@ -268,7 +268,7 @@ export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config
                        * It purposedly has ECMAScript incorrect identifier value.
                        * Can be used by any kind of evaluation observers.
                        */
-                      values: { [FOR_OF_BINDING]: rightItem }
+                      values: { [FOR_OF_RIGHT_VALUE]: rightItem }
                     };
 
                     /**
