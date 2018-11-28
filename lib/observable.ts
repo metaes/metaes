@@ -108,6 +108,8 @@ export class ObservableContext extends MetaesContext {
         traps.forEach(trap => trap[methodName] && trap[methodName](object, property, value));
       }
     }
+
+    // TODO: can use observation of SetValue instead?
     if (evaluation.e.type === "AssignmentExpression" && evaluation.e.left.type === "Identifier") {
       let _env: Environment | undefined = evaluation.env;
       while (_env) {
