@@ -90,7 +90,7 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
         );
         break;
       default:
-        cerr(NotImplementedException(`Init '${e.id.type}' is not supported yet.`, e));
+        cerr(NotImplementedException(`Init '${(<any>e.id).type}' is not supported yet.`, e));
     }
   }
   e.init ? evaluate(e.init, id, cerr, env, config) : id(undefined);
