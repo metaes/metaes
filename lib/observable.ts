@@ -86,7 +86,9 @@ export class ObservableContext extends MetaesContext {
 
   removeListener(listener: EvaluationListener) {
     const index = this._listeners.indexOf(listener);
-    this._listeners.splice(index, 1);
+    if (index >= 0) {
+      this._listeners.splice(index, 1);
+    }
   }
 
   addHandler(handler: ObserverHandler) {

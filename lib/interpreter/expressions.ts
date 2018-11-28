@@ -24,9 +24,7 @@ export function CallExpression(
   evaluateArray(
     e.arguments,
     args => {
-      let e_callee = e.callee;
-
-      switch (e_callee.type) {
+      switch (e.callee.type) {
         case "Identifier":
         case "FunctionExpression":
         case "CallExpression":
@@ -48,7 +46,7 @@ export function CallExpression(
                     evaluate({ type: "Apply", e, fn: callee, args }, c, cerr, env, config);
                   }
                 } catch (error) {
-                  cerr(toException(error, e_callee));
+                  cerr(toException(error, e.callee));
                 }
               } else {
                 cerr(new TypeError(callee + " is not a function"));
@@ -60,28 +58,30 @@ export function CallExpression(
           );
           break;
         case "MemberExpression":
+          const e_callee = e.callee as NodeTypes.MemberExpression;
           evaluate(
-            e.callee,
-            property =>
-              evaluate(
-                e_callee["object"],
-                object => {
-                  if (typeof property === "function") {
-                    evaluate({ type: "Apply", e, fn: property, thisObj: object, args }, c, cerr, env, config);
-                  } else {
-                    cerr({
-                      value: new TypeError(typeof property + " is not a function")
-                    });
-                  }
-                },
-                cerr,
-                env,
-                config
-              ),
+            e_callee.object,
+            object => {
+              function run(property) {
+                if (typeof property === "function") {
+                  evaluate({ type: "Apply", e, fn: property, thisObj: object, args }, c, cerr, env, config);
+                } else {
+                  cerr({
+                    value: new TypeError(typeof property + " is not a function")
+                  });
+                }
+              }
+              if (!e_callee.computed && e_callee.property.type === "Identifier") {
+                run(object[e_callee.property.name]);
+              } else {
+                evaluate(e_callee.property, propertyValue => run(object[propertyValue]), cerr, env, config);
+              }
+            },
             cerr,
             env,
             config
           );
+
           break;
         case "ArrowFunctionExpression":
           evaluate(
@@ -92,7 +92,7 @@ export function CallExpression(
                   evaluate({ type: "Apply", e, fn: callee, thisObj, args }, c, cerr, env, config);
                 GetValue({ name: "this" }, cnt, () => cnt(), env);
               } catch (error) {
-                cerr(toException(error, e_callee));
+                cerr(toException(error, e.callee));
               }
             },
             cerr,
@@ -103,8 +103,8 @@ export function CallExpression(
         default:
           cerr({
             type: "NotImplemented",
-            message: `This kind of callee node ('${e_callee.type}') is not supported yet.`,
-            location: e_callee
+            message: `This kind of callee node ('${e.callee.type}') is not supported yet.`,
+            location: e.callee
           });
       }
     },
