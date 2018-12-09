@@ -60,14 +60,10 @@ export function GetValue<T>(
 ) {
   let _env: Environment | undefined = env;
   do {
-    if (!_env) {
-      break;
-    }
     if (name in _env.values) {
-      let value = _env.values[name];
-
+      c(_env.values[name]);
       // return required here to avoid calling `cerr` at the end
-      return c(value);
+      return;
     }
   } while ((_env = _env.prev));
 
