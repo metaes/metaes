@@ -526,7 +526,7 @@ export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Envi
               }
               break;
             default:
-              cerr(NotImplementedException(`Can't run delete operator on "${e.argument.type}"`));
+              cerr(NotImplementedException(`Delete on operator of type "${e.argument.type}" is not implemented yet.`));
               break;
           }
           break;
