@@ -76,7 +76,7 @@ export interface LogicalExpression extends NodeBase {
 export interface UnaryExpression extends NodeBase {
   type: "UnaryExpression";
   argument: Expression;
-  operator: "typeof" | "-" | "!" | "+" | "~" | "void";
+  operator: "typeof" | "-" | "!" | "+" | "~" | "void" | "delete";
 }
 
 export interface UpdateExpression extends NodeBase {

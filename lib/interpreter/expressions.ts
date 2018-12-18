@@ -1,5 +1,5 @@
 import { evaluate, evaluateArray } from "../applyEval";
-import { Environment, GetValue } from "../environment";
+import { Environment, GetValue, getEnvironmentForValue } from "../environment";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
@@ -514,8 +514,24 @@ export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Envi
         case "void":
           c(void argument);
           break;
+        case "delete":
+          switch (e.argument.type) {
+            case "Identifier":
+              const name = e.argument.name;
+              const variableEnv = getEnvironmentForValue(env, name);
+              try {
+                c(variableEnv!.values[name]);
+              } catch (e) {
+                cerr(e);
+              }
+              break;
+            default:
+              cerr(NotImplementedException(`Can't run delete operator on "${e.argument.type}"`));
+              break;
+          }
+          break;
         default:
-          cerr(NotImplementedException("not implemented " + e.operator));
+          cerr(NotImplementedException(`Support for "${e.operator}" operator is not implemented yet`));
       }
     },
     error => (error.value instanceof ReferenceError && e.operator === "typeof" ? c("undefined") : cerr(error)),
