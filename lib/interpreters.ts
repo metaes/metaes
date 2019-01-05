@@ -3,6 +3,6 @@ import Base from "./interpreter/base";
 import Expressions from "./interpreter/expressions";
 import Statements from "./interpreter/statements";
 
-export const EcmaScriptInterpreters: Environment = {
+export const ECMAScriptInterpreters: Environment = {
   values: Object.assign({ SetValue, GetValue }, Base, Expressions, Statements)
 };

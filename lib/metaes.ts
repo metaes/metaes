@@ -1,6 +1,6 @@
 import { evaluate } from "./applyEval";
 import { Environment, toEnvironment } from "./environment";
-import { EcmaScriptInterpreters } from "./interpreters";
+import { ECMAScriptInterpreters } from "./interpreters";
 import { ASTNode } from "./nodes/nodes";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
@@ -38,7 +38,7 @@ export function isScript(script: any): script is Script {
 
 export function noop() {}
 
-const BaseConfig = { interpreters: EcmaScriptInterpreters, interceptor: noop };
+const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 
 export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config = {}) => {
   script = toScript(script);

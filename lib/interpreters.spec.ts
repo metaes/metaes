@@ -1,7 +1,7 @@
 import { assert } from "chai";
 import { before, beforeEach, describe, it } from "mocha";
 import { GetProperty, SetProperty, Apply } from "./interpreter/base";
-import { EcmaScriptInterpreters } from "./interpreters";
+import { ECMAScriptInterpreters } from "./interpreters";
 import { MetaesContext, evalFunctionBodyAsPromise } from "./metaes";
 
 describe("Interpreters", () => {
@@ -23,7 +23,7 @@ describe("Interpreters", () => {
           }
         }
       },
-      prev: EcmaScriptInterpreters
+      prev: ECMAScriptInterpreters
     };
     context = new MetaesContext(undefined, console.error, { values: { me } }, { interpreters });
   });
@@ -63,7 +63,7 @@ describe("Example Proxy implementation", async () => {
         }
       }
     },
-    prev: EcmaScriptInterpreters
+    prev: ECMAScriptInterpreters
   };
 
   const ERROR_MESSAGE = "Can't write to proxied object";
@@ -177,7 +177,7 @@ describe("Example remote context for database access", () => {
         }
       }
     },
-    prev: EcmaScriptInterpreters
+    prev: ECMAScriptInterpreters
   };
 
   let context: MetaesContext;
