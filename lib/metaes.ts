@@ -38,11 +38,11 @@ export function isScript(script: any): script is Script {
 
 export function noop() {}
 
+const BaseConfig = { interpreters: EcmaScriptInterpreters, interceptor: noop };
+
 export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config = {}) => {
   script = toScript(script);
-  config.script = script;
-  config.interceptor = config.interceptor || noop;
-  config.interpreters = config.interpreters || EcmaScriptInterpreters;
+  config = Object.assign({ script }, BaseConfig, config);
 
   try {
     evaluate(
@@ -97,7 +97,7 @@ export class MetaesContext implements Context {
       config = Object.assign({}, this.defaultConfig, { script: input });
     }
     if (!config.interceptor) {
-      config.interceptor = this.defaultConfig.interceptor;
+      config.interceptor = this.defaultConfig.interceptor || noop;
     }
 
     metaesEval(input, c || this.c, cerr || this.cerr, env, config);
