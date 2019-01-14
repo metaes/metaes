@@ -22,19 +22,13 @@ function hoistDeclarations(e: NodeTypes.Statement[], c, cerr, env, config) {
 }
 
 export function BlockStatement(e: NodeTypes.BlockStatement | NodeTypes.Program, c, cerr, env, config) {
-  if (e.body.length > 1) {
-    hoistDeclarations(
-      e.body,
-      () => evaluateArray(e.body, blockValues => c(blockValues[blockValues.length - 1]), cerr, env, config),
-      cerr,
-      env,
-      config
-    );
-  } else if (e.body.length === 1) {
-    evaluate(e.body[0], c, cerr, env, config);
-  } else {
-    c();
-  }
+  hoistDeclarations(
+    e.body,
+    () => evaluateArray(e.body, blockValues => c(blockValues[blockValues.length - 1]), cerr, env, config),
+    cerr,
+    env,
+    config
+  );
 }
 
 export function Program(e: NodeTypes.Program, c, cerr, env, config) {
