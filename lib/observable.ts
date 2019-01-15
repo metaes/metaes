@@ -184,7 +184,7 @@ export class ObservableContext extends MetaesContext {
           // Manually run trap
           let traps: Traps[] | undefined;
           if ((traps = this._getTraps(parent.children))) {
-            traps.forEach(trap => trap.apply && trap.apply(parent.children, parent.children.push, [node], value));
+            traps.forEach(trap => trap.didApply && trap.didApply(parent.children, parent.children.push, [node], value));
           }
         }
 
@@ -193,7 +193,7 @@ export class ObservableContext extends MetaesContext {
         // Manually run trap
         let traps: Traps[] | undefined;
         if ((traps = this._getTraps(stack))) {
-          traps.forEach(trap => trap.apply && trap.apply(stack, stack.push, [node], value));
+          traps.forEach(trap => trap.didApply && trap.didApply(stack, stack.push, [node], value));
         }
       } else {
         flameGraph.values.set(evaluation.e, evaluation.value);
