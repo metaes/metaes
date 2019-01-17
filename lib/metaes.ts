@@ -195,18 +195,11 @@ export function evalFunctionAsPromise<T extends any[]>(
 }
 
 export const consoleLoggingMetaesContext = (environment: Environment = { values: {} }) =>
-  new MetaesContext(
-    value => {
-      console.log(value);
-    },
-    e => console.log(e),
-    environment,
-    {
-      interceptor(evaluation) {
-        console.log(evaluation);
-      }
+  new MetaesContext(console.log, console.error, environment, {
+    interceptor(evaluation) {
+      console.log(evaluation);
     }
-  );
+  });
 
 const hasPerformance = typeof performance === "function";
 
