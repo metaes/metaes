@@ -103,10 +103,14 @@ function createRemoteFunction(context: Context, id: string) {
   const referencesMap = getReferencesMap(context);
   const fn = (...args) =>
     evalFunctionBody(
-      context,
-      args => {
-        fn.apply(null, args);
+      {
+        context,
+        source: args => {
+          fn.apply(null, args);
+        }
       },
+      console.log,
+      console.error,
       environmentFromMessage(context, {
         values: { args },
         references: { fn: { id } }

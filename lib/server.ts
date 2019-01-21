@@ -5,7 +5,7 @@ import * as http from "http";
 import * as WebSocket from "ws";
 import { Environment } from "./environment";
 import { log } from "./logging";
-import { Context, evalToPromise, MetaesContext } from "./metaes";
+import { Context, evalAsPromise, MetaesContext } from "./metaes";
 import { assertMessage, environmentFromMessage, environmentToMessage, mergeValues, MetaesMessage } from "./remote";
 import { Continuation, ErrorContinuation, Source } from "./types";
 
@@ -88,7 +88,7 @@ export const runWSServer = (port: number = config.port, context = testContext) =
 
           log("[Server: client environmentFromJSON]", environment);
 
-          const result = await evalToPromise(context, input, environment);
+          const result = await evalAsPromise(context, input, environment);
           log("[Server: result]", result);
 
           clientContext.evaluate(

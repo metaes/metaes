@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { describe, it } from "mocha";
-import { evaluateFunction } from "./metaes";
+import { evalFunction } from "./metaes";
 import { ObservableContext } from "./observable";
 
 describe("ObservableContext", () => {
@@ -8,7 +8,7 @@ describe("ObservableContext", () => {
     const value = {};
     const context = new ObservableContext(value);
 
-    await evaluateFunction(context, () => (self["foo"] = "bar"));
+    await evalFunction({ context, source: () => (self["foo"] = "bar") });
 
     expect(value["foo"]).to.equal("bar");
   });
@@ -40,6 +40,35 @@ describe("ObservableContext", () => {
     await context.evaluate(source);
 
     expect(called).to.be.true;
+  });
+
+  it("should collect trap results of assignment expression in global scope", async () => {
+    const value = { foo: false };
+    const results: any[] = [];
+    const context = new ObservableContext(value, {
+      didSet() {
+        results.push([...arguments]);
+      }
+    });
+    const source = `foo=true`;
+    await context.evaluate(source);
+
+    expect(results[0]).to.deep.equal([value, "foo", true]);
+  });
+
+  it("should not collect trap results of assignment expression in local scope", async () => {
+    const value = { foo: false };
+    const results: any[] = [];
+    const context = new ObservableContext(value, {
+      didSet() {
+        results.push([...arguments]);
+      }
+    });
+    const source = `(()=>{var foo; foo="value"})()`;
+    await context.evaluate(source);
+
+    // Local foo was not observed
+    expect(results.length).to.equal(0);
   });
 
   it("should collect trap results before value is set with computed expression", async () => {

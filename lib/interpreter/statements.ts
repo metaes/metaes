@@ -90,7 +90,7 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
         );
         break;
       default:
-        cerr(NotImplementedException(`Init '${e.id.type}' is not supported yet.`, e));
+        cerr(NotImplementedException(`Init '${(<any>e.id).type}' is not supported yet.`, e));
     }
   }
   e.init ? evaluate(e.init, id, cerr, env, config) : id(undefined);
@@ -241,8 +241,6 @@ export function ForStatement(e: NodeTypes.ForStatement, _c, cerr, env, config) {
   evaluate(e.init, _init => cerr(NotImplementedException(`${e.type} is not implemented yet`)), cerr, env, config);
 }
 
-export const FOR_OF_BINDING = "-metaes-for-of-binding";
-
 export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config) {
   evaluate(
     e.right,
@@ -250,58 +248,50 @@ export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config
       if (!Array.isArray(right)) {
         cerr(NotImplementedException("Only arrays as right-hand side of for-of loop are supported for now.", e.right));
       } else {
-        switch (e.left.type) {
-          case "VariableDeclaration":
-            // create iterator in new env
-            evaluate(
-              e.left,
-              _ =>
-                // TODO: iterate over declarations in e.left
-                visitArray(
-                  right,
-                  (rightItem, c, cerr) => {
-                    const bodyEnv = {
-                      prev: env,
+        if (e.left.type === "VariableDeclaration" && e.left.declarations[0].id.type === "Identifier") {
+          // create iterator in new env
+          evaluate(
+            e.left,
+            _ =>
+              // TODO: iterate over declarations in e.left
+              visitArray(
+                right,
+                (rightItem, c, cerr) => {
+                  const bodyEnv = { prev: env, values: {} };
 
-                      /**
-                       * Metaes script inaccessible environment variable binding current item of iterable expression.
-                       * It purposedly has ECMAScript incorrect identifier value.
-                       * Can be used by any kind of evaluation observers.
-                       */
-                      values: { [FOR_OF_BINDING]: rightItem }
-                    };
-
-                    /**
-                     * TODO: currently left-hand side of loop definition is bound to new environment
-                     * for each iteration. It means it supports `let`/`const` style (creates new scope),
-                     * but not `var` (where shouldn't be created).
-                     *
-                     * Should support both semantics.
-                     */
-                    evaluate(
-                      {
-                        type: "SetValue",
-                        name: (<NodeTypes.Identifier>e.left.declarations[0].id).name,
-                        value: rightItem,
-                        isDeclaration: true
-                      },
-                      () => evaluate(e.body, c, cerr, bodyEnv, config),
-                      cerr,
-                      bodyEnv,
-                      config
-                    );
-                  },
-                  c,
-                  cerr
-                ),
-              cerr,
-              env,
-              config
-            );
-            break;
-          default:
-            cerr(NotImplementedException(`Left-hand side of type ${e.left.type} in ${e.type} not implemented yet.`));
-            break;
+                  /**
+                   * TODO: currently left-hand side of loop definition is bound to new environment
+                   * for each iteration. It means it supports `let`/`const` style (creates new scope),
+                   * but not `var` (where shouldn't be created).
+                   *
+                   * Should support both semantics.
+                   */
+                  evaluate(
+                    {
+                      type: "SetValue",
+                      name: (<NodeTypes.Identifier>e.left.declarations[0].id).name,
+                      value: rightItem,
+                      isDeclaration: true
+                    },
+                    () => evaluate(e.body, c, cerr, bodyEnv, config),
+                    cerr,
+                    bodyEnv,
+                    config
+                  );
+                },
+                c,
+                cerr
+              ),
+            cerr,
+            env,
+            config
+          );
+        } else {
+          cerr(
+            NotImplementedException(
+              `Left-hand side of type ${e.left.declarations[0].id.type} in ${e.type} not implemented yet.`
+            )
+          );
         }
       }
     },

@@ -3,6 +3,7 @@ import { ASTNode } from "./nodes/nodes";
 import { Apply } from "./nodeTypes";
 import { createCache } from "./parse";
 import { Evaluation } from "./types";
+import { Environment } from "./environment";
 
 type Traps = {
   set?: (target: object, key: string, args: any) => void;
@@ -42,7 +43,7 @@ export class ObservableContext extends MetaesContext {
     super(
       undefined,
       undefined,
-      { values: { this: target, self: target } },
+      { values: { self: target }, prev: { values: target } },
       {
         interceptor: (evaluation: Evaluation) => {
           this._flameGraphBuilder("before", evaluation);
@@ -57,7 +58,6 @@ export class ObservableContext extends MetaesContext {
       },
       createCache()
     );
-
     if (mainTraps) {
       this._addTraps(target, mainTraps);
     }
@@ -76,13 +76,19 @@ export class ObservableContext extends MetaesContext {
     return this._handlers.get(target);
   }
 
+  get handlers() {
+    return this._handlers;
+  }
+
   addListener(listener: EvaluationListener) {
     this._listeners.push(listener);
   }
 
   removeListener(listener: EvaluationListener) {
     const index = this._listeners.indexOf(listener);
-    this._listeners.splice(index, 1);
+    if (index >= 0) {
+      this._listeners.splice(index, 1);
+    }
   }
 
   addHandler(handler: ObserverHandler) {
@@ -102,6 +108,24 @@ export class ObservableContext extends MetaesContext {
       if ((traps = this._getTraps(object))) {
         const methodName = evaluation.phase === "enter" ? "set" : "didSet";
         traps.forEach(trap => trap[methodName] && trap[methodName](object, property, value));
+      }
+    }
+
+    // TODO: can use observation of SetValue instead?
+    if (evaluation.e.type === "AssignmentExpression" && evaluation.e.left.type === "Identifier") {
+      let _env: Environment | undefined = evaluation.env;
+      while (_env) {
+        if (evaluation.e.left.name in _env.values) {
+          const object = _env.values;
+          if ((traps = this._getTraps(object))) {
+            const methodName = evaluation.phase === "enter" ? "set" : "didSet";
+            traps.forEach(
+              trap => trap[methodName] && trap[methodName](object, evaluation.e.left.name, getValue(evaluation.e.right))
+            );
+          }
+          break;
+        }
+        _env = _env.prev;
       }
     }
 
@@ -160,7 +184,7 @@ export class ObservableContext extends MetaesContext {
           // Manually run trap
           let traps: Traps[] | undefined;
           if ((traps = this._getTraps(parent.children))) {
-            traps.forEach(trap => trap.apply && trap.apply(parent.children, parent.children.push, [node], value));
+            traps.forEach(trap => trap.didApply && trap.didApply(parent.children, parent.children.push, [node], value));
           }
         }
 
@@ -169,7 +193,7 @@ export class ObservableContext extends MetaesContext {
         // Manually run trap
         let traps: Traps[] | undefined;
         if ((traps = this._getTraps(stack))) {
-          traps.forEach(trap => trap.apply && trap.apply(stack, stack.push, [node], value));
+          traps.forEach(trap => trap.didApply && trap.didApply(stack, stack.push, [node], value));
         }
       } else {
         flameGraph.values.set(evaluation.e, evaluation.value);

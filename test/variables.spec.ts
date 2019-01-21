@@ -27,3 +27,15 @@ typeof true === "boolean";
 
 // it: should handle template literal
 typeof `42` === "string";
+
+// it: should throw at member expression
+{
+  let error;
+  try {
+    // @ts-ignore
+    typeof a.b;
+  } catch (e) {
+    error = e;
+  }
+  error instanceof ReferenceError;
+}
