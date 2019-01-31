@@ -2,8 +2,6 @@
 
 # MetaES
 
-## About MetaES as a metacircular interpreter
-
 [MetaES](http://metaes.org/) is a building block for other libraries and tools. It was created to speed up applications development. 
 
 Try it out at the [playground](http://metaes.org/playground.html).
