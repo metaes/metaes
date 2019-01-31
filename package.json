@@ -9,8 +9,8 @@
     "test": "tsc; mocha --recursive lib/ test/runner",
     "test:local": "mocha --recursive lib/ test/runner",
     "dist:compile": "tsc -p tsconfig-build.json --declaration",
-    "dist:copy": "cp package.json README.md tsconfig.json build/",
-    "dist": "npm run dist:compile; npm run dist:copy; cd build;"
+    "dist:copy": "cp package.json README.md tsconfig.json .npmignore build/lib",
+    "dist": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish --dry-run"
   },
   "repository": {
     "type": "git",
