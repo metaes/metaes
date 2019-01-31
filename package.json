@@ -1,6 +1,15 @@
 {
   "name": "metaes",
   "description": "JavaScript (ECMAScript) in JavaScript interpreter for better tools.",
+  "keywords": [
+    "interpreter",
+    "language",
+    "javascript",
+    "ecmascript"
+  ],
+  "bugs": {
+    "url": "https://github.com/metaes/metaes/issues"
+  },
   "author": {
     "name": "Bartosz Krupa",
     "email": "krupa.bartosz@gmail.com"
@@ -31,10 +40,10 @@
     "lodash": "^4.17.4",
     "mocha": "^5.2.0",
     "pify": "^3.0.0",
-    "typescript": "^2.9.2"
+    "typescript": "^2.9.2",
+    "@types/chai": "^4.1.2"
   },
   "dependencies": {
-    "@types/chai": "^4.1.2",
     "esprima": "^4.0.0",
     "node-fetch": "^2.2.0",
     "websocket": "^1.0.25",
