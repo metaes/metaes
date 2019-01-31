@@ -1,4 +1,4 @@
-<main>
+[![CircleCI](https://circleci.com/gh/metaes/metaes.svg?style=svg)](https://circleci.com/gh/metaes/metaes)
 
 # MetaES
 
