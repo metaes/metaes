@@ -10,15 +10,16 @@
     "test:local": "mocha --recursive lib/ test/runner",
     "dist:compile": "tsc -p tsconfig-build.json --declaration",
     "dist:copy": "cp package.json README.md tsconfig.json .npmignore build/lib",
-    "dist": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish --dry-run"
+    "dist:dry": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish --dry-run",
+    "dist": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/metaes/metaes.git"
   },
-  "main": "build/lib/metaes",
+  "main": "metaes",
   "license": "MIT",
-  "version": "2.3.0-alpha-1",
+  "version": "2.4.0-dev",
   "devDependencies": {
     "@types/node": "^8.0.10",
     "body-parser": "^1.18.3",
