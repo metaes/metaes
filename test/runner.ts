@@ -5,7 +5,7 @@ import { zip } from "lodash";
 import { before, describe, it } from "mocha";
 import * as pify from "pify";
 import { metaesEval } from "../lib/metaes";
-import { callWithCurrentContinuation } from "../lib/special";
+import { callWithCurrentContinuation } from "../lib/callcc";
 
 const values = {
   getThisEnv(_, c, _cerr, env) {

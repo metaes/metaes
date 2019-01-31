@@ -3,7 +3,7 @@ import { Environment, GetValue, getEnvironmentForValue } from "../environment";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
-import { callWithCurrentContinuation } from "../special";
+import { callWithCurrentContinuation } from "../callcc";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { IfStatement } from "./statements";
 

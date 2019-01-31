@@ -2,9 +2,9 @@ import { assert, expect } from "chai";
 import { describe, it } from "mocha";
 import { evalFunctionBodyAsPromise, MetaesContext, metaesEval, evalFunctionAsPromise } from "./metaes";
 import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "./metafunction";
-import { callWithCurrentContinuation } from "./special";
+import { callWithCurrentContinuation } from "./callcc";
 
-describe("Special", () => {
+describe("Callcc", () => {
   it("should return current env", () => {
     function receiver(_, _c, _cerr, env) {
       assert.equal(env.values.answer, 42);
@@ -276,6 +276,3 @@ describe("Special", () => {
     expect(result).deep.eq([errorMessage, 1, 5, serverData]);
   });
 });
-
-// TODO: add example when config interpreters are modified in a function scope and change how code is executed.
-// Using call/cc and config.interpreters
