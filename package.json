@@ -7,12 +7,16 @@
   },
   "scripts": {
     "test": "tsc; mocha --recursive lib/ test/runner",
-    "test:local": "mocha --recursive lib/ test/runner"
+    "test:local": "mocha --recursive lib/ test/runner",
+    "dist:compile": "tsc -p tsconfig-build.json --declaration",
+    "dist:copy": "cp package.json README.md tsconfig.json build/",
+    "dist": "npm run dist:compile; npm run dist:copy; cd build;"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/metaes/metaes.git"
   },
+  "main": "build/lib/metaes",
   "license": "MIT",
   "version": "2.3.0-alpha-1",
   "devDependencies": {
