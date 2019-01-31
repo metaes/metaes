@@ -28,7 +28,7 @@
   },
   "main": "metaes",
   "license": "MIT",
-  "version": "2.4.0-dev-1",
+  "version": "2.4.0-dev-4",
   "devDependencies": {
     "@types/node": "^8.0.10",
     "body-parser": "^1.18.3",

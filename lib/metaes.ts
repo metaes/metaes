@@ -129,7 +129,8 @@ export const evalAsPromise = (context: Context, input: Script | Source, environm
   new Promise((resolve, reject) => context.evaluate(input, resolve, reject, environment));
 
 export const createScriptFromFunctionBody = (source: Function, cache?: ParseCache) => ({
-  ast: (((parseFunction(source, cache) as Program).body[0] as ExpressionStatement).expression as FunctionNode).body,
+  ast: (((parseFunction(source, cache) as Program).body[0] as ExpressionStatement).expression as FunctionNode)
+    .body as ASTNode,
   scriptId: nextScriptId(),
   source
 });
