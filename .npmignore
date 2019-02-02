@@ -1,0 +1,6 @@
+test
+.idea
+.editorconfig
+.circleci
+.vscode
+*.map

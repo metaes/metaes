@@ -1,6 +1,7 @@
 {
   "compileOnSave": true,
   "compilerOptions": {
+    "outDir": "build/",
     "lib": ["es6", "dom", "es2016.array.include"],
     "baseUrl": ".",
     "paths": {
@@ -17,5 +18,6 @@
     "noFallthroughCasesInSwitch": true,
     "composite": true
   },
-  "include": ["lib/**/*.ts", "test/**/*.ts"]
+  "include": ["lib/**/*.ts"],
+  "exclude": ["lib/**/*.spec.ts", "test"]
 }

@@ -1,20 +1,34 @@
 {
   "name": "metaes",
   "description": "JavaScript (ECMAScript) in JavaScript interpreter for better tools.",
+  "keywords": [
+    "interpreter",
+    "language",
+    "javascript",
+    "ecmascript"
+  ],
+  "bugs": {
+    "url": "https://github.com/metaes/metaes/issues"
+  },
   "author": {
     "name": "Bartosz Krupa",
     "email": "krupa.bartosz@gmail.com"
   },
   "scripts": {
     "test": "tsc; mocha --recursive lib/ test/runner",
-    "test:local": "mocha --recursive lib/ test/runner"
+    "test:local": "mocha --recursive lib/ test/runner",
+    "dist:compile": "tsc -p tsconfig-build.json --declaration",
+    "dist:copy": "cp package.json README.md tsconfig.json .npmignore build/lib",
+    "dist:dry": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish --dry-run",
+    "dist": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/metaes/metaes.git"
   },
+  "main": "metaes",
   "license": "MIT",
-  "version": "2.3.0-alpha-1",
+  "version": "2.4.0-dev-4",
   "devDependencies": {
     "@types/node": "^8.0.10",
     "body-parser": "^1.18.3",
@@ -26,10 +40,10 @@
     "lodash": "^4.17.4",
     "mocha": "^5.2.0",
     "pify": "^3.0.0",
-    "typescript": "^2.9.2"
+    "typescript": "^2.9.2",
+    "@types/chai": "^4.1.2"
   },
   "dependencies": {
-    "@types/chai": "^4.1.2",
     "esprima": "^4.0.0",
     "node-fetch": "^2.2.0",
     "websocket": "^1.0.25",
