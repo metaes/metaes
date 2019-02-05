@@ -130,6 +130,7 @@ export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, co
         switch (e.property.type) {
           case "Identifier":
             if (e.computed) {
+              // TODO: dry?
               evaluate(
                 e.property,
                 property => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
