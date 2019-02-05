@@ -2,7 +2,7 @@
 
 # MetaES
 
-[MetaES](http://metaes.org/) is a building block for other libraries and tools. It was created to speed up applications development. 
+[MetaES](http://metaes.org/) is a JavaScript metacircular interpreter. It is a building block for other libraries and tools. It was created to speed up applications development.
 
 Try it out at the [playground](http://metaes.org/playground.html).
 
@@ -55,7 +55,7 @@ npm install
 npm test
 ```
 
-## Contribution 
+## Contribution
 
 Use GitHub [issues](http://github.com/metaes/metaes/issues) or [pull requests](https://github.com/metaes/metaes/pulls).
 
