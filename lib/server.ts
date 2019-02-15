@@ -9,10 +9,6 @@ import { Context, evalAsPromise, MetaesContext } from "./metaes";
 import { assertMessage, environmentFromMessage, environmentToMessage, mergeValues, MetaesMessage } from "./remote";
 import { Continuation, ErrorContinuation, Source } from "./types";
 
-export const config = {
-  port: 8082
-};
-
 const testContext = new MetaesContext(
   value => {
     console.log("[value]");
@@ -28,7 +24,7 @@ const testContext = new MetaesContext(
   }
 );
 
-export const runWSServer = (port: number = config.port, context = testContext) =>
+export const runWSServer = (port: number | undefined = undefined, context = testContext) =>
   new Promise((resolve, _reject) => {
     const server = http.createServer();
     const app = express();
@@ -117,8 +113,9 @@ export const runWSServer = (port: number = config.port, context = testContext) =
     server.on("request", app);
     server.on("error", e => log("[Server: caught error]", e));
 
-    server.listen(port, () => {
+    const callback = () => {
       log("[Server: Listening on " + JSON.stringify(server.address()) + "]");
       resolve(server);
-    });
+    };
+    port ? server.listen(port, callback) : server.listen(callback);
   });

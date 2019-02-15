@@ -169,22 +169,28 @@ export const createHTTPConnector = (url: string): Context => {
   return context;
 };
 
-export const createWSConnector = (WebSocketConstructor: typeof WebSocket) => (connectionString: string) =>
-  new Promise<Context>((resolve, reject) => {
+type ClosableContext = Context & { close: () => void };
+
+export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoReconnect = false) => (
+  connectionString: string
+) =>
+  new Promise<ClosableContext>((resolve, reject) => {
     const connect = () => {
-      const client = new WebSocketConstructor(connectionString);
-      let context: Context;
+      const socket = new WebSocketConstructor(connectionString);
+      let context: ClosableContext;
 
       const send = (message: MetaesMessage) => {
         const stringified = JSON.stringify(assertMessage(message));
         log("[Client: sending message]", stringified);
-        client.send(stringified);
+        socket.send(stringified);
       };
+      if (autoReconnect) {
+        socket.addEventListener("close", () => {
+          setTimeout(connect, 5000);
+        });
+      }
 
-      client.addEventListener("close", () => {
-        setTimeout(connect, 5000);
-      });
-      client.addEventListener("message", e => {
+      socket.addEventListener("message", e => {
         try {
           const message = assertMessage(JSON.parse(e.data) as MetaesMessage);
 
@@ -201,9 +207,10 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket) => (co
           log("[Client: receiving message error]", e);
         }
       });
-      client.addEventListener("error", reject);
-      client.addEventListener("open", async () => {
+      socket.addEventListener("error", reject);
+      socket.addEventListener("open", async () => {
         context = {
+          close: () => socket.close(),
           evaluate: (
             input: Source,
             c?: Continuation,

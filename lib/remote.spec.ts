@@ -17,10 +17,9 @@ import {
   mergeValues,
   patchNodeFetch
 } from "./remote";
-import { config, runWSServer } from "./server";
+import { runWSServer } from "./server";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
-export const testServerPort = 8082;
 
 describe("Environment operations", () => {
   let context: Context;
@@ -70,22 +69,25 @@ describe("Remote", () => {
   let server;
 
   before(async () => {
-    server = await runWSServer(config.port);
+    server = await runWSServer();
   });
 
-  after(() => new Promise(resolve => server.close(resolve)));
+  after(() => server.close());
 
-  defineTestsFor("Remote WebSocket messaging", () => createWSConnector(W3CWebSocket)(`ws://localhost:8082`));
-  defineTestsFor("Remote HTTP messaging", () => {
-    return Promise.resolve(createHTTPConnector("http://localhost:" + config.port));
-  });
+  defineTestsFor("Remote HTTP messaging", () => createHTTPConnector("http://localhost:" + server.address().port));
+  defineTestsFor("Remote WebSocket messaging", () =>
+    createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port)
+  );
 });
 
-function defineTestsFor(describeName: string, contextGetter: () => Promise<Context>) {
+function defineTestsFor(describeName: string, contextGetter: () => Promise<Context> | Context) {
   describe(describeName, () => {
     let context;
     before(async () => {
       context = await contextGetter();
+    });
+    after(() => {
+      context.close && context.close();
     });
     it("should correctly deliver primitive success value", async () =>
       assert.equal(4, await evalAsPromise(context, "2+2")));
@@ -163,12 +165,12 @@ describe("Raw HTTP calls", () => {
   let server, url;
 
   before(async () => {
-    server = await runWSServer(config.port);
-    url = `http://localhost:` + config.port;
+    server = await runWSServer();
+    url = `http://localhost:` + server.address().port;
     patchNodeFetch();
   });
 
-  after(() => new Promise(resolve => server.close(resolve)));
+  after(() => server.close());
 
   it("Should return response using string query", async () => {
     assert.equal(await fetch(url, { method: "post", body: "2+2" }).then(d => d.text()), "4");

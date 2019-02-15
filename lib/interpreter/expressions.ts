@@ -535,7 +535,10 @@ export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Envi
           cerr(NotImplementedException(`Support for "${e.operator}" operator is not implemented yet`));
       }
     },
-    error => (error.value instanceof ReferenceError && e.operator === "typeof" ? c("undefined") : cerr(error)),
+    error =>
+      e.operator === "typeof" && e.argument.type === "Identifier" && error.value instanceof ReferenceError
+        ? c("undefined")
+        : cerr(error),
     env,
     config
   );
