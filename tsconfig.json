@@ -15,7 +15,7 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "composite": true
+    "declaration": false
   },
   "include": ["lib/**/*.ts", "test/**/*.ts"]
 }
