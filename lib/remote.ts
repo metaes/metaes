@@ -177,7 +177,6 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
   new Promise<ClosableContext>((resolve, reject) => {
     const connect = () => {
       const socket = new WebSocketConstructor(connectionString);
-      console.log(socket);
       let context: ClosableContext;
 
       const send = (message: MetaesMessage) => {
