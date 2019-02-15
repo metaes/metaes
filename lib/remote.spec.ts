@@ -20,7 +20,6 @@ import {
 import { runWSServer } from "./server";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
-export const testServerPort = 8082;
 
 describe("Environment operations", () => {
   let context: Context;
@@ -75,19 +74,20 @@ describe("Remote", () => {
 
   after(() => server.close());
 
+  defineTestsFor("Remote HTTP messaging", () => createHTTPConnector("http://localhost:" + server.address().port));
   defineTestsFor("Remote WebSocket messaging", () =>
     createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port)
   );
-  defineTestsFor("Remote HTTP messaging", () => {
-    return Promise.resolve(createHTTPConnector("http://localhost:" + server.address().port));
-  });
 });
 
-function defineTestsFor(describeName: string, contextGetter: () => Promise<Context>) {
+function defineTestsFor(describeName: string, contextGetter: () => Promise<Context> | Context) {
   describe(describeName, () => {
     let context;
     before(async () => {
       context = await contextGetter();
+    });
+    after(() => {
+      context.close && context.close();
     });
     it("should correctly deliver primitive success value", async () =>
       assert.equal(4, await evalAsPromise(context, "2+2")));

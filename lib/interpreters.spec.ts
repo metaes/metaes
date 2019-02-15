@@ -80,7 +80,7 @@ describe("Example Proxy implementation", async () => {
       }
     });
     let self = { value, proxied };
-    context = new MetaesContext(undefined, console.error, { values: { self, console } }, { interpreters });
+    context = new MetaesContext(undefined, undefined, { values: { self, console } }, { interpreters });
   });
 
   it("should support standard get operations", async () => {
