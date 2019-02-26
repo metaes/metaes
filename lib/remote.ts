@@ -8,7 +8,8 @@ const referencesMaps = new Map<Context, Map<object | Function, string>>();
 
 export function patchNodeFetch() {
   if (typeof fetch === "undefined" && typeof global === "object") {
-    global.fetch = require("node-fetch");
+    // @ts-ignore
+    global.fetch = global.require("node-fetch");
   }
 }
 

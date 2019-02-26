@@ -41,12 +41,13 @@
     "typescript": "^2.9.2"
   },
   "dependencies": {
+    "body-parser": "^1.18.3",
+    "cors": "^2.8.5",
     "esprima": "^4.0.0",
+    "express": "^4.15.3",
+    "helmet": "^3.6.1",
     "node-fetch": "^2.2.0",
     "websocket": "^1.0.25",
-    "ws": "^4.0.0",
-    "body-parser": "^1.18.3",
-    "express": "^4.15.3",
-    "helmet": "^3.6.1"
+    "ws": "^4.0.0"
   }
 }

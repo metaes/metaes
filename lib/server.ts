@@ -1,6 +1,7 @@
 import * as bodyParser from "body-parser";
 import * as express from "express";
 import * as helmet from "helmet";
+import * as cors from "cors";
 import * as http from "http";
 import * as WebSocket from "ws";
 import { Environment } from "./environment";
@@ -32,6 +33,7 @@ export const runWSServer = (port: number | undefined = undefined, context = test
     app.use(bodyParser.json());
     app.use(bodyParser.text());
     app.use(helmet());
+    app.use(cors());
 
     // HTTP
     app.post("/", (req, res) => {
