@@ -8,8 +8,13 @@ const referencesMaps = new Map<Context, Map<object | Function, string>>();
 
 export function patchNodeFetch() {
   if (typeof fetch === "undefined" && typeof global === "object") {
-    // @ts-ignore
-    global.fetch = global.require("node-fetch");
+    /**
+     * Redundancy created to skip SystemJS eager dependencies finder.
+     * In dev mode using CommonJS modules in browser it disallows conditional modules loading.
+     * For production it will be optimized out.
+     */
+    const _require = require;
+    global.fetch = _require("node-fetch");
   }
 }
 
