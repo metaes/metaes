@@ -1,12 +1,15 @@
 import { assert } from "chai";
 import { after, before, beforeEach, describe, it } from "mocha";
 import { Environment } from "./environment";
+import { Identifier } from "./interpreter/base";
+import { ECMAScriptInterpreters } from "./interpreters";
 import {
   consoleLoggingMetaesContext,
   Context,
-  evalFunctionBody,
   evalAsPromise,
-  evalFunctionBodyAsPromise
+  evalFunctionBody,
+  evalFunctionBodyAsPromise,
+  MetaesContext
 } from "./metaes";
 import {
   createHTTPConnector,
@@ -15,7 +18,8 @@ import {
   environmentToMessage,
   getReferencesMap,
   mergeValues,
-  patchNodeFetch
+  patchNodeFetch,
+  RemoteObject
 } from "./remote";
 import { runWSServer } from "./server";
 
@@ -170,11 +174,11 @@ describe("Raw HTTP calls", () => {
 
   after(() => server.close());
 
-  it("Should return response using string query", async () => {
+  it("should return response using string query", async () => {
     assert.equal(await fetch(url, { method: "post", body: "2+2" }).then(d => d.text()), "4");
   });
 
-  it("Should throw when using string query", async () => {
+  it("should throw when using string query", async () => {
     const { json, status } = await fetch(url, { method: "post", body: "throw 1" }).then(async response => ({
       json: await response.json(),
       status: response.status
@@ -183,7 +187,7 @@ describe("Raw HTTP calls", () => {
     assert.equal(status, 400);
   });
 
-  it("Should throw and return error message using string query", async () => {
+  it("should throw and return error message using string query", async () => {
     const { json, status } = await fetch(url, { method: "post", body: `foo;` }).then(async response => ({
       json: await response.json(),
       status: response.status
@@ -193,7 +197,7 @@ describe("Raw HTTP calls", () => {
     assert.equal(status, 400);
   });
 
-  it("Should return response using object", async () => {
+  it("should return response using object", async () => {
     const response = await fetch(url, {
       method: "post",
       body: JSON.stringify({ input: "2+2" }),
@@ -203,7 +207,7 @@ describe("Raw HTTP calls", () => {
     assert.deepEqual(response, 4);
   });
 
-  it("Should throw when using JSON query", async () => {
+  it("should throw when using JSON query", async () => {
     const { json, status } = await fetch(url, {
       method: "post",
       body: JSON.stringify({ input: "throw 1" }),
@@ -214,5 +218,60 @@ describe("Raw HTTP calls", () => {
     }));
     assert.equal(json.type, "ThrowStatement");
     assert.equal(status, 400);
+  });
+});
+
+describe.only("Remote objects", () => {
+  let remoteContext: MetaesContext, interpreters: Environment, localContext: MetaesContext;
+
+  before(() => {
+    remoteContext = new MetaesContext(undefined, undefined, {
+      values: { stringMessage: "Hello", objectMessage: { value: "Hello" } }
+    });
+
+    interpreters = {
+      values: {
+        Identifier(e, c, cerr, env, config) {
+          Identifier(
+            e,
+            c,
+            exception => {
+              const { type } = exception;
+              if (type === "ReferenceError") {
+                remoteContext.evaluate(
+                  e,
+                  value =>
+                    c(
+                      typeof value === "object" && !(value instanceof RemoteObject)
+                        ? /**
+                           * A case when remote context is just other object in the same VM.
+                           * Want to convert it to RemoteObject anyway, because changing object
+                           * in non-original context may cause observations or interceptors break.
+                           */
+                          RemoteObject.create()
+                        : value
+                    ),
+                  cerr
+                );
+              } else {
+                cerr(exception);
+              }
+            },
+            env,
+            config
+          );
+        }
+      },
+      prev: ECMAScriptInterpreters
+    };
+    localContext = new MetaesContext(undefined, undefined, { values: {} }, { interpreters });
+  });
+
+  it("should query remote primitive value from different context", async () => {
+    assert.equal("Hello", await localContext.evalAsPromise("stringMessage"));
+  });
+
+  it("should query object value from different context", async () => {
+    assert.isTrue((await localContext.evalAsPromise("objectMessage")) instanceof RemoteObject);
   });
 });

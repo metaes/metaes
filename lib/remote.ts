@@ -6,6 +6,20 @@ import { Continuation, ErrorContinuation, EvaluationConfig, Script, Source } fro
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
 
+// Intentionally not exported.
+const privateKey = {};
+
+export class RemoteObject {
+  constructor(key?) {
+    if (key !== privateKey) {
+      throw new Error("Can't use consctructor directly, use RemoteObject.create");
+    }
+  }
+  static create() {
+    return Object.freeze(new RemoteObject(privateKey));
+  }
+}
+
 export function patchNodeFetch() {
   if (typeof fetch === "undefined" && typeof global === "object") {
     /**
