@@ -25,6 +25,8 @@ const testContext = new MetaesContext(
   }
 );
 
+const attachErrorMessage = (_, v) => (v instanceof Error ? { message: v.message } : v);
+
 export const runWSServer = (port: number | undefined = undefined, context = testContext) =>
   new Promise((resolve, _reject) => {
     const server = http.createServer();
@@ -52,7 +54,7 @@ export const runWSServer = (port: number | undefined = undefined, context = test
           context.evaluate(
             req.body,
             value => res.send(JSON.stringify(value)),
-            error => res.status(400).send(JSON.stringify(error))
+            error => res.status(400).send(JSON.stringify(error, attachErrorMessage))
           );
         }
       } catch (e) {
