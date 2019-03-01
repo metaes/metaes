@@ -80,15 +80,12 @@ describe("Remote", () => {
   );
 });
 
-function defineTestsFor(describeName: string, contextGetter: () => Promise<Context> | Context) {
+function defineTestsFor(describeName: string, getContext: () => Promise<Context> | Context) {
   describe(describeName, () => {
     let context;
-    before(async () => {
-      context = await contextGetter();
-    });
-    after(() => {
-      context.close && context.close();
-    });
+    before(async () => (context = await getContext()));
+    after(() => context.close && context.close());
+
     it("should correctly deliver primitive success value", async () =>
       assert.equal(4, await evalAsPromise(context, "2+2")));
 
@@ -116,9 +113,8 @@ function defineTestsFor(describeName: string, contextGetter: () => Promise<Conte
 
     it("should not throw when c and cerr are not defined and result is correct", () => context.evaluate("2+2"));
 
-    it("should not throw when cerr is not defined, evaluation is synchronous and result is incorrect", async () => {
-      context.evaluate("throw 1;");
-    });
+    it("should not throw when cerr is not defined, evaluation is synchronous and result is incorrect", async () =>
+      context.evaluate("throw 1;"));
 
     it("should correctly deliver primitive success value and use env", async () =>
       assert.equal(4, await evalAsPromise(context, "2+a", { values: { a: 2 } })));
@@ -134,14 +130,16 @@ function defineTestsFor(describeName: string, contextGetter: () => Promise<Conte
     });
 
     it("should return correct value reading a disk file", async () => {
+      const command = "cat tsconfig.json";
+
       assert.equal(
         require("child_process")
-          .execSync("cat tsconfig.json")
+          .execSync(command)
           .toString(),
         await evalFunctionBodyAsPromise(
           { context, source: (child_process, command) => child_process.execSync(command).toString() },
           {
-            values: { command: "cat tsconfig.json" }
+            values: { command: command }
           }
         )
       );
@@ -150,7 +148,7 @@ function defineTestsFor(describeName: string, contextGetter: () => Promise<Conte
     it("should throw an exception", async () => {
       let thrown = false;
       try {
-        await evalFunctionBody(context, window => window); // window is undefined on nodejs
+        await evalFunctionBody(context, () => window); // window is undefined on nodejs
       } catch (e) {
         if (e) {
           thrown = true;
@@ -182,6 +180,16 @@ describe("Raw HTTP calls", () => {
       status: response.status
     }));
     assert.equal(json.type, "ThrowStatement");
+    assert.equal(status, 400);
+  });
+
+  it("Should throw and return error message using string query", async () => {
+    const { json, status } = await fetch(url, { method: "post", body: `foo;` }).then(async response => ({
+      json: await response.json(),
+      status: response.status
+    }));
+    assert.equal(json.type, "ReferenceError");
+    assert.equal(json.value.message, '"foo" is not defined.');
     assert.equal(status, 400);
   });
 
