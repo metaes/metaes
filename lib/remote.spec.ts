@@ -221,7 +221,7 @@ describe("Raw HTTP calls", () => {
   });
 });
 
-describe.only("Remote objects", () => {
+describe("Remote objects", () => {
   let remoteContext: MetaesContext, interpreters: Environment, localContext: MetaesContext;
 
   before(() => {
