@@ -21,6 +21,18 @@
     a,
     b: { c = foo() }
   } = { a: 1, b: { c: 2 } };
-  
+
   a == 1 && c === 2 && called === false;
+}
+
+// it: should throw TypeError
+{
+  let result;
+  try {
+    // @ts-ignore
+    const { x } = undefined;
+  } catch (e) {
+    result = e instanceof TypeError;
+  }
+  result;
 }
