@@ -64,51 +64,48 @@ export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) 
   visitArray(
     e.properties,
     (property, c, cerr) => {
-      switch (property.key.type) {
-        case "Identifier":
-          const keyName = property.key.name;
-          GetValue(
-            { name: keyName },
-            value => {
-              switch (property.value.type) {
-                case "Identifier":
-                  evaluate(
-                    { type: "SetValue", name: property.value.name, value, isDeclaration: true },
-                    c,
-                    cerr,
-                    env,
-                    config
-                  );
-                  break;
-                case "ObjectPattern":
-                  if (value) {
-                    evaluate(property.value, c, cerr, { values: value, prev: env, internal: true }, config);
-                  } else {
-                    cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
-                  }
-                  break;
-                // TODO: move top out of this switch stmt?
-                case "AssignmentPattern":
-                  if (value) {
-                    evaluate(property.value, c, cerr, env, config);
-                  } else {
-                    cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
-                  }
-                  break;
-                default:
-                  cerr(
-                    NotImplementedException(`'${property.value.type}' in ObjectPattern value is not supported yet.`)
-                  );
-                  break;
-              }
-            },
-            cerr,
-            env
-          );
-          break;
-        default:
-          cerr(NotImplementedException(`'${property.key.type}' in ObjectPattern property is not supported yet.`));
-          break;
+      if (property.value.type === "AssignmentPattern") {
+        evaluate(property, c, cerr, env, config);
+      } else {
+        switch (property.key.type) {
+          case "Identifier":
+            const keyName = property.key.name;
+            GetValue(
+              { name: keyName },
+              value => {
+                switch (property.value.type) {
+                  case "Identifier":
+                    evaluate(
+                      { type: "SetValue", name: property.value.name, value, isDeclaration: true },
+                      c,
+                      cerr,
+                      env,
+                      config
+                    );
+                    break;
+                  case "ObjectPattern":
+                    if (value) {
+                      evaluate(property.value, c, cerr, { values: value, prev: env, internal: true }, config);
+                    } else {
+                      cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
+                    }
+                    break;
+
+                  default:
+                    cerr(
+                      NotImplementedException(`'${property.value.type}' in ObjectPattern value is not supported yet.`)
+                    );
+                    break;
+                }
+              },
+              cerr,
+              env
+            );
+            break;
+          default:
+            cerr(NotImplementedException(`'${property.key.type}' in ObjectPattern property is not supported yet.`));
+            break;
+        }
       }
     },
     c,
