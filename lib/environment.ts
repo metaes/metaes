@@ -11,6 +11,7 @@ export interface EnvironmentBase<T = any> {
 
 export interface Environment<T = any> extends EnvironmentBase<T> {
   prev?: Environment<T>;
+  internal?: boolean;
 }
 
 export function toEnvironment(environment?: any | EnvironmentBase | Environment): Environment {
@@ -40,10 +41,17 @@ export function SetValue<T>(
   cerr: ErrorContinuation,
   env: Environment<T>
 ) {
+  let writableEnv: Environment | undefined = env;
+  while (writableEnv && writableEnv.internal) {
+    writableEnv = writableEnv.prev;
+  }
+  if (!writableEnv) {
+    return cerr(new Error(`Can't write to '${name}' value.`));
+  }
   if (isDeclaration) {
-    c((env.values[name] = value));
+    c((writableEnv.values[name] = value));
   } else {
-    const _env = getEnvironmentForValue(env, name);
+    const _env = getEnvironmentForValue(writableEnv, name);
     if (_env) {
       c((_env.values[name] = value));
     } else {

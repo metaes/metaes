@@ -7,13 +7,6 @@ import { callWithCurrentContinuation } from "../callcc";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { IfStatement } from "./statements";
 
-export function lastArrayItem(array?: any[]) {
-  if (array) {
-    return array[array.length - 1];
-  }
-  return null;
-}
-
 export function CallExpression(
   e: NodeTypes.CallExpression,
   c: Continuation,
@@ -245,12 +238,12 @@ export function AssignmentExpression(e: NodeTypes.AssignmentExpression, c, cerr,
 }
 
 export function ObjectExpression(e: NodeTypes.ObjectExpression, c, cerr, env, config) {
-  let object = {};
   evaluateArray(
     e.properties,
     properties => {
-      for (let property of properties) {
-        object[property.key] = property.value;
+      const object = {};
+      for (let { key, value } of properties) {
+        object[key] = value;
       }
       c(object);
     },
@@ -261,19 +254,23 @@ export function ObjectExpression(e: NodeTypes.ObjectExpression, c, cerr, env, co
 }
 
 export function Property(e: NodeTypes.Property, c, cerr, env, config) {
-  let key;
-  switch (e.key.type) {
-    case "Identifier":
-      key = e.key.name;
-      break;
-    case "Literal":
-      key = e.key.value;
-      break;
-    default:
-      cerr(NotImplementedException("This type or property is not supported yet."));
-      return;
+  if (e.computed) {
+    cerr(NotImplementedException("Computed properties are not supported yet."));
+  } else {
+    let key;
+    switch (e.key.type) {
+      case "Identifier":
+        key = e.key.name;
+        break;
+      case "Literal":
+        key = e.key.value;
+        break;
+      default:
+        cerr(NotImplementedException(`'${e.key["type"]}' property key type is not supported yet.`));
+        return;
+    }
+    evaluate(e.value, value => c({ key, value }), cerr, env, config);
   }
-  evaluate(e.value, value => c({ key, value }), cerr, env, config);
 }
 
 export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, config) {
@@ -421,7 +418,13 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
 }
 
 export function SequenceExpression(e: NodeTypes.SequenceExpression, c, cerr, env, config) {
-  evaluateArray(e.expressions, results => (results.length ? c(lastArrayItem(results)) : c()), cerr, env, config);
+  evaluateArray(
+    e.expressions,
+    results => (results.length ? c(results ? results[results.length - 1] : null) : c()),
+    cerr,
+    env,
+    config
+  );
 }
 
 export function LogicalExpression(e: NodeTypes.LogicalExpression, c, cerr, env, config) {

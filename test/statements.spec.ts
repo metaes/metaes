@@ -12,9 +12,15 @@
 
 // it: should support deeper destruction assignment
 {
+  let called = false;
+  function foo() {
+    called = true;
+    return 4;
+  }
   let {
     a,
-    b: { c = 4 }
+    b: { c = foo() }
   } = { a: 1, b: { c: 2 } };
-  a == 1 && c === 2;
+  
+  a == 1 && c === 2 && called === false;
 }

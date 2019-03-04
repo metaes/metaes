@@ -1,6 +1,7 @@
 import { assert, expect } from "chai";
 import { describe, it } from "mocha";
 import { evalFunctionBodyAsPromise, MetaesContext, metaesEval } from "./metaes";
+import { callWithCurrentContinuation } from "./callcc";
 
 describe("Meta functions", () => {
   it("should return correct value in simple case", () => {
@@ -67,20 +68,43 @@ describe("Meta functions", () => {
       assert.instanceOf(e.value, errorConstructor);
     }
   });
-
+  // TODO: test TypeError
   it("should support ObjectPattern", async () => {
-    const context = new MetaesContext();
-    const source = () => {
-      function f({ b: { c } }, { a }) {
-        return [a, c];
+    function getEnv(_, c, _cerr, env) {
+      c(Object.keys(env.values));
+    }
+    const callcc = callWithCurrentContinuation;
+    const context = new MetaesContext(undefined, undefined, {
+      values: {
+        console,
+        getEnv,
+        callcc
       }
-      f({ b: { c: 2 } }, { a: 1 });
+    });
+    const source = () => {
+      let called = false;
+      function foo() {
+        called = true;
+        return 4;
+      }
+      const object = { a: 1, b: 2, c: { d: 3 }, e: 4 };
+      let {
+        a,
+        b: b2,
+        c: { d = foo() }
+      } = object;
+      console.log("done, env:", callcc(getEnv));
+      console.log("result:", { a, b2, d, called });
+      // function f({ b: { c } }, { a }) {
+      //   return [a, c];
+      // }
+      // f({ b: { c: 2 } }, { a: 1 });
     };
+    console.log(source.toString());
     const r = await evalFunctionBodyAsPromise({
       context,
       source
     });
-    console.log(source);
     console.log(r);
   });
 });

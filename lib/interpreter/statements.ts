@@ -1,5 +1,5 @@
 import { evaluate, evaluateArray, visitArray } from "../applyEval";
-import { GetValue } from "../environment";
+import { GetValue, SetValue } from "../environment";
 import { LocatedError, NotImplementedException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
@@ -51,44 +51,7 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
         evaluate({ type: "SetValue", name: e.id.name, value: rightValue, isDeclaration: true }, c, cerr, env, config);
         break;
       case "ObjectPattern":
-        visitArray(
-          e.id.properties,
-          (property, c, cerr) => {
-            if (property.key.type === "Identifier") {
-              if (property.value) {
-                // For example: let {x} = obj;
-                // Don't want to try evaluate {x:x} as expanded property, so skip property evaluation.
-                if (property.shorthand && property.value.type === "Identifier") {
-                  const name = property.key.name;
-                  evaluate(
-                    { type: "SetValue", name, value: rightValue[name], isDeclaration: true },
-                    c,
-                    cerr,
-                    env,
-                    config
-                  );
-                } else {
-                  const name = property.key.name;
-                  const setValue = value =>
-                    evaluate({ type: "SetValue", name, value, isDeclaration: true }, c, cerr, env, config);
-                  rightValue[name] ? setValue(rightValue[name]) : evaluate(property.value, setValue, cerr, env, config);
-                }
-              } else {
-                evaluate(property, c, cerr, env, config);
-              }
-            } else {
-              cerr(
-                NotImplementedException(
-                  `Property key of '${property.key.type}' type is not supported yet.`,
-                  property.key
-                )
-              );
-            }
-          },
-          c,
-          cerr
-        );
-        // evaluate(e.id, c, cerr, { values: rightValue, prev: env }, config);
+        evaluate(e.id, c, cerr, { values: rightValue, prev: env, internal: true }, config);
         break;
       default:
         cerr(NotImplementedException(`Init '${(<any>e.id).type}' is not supported yet.`, e));
@@ -98,30 +61,86 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
 }
 
 export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) {
-  evaluateArray(e.properties, c, cerr, env, config);
+  visitArray(
+    e.properties,
+    (property, c, cerr) => {
+      switch (property.key.type) {
+        case "Identifier":
+          const keyName = property.key.name;
+          GetValue(
+            { name: keyName },
+            value => {
+              switch (property.value.type) {
+                case "Identifier":
+                  evaluate(
+                    { type: "SetValue", name: property.value.name, value, isDeclaration: true },
+                    c,
+                    cerr,
+                    env,
+                    config
+                  );
+                  break;
+                case "ObjectPattern":
+                  if (value) {
+                    evaluate(property.value, c, cerr, { values: value, prev: env, internal: true }, config);
+                  } else {
+                    cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
+                  }
+                  break;
+                // TODO: move top out of this switch stmt?
+                case "AssignmentPattern":
+                  if (value) {
+                    evaluate(property.value, c, cerr, env, config);
+                  } else {
+                    cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
+                  }
+                  break;
+                default:
+                  cerr(
+                    NotImplementedException(`'${property.value.type}' in ObjectPattern value is not supported yet.`)
+                  );
+                  break;
+              }
+            },
+            cerr,
+            env
+          );
+          break;
+        default:
+          cerr(NotImplementedException(`'${property.key.type}' in ObjectPattern property is not supported yet.`));
+          break;
+      }
+    },
+    c,
+    cerr
+  );
 }
 
 export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, config) {
-  evaluate(
-    e.right,
-    right => {
-      switch (e.left.type) {
-        case "Identifier":
-          evaluate({ type: "SetValue", name: e.left.name, value: right, isDeclaration: true }, c, cerr, env, config);
-          break;
-        default:
-          cerr(
-            NotImplementedException(
-              `${e.left.type} is not supported as AssignmentPattern left-hand side value.`,
-              e.left
-            )
-          );
+  switch (e.left.type) {
+    case "Identifier":
+      function assignRight() {
+        evaluate(
+          e.right,
+          right =>
+            evaluate({ type: "SetValue", name: e.left.name, value: right, isDeclaration: true }, c, cerr, env, config),
+          cerr,
+          env,
+          config
+        );
       }
-    },
-    cerr,
-    env,
-    config
-  );
+      GetValue(
+        { name: e.left.name },
+        value => (value ? SetValue({ name: e.left.name, isDeclaration: true, value }, c, cerr, env) : assignRight()),
+        assignRight,
+        env
+      );
+      break;
+    default:
+      cerr(
+        NotImplementedException(`${e.left.type} is not supported as AssignmentPattern left-hand side value.`, e.left)
+      );
+  }
 }
 
 export function IfStatement(e: NodeTypes.IfStatement | NodeTypes.ConditionalExpression, c, cerr, env, config) {

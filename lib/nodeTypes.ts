@@ -123,7 +123,7 @@ export interface IfStatement extends ConditionalBase {
 export interface Property extends NodeBase {
   type: "Property";
   key: Identifier | Literal;
-  value: Expression;
+  value: Expression | ObjectPattern | AssignmentPattern;
   computed: boolean;
   shorthand: boolean;
   method: boolean;
