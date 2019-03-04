@@ -6,10 +6,10 @@
   f(1, 2, 3, 4) + "" === [2, 3, 4] + "";
 }
 
-// it: :skip should support ObjectPattern
+// it: should support ObjectPattern
 {
-  function f({ a }) {
-    return a;
+  function f({ b: { c } }, { a }) {
+    return [a, c];
   }
-  f({ a: 1 }) === 1;
+  [1, 2] + "" === f({ b: { c: 2 } }, { a: 1 }) + "";
 }

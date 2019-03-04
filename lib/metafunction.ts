@@ -29,8 +29,7 @@ export const evaluateMetaFunction = (
           c((env.values[param.argument.name] = args.slice(i++)));
           break;
         case "ObjectPattern":
-          console.log(JSON.stringify(param, null, 2));
-          evaluate(param, c, cerr, env, config);
+          evaluate(param, c, cerr, { values: args[i++], prev: env, internal: true }, config);
           break;
         default:
           cerr(NotImplementedException(`"${param["type"]}" is not supported type of function param.`, param));
