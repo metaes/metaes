@@ -1,5 +1,5 @@
 import { evaluate, evaluateArray, visitArray } from "../applyEval";
-import { GetValue, SetValue } from "../environment";
+import { GetValue } from "../environment";
 import { LocatedError, NotImplementedException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
@@ -133,7 +133,10 @@ export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, 
       }
       GetValue(
         { name: e.left.name },
-        value => (value ? SetValue({ name: e.left.name, isDeclaration: true, value }, c, cerr, env) : assignRight()),
+        value =>
+          value
+            ? evaluate({ type: "SetValue", name: e.left.name, isDeclaration: true, value }, c, cerr, env, config)
+            : assignRight(),
         assignRight,
         env
       );
