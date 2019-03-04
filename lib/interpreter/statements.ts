@@ -73,35 +73,37 @@ export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) 
             if (!env.values) {
               cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
             } else {
-              GetValue(
-                { name: keyName },
-                value => {
-                  switch (property.value.type) {
-                    case "Identifier":
-                      evaluate(
-                        { type: "SetValue", name: property.value.name, value, isDeclaration: true },
-                        c,
-                        cerr,
-                        env,
-                        config
-                      );
-                      break;
-                    case "ObjectPattern":
-                      if (value) {
-                        evaluate(property.value, c, cerr, { values: value, prev: env, internal: true }, config);
-                      } else {
-                        cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
-                      }
-                      break;
-                    default:
-                      cerr(
-                        NotImplementedException(`'${property.value.type}' in ObjectPattern value is not supported yet.`)
-                      );
-                      break;
-                  }
-                },
-                cerr,
-                env
+              function assignValue(value?) {
+                switch (property.value.type) {
+                  case "Identifier":
+                    evaluate(
+                      { type: "SetValue", name: property.value.name, value, isDeclaration: true },
+                      c,
+                      cerr,
+                      env,
+                      config
+                    );
+                    break;
+                  case "ObjectPattern":
+                    if (value) {
+                      evaluate(property.value, c, cerr, { values: value, prev: env, internal: true }, config);
+                    } else {
+                      cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
+                    }
+                    break;
+                  default:
+                    cerr(
+                      NotImplementedException(`'${property.value.type}' in ObjectPattern value is not supported yet.`)
+                    );
+                    break;
+                }
+              }
+              evaluate(
+                { type: "GetValue", name: keyName },
+                assignValue,
+                e => (e.type === "ReferenceError" ? assignValue() : cerr(e)),
+                env,
+                config
               );
             }
             break;

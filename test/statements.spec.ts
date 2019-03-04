@@ -36,3 +36,11 @@
   }
   result;
 }
+
+// it: should assign undefined
+{
+  // @ts-ignore
+  let { x } = {};
+  // @ts-ignore
+  typeof x === "undefined";
+}
