@@ -154,7 +154,7 @@ export const evalFunctionBodyAsPromise = (
   { context, source }: { context: Context; source: Function },
   environment?: Environment,
   config?: EvaluationConfig
-) => new Promise((resolve, reject) => evalFunctionBody({ context, source }, resolve, reject, environment, config));
+) => new Promise<any>((resolve, reject) => evalFunctionBody({ context, source }, resolve, reject, environment, config));
 
 export function evalFunction<T extends any[]>(
   { context, source, args }: { context: MetaesContext; source: ((...T) => void); args?: T },
