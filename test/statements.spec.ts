@@ -9,3 +9,12 @@
   let { a, b = 3, c = 4 } = { a: 1, b: 2 };
   a == 1 && b === 2 && c === 4;
 }
+
+// it: should support deeper destruction assignment
+{
+  let {
+    a,
+    b: { c = 4 }
+  } = { a: 1, b: { c: 2 } };
+  a == 1 && c === 2;
+}

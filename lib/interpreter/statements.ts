@@ -45,10 +45,10 @@ export function VariableDeclaration(e: NodeTypes.VariableDeclaration, c, cerr, e
 }
 
 export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env, config) {
-  function id(initValue) {
+  function assign(rightValue) {
     switch (e.id.type) {
       case "Identifier":
-        evaluate({ type: "SetValue", name: e.id.name, value: initValue, isDeclaration: true }, c, cerr, env, config);
+        evaluate({ type: "SetValue", name: e.id.name, value: rightValue, isDeclaration: true }, c, cerr, env, config);
         break;
       case "ObjectPattern":
         visitArray(
@@ -61,7 +61,7 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
                 if (property.shorthand && property.value.type === "Identifier") {
                   const name = property.key.name;
                   evaluate(
-                    { type: "SetValue", name, value: initValue[name], isDeclaration: true },
+                    { type: "SetValue", name, value: rightValue[name], isDeclaration: true },
                     c,
                     cerr,
                     env,
@@ -71,7 +71,7 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
                   const name = property.key.name;
                   const setValue = value =>
                     evaluate({ type: "SetValue", name, value, isDeclaration: true }, c, cerr, env, config);
-                  initValue[name] ? setValue(initValue[name]) : evaluate(property.value, setValue, cerr, env, config);
+                  rightValue[name] ? setValue(rightValue[name]) : evaluate(property.value, setValue, cerr, env, config);
                 }
               } else {
                 evaluate(property, c, cerr, env, config);
@@ -88,12 +88,17 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
           c,
           cerr
         );
+        // evaluate(e.id, c, cerr, { values: rightValue, prev: env }, config);
         break;
       default:
         cerr(NotImplementedException(`Init '${(<any>e.id).type}' is not supported yet.`, e));
     }
   }
-  e.init ? evaluate(e.init, id, cerr, env, config) : id(undefined);
+  e.init ? evaluate(e.init, assign, cerr, env, config) : assign(undefined);
+}
+
+export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) {
+  evaluateArray(e.properties, c, cerr, env, config);
 }
 
 export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, config) {
@@ -373,6 +378,7 @@ export default {
   Program,
   VariableDeclarator,
   VariableDeclaration,
+  ObjectPattern,
   AssignmentPattern,
   IfStatement,
   ExpressionStatement,

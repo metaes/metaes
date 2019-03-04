@@ -1,4 +1,4 @@
-import { evaluate } from "./applyEval";
+import { evaluate, visitArray } from "./applyEval";
 import { Environment } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
@@ -13,51 +13,55 @@ export const evaluateMetaFunction = (
   executionTimeConfig?: EvaluationConfig
 ) => {
   const { e, closure, config } = metaFunction;
-  try {
-    const env = {
-      prev: closure,
-      values: { this: thisObject, arguments: args }
-    };
-    for (let i = 0; i < e.params.length; i++) {
-      let param = e.params[i];
+  const env = {
+    prev: closure,
+    values: { this: thisObject, arguments: args }
+  };
+  let i = 0;
+  visitArray(
+    e.params,
+    (param, c, cerr) => {
       switch (param.type) {
         case "Identifier":
-          env.values[param.name] = args[i];
+          c((env.values[param.name] = args[i++]));
           break;
         case "RestElement":
-          env.values[param.argument.name] = args.slice(i);
+          c((env.values[param.argument.name] = args.slice(i++)));
+          break;
+        case "ObjectPattern":
+          console.log(JSON.stringify(param, null, 2));
+          evaluate(param, c, cerr, env, config);
           break;
         default:
-          throw NotImplementedException(`Not supported type (${param["type"]}) of function param.`, param);
+          cerr(NotImplementedException(`"${param["type"]}" is not supported type of function param.`, param));
       }
-    }
-
-    evaluate(
-      e.body,
-      value => {
-        // use implicit return only if function is arrow function and have expression as a body
-        if (e.type === "ArrowFunctionExpression" && e.body.type !== "BlockStatement") {
-          c(value);
-        } else {
-          // ignore what was evaluated in function body, return statement in error continuation should carry the value
-          c();
-        }
-      },
-      exception => {
-        switch (exception.type) {
-          case "ReturnStatement":
-            c(exception.value);
-            break;
-          default:
-            cerr(exception);
-        }
-      },
-      env,
-      Object.assign({}, executionTimeConfig, config)
-    );
-  } catch (e) {
-    cerr(e);
-  }
+    },
+    () =>
+      evaluate(
+        e.body,
+        value => {
+          // use implicit return only if function is arrow function and have expression as a body
+          if (e.type === "ArrowFunctionExpression" && e.body.type !== "BlockStatement") {
+            c(value);
+          } else {
+            // ignore what was evaluated in function body, return statement in error continuation should carry the value
+            c();
+          }
+        },
+        exception => {
+          switch (exception.type) {
+            case "ReturnStatement":
+              c(exception.value);
+              break;
+            default:
+              cerr(exception);
+          }
+        },
+        env,
+        Object.assign({}, executionTimeConfig, config)
+      ),
+    cerr
+  );
 };
 
 export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {

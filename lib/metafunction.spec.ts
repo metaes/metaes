@@ -1,6 +1,6 @@
 import { assert, expect } from "chai";
 import { describe, it } from "mocha";
-import { metaesEval } from "./metaes";
+import { evalFunctionBodyAsPromise, MetaesContext, metaesEval } from "./metaes";
 
 describe("Meta functions", () => {
   it("should return correct value in simple case", () => {
@@ -66,5 +66,21 @@ describe("Meta functions", () => {
       assert.equal(e.value.message, message);
       assert.instanceOf(e.value, errorConstructor);
     }
+  });
+
+  it("should support ObjectPattern", async () => {
+    const context = new MetaesContext();
+    const source = () => {
+      function f({ b: { c } }, { a }) {
+        return [a, c];
+      }
+      f({ b: { c: 2 } }, { a: 1 });
+    };
+    const r = await evalFunctionBodyAsPromise({
+      context,
+      source
+    });
+    console.log(source);
+    console.log(r);
   });
 });
