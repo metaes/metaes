@@ -17,7 +17,7 @@ export function callWithCurrentContinuation(
 
 let script;
 
-export function lift(fn: Function) {
+export function lifted(fn: Function) {
   if (!script) {
     script = createScript(`value => callcc(fn, value)`);
   }
@@ -31,10 +31,10 @@ export function lift(fn: Function) {
   return result;
 }
 
-export function liftAll(fns: { [k: string]: Function }) {
+export function liftedAll(fns: { [k: string]: Function }) {
   const result = {};
   for (let k in fns) {
-    result[k] = lift(fns[k]);
+    result[k] = lifted(fns[k]);
   }
   return result;
 }

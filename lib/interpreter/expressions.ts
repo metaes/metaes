@@ -454,6 +454,7 @@ export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: En
         _ => {
           // discard found value
           // if value is found, there must be an env for that value, don't check for negative case
+          // TODO: integrate with `getEnvironmentForValue`
           let foundEnv: Environment = env;
           while (!(propName in foundEnv.values)) {
             foundEnv = foundEnv.prev!;

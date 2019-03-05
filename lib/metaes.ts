@@ -76,7 +76,7 @@ export class MetaesContext implements Context {
    * @param c
    * @param cerr
    * @param environment - If user provides environment with `prev` field it means he wants to completely replace current evaluation environment.
-   *                      If `prev` is not defined, new environment will be build using provided values and refering to context's original environment with `prev`.
+   *                      If `prev` is not defined, new environment will be built using provided values and refering to context's original environment with `prev`.
    * @param config
    */
   evaluate(
