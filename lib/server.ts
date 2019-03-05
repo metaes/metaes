@@ -47,7 +47,7 @@ export const runWSServer = (port: number | undefined = undefined, context = test
           context.evaluate(
             input,
             value => res.send(JSON.stringify(value)),
-            error => res.status(400).send(JSON.stringify(error)),
+            error => res.status(400).send(JSON.stringify(error, attachErrorMessage)),
             env
           );
         } else {
