@@ -11,10 +11,10 @@
 
 // it: should support Identifier
 {
-  function f() {
+  function f2() {
     return 44;
   }
-  f() === 44;
+  f2() === 44;
 }
 
 // it: should support FunctionExpression
@@ -24,12 +24,12 @@
 
 // it: should support CallExpression
 {
-  function f2() {
+  function f3() {
     return function() {
       return 44;
     };
   }
-  f2()() === 44;
+  f3()() === 44;
 }
 
 // it: should support ArrowFunctionExpression
