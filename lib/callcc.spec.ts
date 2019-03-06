@@ -1,8 +1,8 @@
 import { assert, expect } from "chai";
 import { describe, it } from "mocha";
-import { evalFunctionBodyAsPromise, MetaesContext, metaesEval, evalFunctionAsPromise } from "./metaes";
+import { callWithCurrentContinuation, lifted, liftedAll } from "./callcc";
+import { evalFunctionAsPromise, evalFunctionBodyAsPromise, MetaesContext, metaesEval } from "./metaes";
 import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "./metafunction";
-import { callWithCurrentContinuation } from "./callcc";
 
 describe("Callcc", () => {
   it("should return current env", () => {
@@ -274,5 +274,37 @@ describe("Callcc", () => {
       }
     );
     expect(result).deep.eq([errorMessage, 1, 5, serverData]);
+  });
+
+  it("should lift functions", async () => {
+    function socket(int, c) {
+      for (let i = 0; i < 6; i++) {
+        c(int + ":" + i);
+      }
+    }
+
+    function pack(amount) {
+      let group: any = [];
+      return lifted((val, c) => {
+        group.push(val);
+        if (group.length === amount) {
+          c([group]);
+          group = [];
+        }
+      });
+    }
+
+    const context = new MetaesContext(undefined, console.error, {
+      values: Object.assign({ console, pack, setTimeout, assert }, liftedAll({ socket }))
+    });
+    await evalFunctionBodyAsPromise({
+      context,
+      source: assert => {
+        const pack3 = pack(3);
+        const pack2 = pack(2);
+        // @ts-ignore
+        assert.deepEqual(pack2(pack3(socket(80))), [[[["80:0", "80:1", "80:2"]], [["80:3", "80:4", "80:5"]]]]);
+      }
+    });
   });
 });
