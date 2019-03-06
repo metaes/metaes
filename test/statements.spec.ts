@@ -44,3 +44,15 @@
   // @ts-ignore
   typeof x === "undefined";
 }
+
+// it: should throw ReferenceError
+{
+  let result;
+  try {
+    // @ts-ignore
+    let { [key]: foo } = { z: "bar" };
+  } catch (e) {
+    result = e.type === "NotImplemented";
+  }
+  result;
+}

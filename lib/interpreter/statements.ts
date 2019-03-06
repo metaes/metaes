@@ -66,6 +66,8 @@ export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) 
     (property, c, cerr) => {
       if (property.value.type === "AssignmentPattern") {
         evaluate(property, c, cerr, env, config);
+      } else if (property.computed) {
+        cerr(NotImplementedException(`Computed property in ObjectPattern is not supported yet.`, property));
       } else {
         switch (property.key.type) {
           case "Identifier":
@@ -185,7 +187,7 @@ export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: Ev
         cerr,
         {
           values: {
-            [EXCEPTION_NAME]: exception.value
+            [EXCEPTION_NAME]: exception.value || exception
           },
           prev: env
         },
