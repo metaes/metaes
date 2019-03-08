@@ -1,7 +1,7 @@
 import { assert, expect } from "chai";
 import { describe, it } from "mocha";
 import { callWithCurrentContinuation, lifted, liftedAll } from "./callcc";
-import { evalFunctionAsPromise, evalFunctionBodyAsPromise, MetaesContext, metaesEval } from "./metaes";
+import { evalFnAsPromise, evalFnBodyAsPromise, MetaesContext, metaesEval } from "./metaes";
 import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "./metafunction";
 
 describe("Callcc", () => {
@@ -33,7 +33,7 @@ describe("Callcc", () => {
       setTimeout(cc, 0, 21);
     }
 
-    const result = await evalFunctionBodyAsPromise({
+    const result = await evalFnBodyAsPromise({
       context,
       source: callWithCurrentContinuation => 2 * callWithCurrentContinuation(receiver)
     });
@@ -51,7 +51,7 @@ describe("Callcc", () => {
       cc = _cc;
       cc([1, 2, 3]);
     }
-    await evalFunctionBodyAsPromise({
+    await evalFnBodyAsPromise({
       context,
       source: (callcc, result, receiver) => {
         for (let x of callcc(receiver)) {
@@ -75,7 +75,7 @@ describe("Callcc", () => {
       cc = _cc;
       cc(value);
     }
-    await evalFunctionBodyAsPromise({
+    await evalFnBodyAsPromise({
       context,
       source: (callcc, result, receiver) => {
         const bind = value => callcc(receiver, value);
@@ -95,7 +95,7 @@ describe("Callcc", () => {
       values: { callcc: callWithCurrentContinuation, console }
     });
 
-    const i = await evalFunctionAsPromise({
+    const i = await evalFnAsPromise({
       context,
       source: callcc => {
         let evilGoTo;
@@ -125,7 +125,7 @@ describe("Callcc", () => {
       cerr({ value: new Error("Continuation error") });
     }
 
-    const error = await evalFunctionAsPromise({
+    const error = await evalFnAsPromise({
       context,
       source: (callcc, receiver) => {
         try {
@@ -144,7 +144,7 @@ describe("Callcc", () => {
       values: { callcc: callWithCurrentContinuation, console, isMetaFunction, getMetaFunction, evaluateMetaFunction }
     });
 
-    const result = await evalFunctionBodyAsPromise({
+    const result = await evalFnBodyAsPromise({
       context,
       source: (callcc, isMetaFunction, evaluateMetaFunction, getMetaFunction) => {
         function receiver(value, cc, ccerr) {
@@ -251,7 +251,7 @@ describe("Callcc", () => {
     const serverData = { "fake-server-data": ["hello", "world"] };
     const errorMessage = "Can't load data";
 
-    const result = await evalFunctionBodyAsPromise(
+    const result = await evalFnBodyAsPromise(
       {
         context,
         source: (awaitReceiver_, callcc, loadData, loadFailingData) => {
@@ -297,7 +297,7 @@ describe("Callcc", () => {
     const context = new MetaesContext(undefined, console.error, {
       values: Object.assign({ console, pack, setTimeout, assert }, liftedAll({ socket }))
     });
-    await evalFunctionBodyAsPromise({
+    await evalFnBodyAsPromise({
       context,
       source: assert => {
         const pack3 = pack(3);

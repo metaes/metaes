@@ -107,18 +107,18 @@ export class MetaesContext implements Context {
     return evalAsPromise(this, input, environment);
   }
 
-  evalFunctionBody(
+  evalFnBody(
     source: Function,
     c?: Continuation,
     cerr?: ErrorContinuation,
     environment?: Environment,
     config?: EvaluationConfig
   ) {
-    evalFunctionBody({ context: this, source }, c, cerr, environment, config);
+    evalFnBody({ context: this, source }, c, cerr, environment, config);
   }
 
-  evalFunction(source: ((...rest) => void), ...args: any[]) {
-    return evalFunction({ context: this, source, args });
+  evalFn(source: (...rest) => void, ...args: any[]) {
+    return evalFn({ context: this, source, args });
   }
 }
 
@@ -128,14 +128,14 @@ export const parseFunction = (fn: Function, cache?: ParseCache) =>
 export const evalAsPromise = (context: Context, input: Script | Source, environment?: Environment) =>
   new Promise((resolve, reject) => context.evaluate(input, resolve, reject, environment));
 
-export const createScriptFromFunctionBody = (source: Function, cache?: ParseCache) => ({
+export const createScriptFromFnBody = (source: Function, cache?: ParseCache) => ({
   ast: (((parseFunction(source, cache) as Program).body[0] as ExpressionStatement).expression as FunctionNode)
     .body as ASTNode,
   scriptId: nextScriptId(),
   source
 });
 
-export const evalFunctionBody = (
+export const evalFnBody = (
   { context, source }: { context: Context; source: Function },
   c?: Continuation,
   cerr?: ErrorContinuation,
@@ -143,21 +143,21 @@ export const evalFunctionBody = (
   config?: EvaluationConfig
 ) =>
   context.evaluate(
-    createScriptFromFunctionBody(source, context instanceof MetaesContext ? context.cache : void 0),
+    createScriptFromFnBody(source, context instanceof MetaesContext ? context.cache : void 0),
     c,
     cerr,
     environment,
     config
   );
 
-export const evalFunctionBodyAsPromise = (
+export const evalFnBodyAsPromise = (
   { context, source }: { context: Context; source: Function },
   environment?: Environment,
   config?: EvaluationConfig
-) => new Promise<any>((resolve, reject) => evalFunctionBody({ context, source }, resolve, reject, environment, config));
+) => new Promise<any>((resolve, reject) => evalFnBody({ context, source }, resolve, reject, environment, config));
 
-export function evalFunction<T extends any[]>(
-  { context, source, args }: { context: MetaesContext; source: ((...T) => void); args?: T },
+export function evalFn<T extends any[]>(
+  { context, source, args }: { context: MetaesContext; source: (...T) => void; args?: T },
   c?: Continuation,
   cerr?: ErrorContinuation,
   environment?: Environment,
@@ -185,13 +185,13 @@ export function evalFunction<T extends any[]>(
   );
 }
 
-export function evalFunctionAsPromise<T extends any[]>(
-  { context, source, args }: { context: MetaesContext; source: ((...T) => void); args?: T },
+export function evalFnAsPromise<T extends any[]>(
+  { context, source, args }: { context: MetaesContext; source: (...T) => void; args?: T },
   environment?: Environment,
   config?: EvaluationConfig
 ): Promise<any> {
   return new Promise((resolve, reject) =>
-    evalFunction({ context, source, args }, resolve, reject, environment, config)
+    evalFn({ context, source, args }, resolve, reject, environment, config)
   );
 }
 

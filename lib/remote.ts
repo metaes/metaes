@@ -1,6 +1,6 @@
 import { Environment, EnvironmentBase, Reference } from "./environment";
 import { log } from "./logging";
-import { Context, evalFunctionBody, isScript, metaesEval } from "./metaes";
+import { Context, evalFnBody, isScript, metaesEval } from "./metaes";
 import { ASTNode } from "./nodes/nodes";
 import { Continuation, ErrorContinuation, EvaluationConfig, Script, Source } from "./types";
 
@@ -122,7 +122,7 @@ export function assertMessage(message: MetaesMessage, requiresEnvironment = true
 function createRemoteFunction(context: Context, id: string) {
   const referencesMap = getReferencesMap(context);
   const fn = (...args) =>
-    evalFunctionBody(
+    evalFnBody(
       {
         context,
         source: args => {

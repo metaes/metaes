@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
-import { evalFunctionBodyAsPromise, MetaesContext, metaesEval, noop } from "./metaes";
+import { evalFnBodyAsPromise, MetaesContext, metaesEval, noop } from "./metaes";
 
 describe("Exceptions", () => {
   it("should throw on AwaitExpression use", () =>
@@ -28,7 +28,7 @@ describe("Exceptions", () => {
   describe("From blocks", () => {
     it("should exit block statement", async () => {
       try {
-        await evalFunctionBodyAsPromise({
+        await evalFnBodyAsPromise({
           context: new MetaesContext(),
           source: function() {
             throw 1;
@@ -42,7 +42,7 @@ describe("Exceptions", () => {
 
     it("should exit block statement when throwing from nested function", async () => {
       try {
-        await evalFunctionBodyAsPromise({
+        await evalFnBodyAsPromise({
           context: new MetaesContext(),
           source: function() {
             (() => {
@@ -57,7 +57,7 @@ describe("Exceptions", () => {
 
     it("should continue after try/catch block", async () => {
       assert.equal(
-        await evalFunctionBodyAsPromise({
+        await evalFnBodyAsPromise({
           context: new MetaesContext(),
           source: function() {
             try {
@@ -79,7 +79,7 @@ describe("Exceptions", () => {
       let a;
 
       assert.isTrue(
-        (await evalFunctionBodyAsPromise({
+        (await evalFnBodyAsPromise({
           context: new MetaesContext(),
           source: function() {
             let error;

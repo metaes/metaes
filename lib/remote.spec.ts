@@ -7,8 +7,8 @@ import {
   consoleLoggingMetaesContext,
   Context,
   evalAsPromise,
-  evalFunctionBody,
-  evalFunctionBodyAsPromise,
+  evalFnBody,
+  evalFnBodyAsPromise,
   MetaesContext
 } from "./metaes";
 import {
@@ -140,7 +140,7 @@ function defineTestsFor(describeName: string, getContext: () => Promise<Context>
         require("child_process")
           .execSync(command)
           .toString(),
-        await evalFunctionBodyAsPromise(
+        await evalFnBodyAsPromise(
           { context, source: (child_process, command) => child_process.execSync(command).toString() },
           {
             values: { command: command }
@@ -152,7 +152,7 @@ function defineTestsFor(describeName: string, getContext: () => Promise<Context>
     it("should throw an exception", async () => {
       let thrown = false;
       try {
-        await evalFunctionBody(context, () => window); // window is undefined on nodejs
+        await evalFnBody(context, () => window); // window is undefined on nodejs
       } catch (e) {
         if (e) {
           thrown = true;

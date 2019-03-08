@@ -69,12 +69,11 @@ export function GetValue<T>(
   let _env: Environment | undefined = env;
   do {
     if (name in _env.values) {
-      c(_env.values[name]);
-      // return required here to avoid calling `cerr` at the end
-      return;
+      return c(_env.values[name]);
     }
   } while ((_env = _env.prev));
 
+  console.log
   cerr({
     type: "ReferenceError",
     value: new ReferenceError(`"${name}" is not defined.`)
