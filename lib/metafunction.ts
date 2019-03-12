@@ -1,4 +1,4 @@
-import { evaluate, visitArray } from "./applyEval";
+import { evaluate, visitArray } from "./evaluate";
 import { Environment } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";

@@ -1,4 +1,4 @@
-import { evaluate } from "./applyEval";
+import { evaluate } from "./evaluate";
 import { Environment, toEnvironment } from "./environment";
 import { ECMAScriptInterpreters } from "./interpreters";
 import { ASTNode } from "./nodes/nodes";

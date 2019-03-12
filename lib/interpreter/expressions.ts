@@ -1,4 +1,4 @@
-import { evaluate, evaluateArray } from "../applyEval";
+import { evaluate, evaluateArray } from "../evaluate";
 import { Environment, GetValue, getEnvironmentForValue } from "../environment";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";

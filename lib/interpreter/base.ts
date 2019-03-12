@@ -1,4 +1,4 @@
-import { evaluate } from "../applyEval";
+import { evaluate } from "../evaluate";
 import { Environment } from "../environment";
 import { NotImplementedException } from "../exceptions";
 import * as NodeTypes from "../nodeTypes";
