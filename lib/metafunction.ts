@@ -4,6 +4,7 @@ import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
 import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
 
+// TODO: move to interpreter style
 export const evaluateMetaFunction = (
   metaFunction: MetaesFunction,
   c: Continuation,
@@ -39,9 +40,9 @@ export const evaluateMetaFunction = (
       evaluate(
         e.body,
         value =>
-          // use implicit return only if function is arrow function and have expression as a body
           e.type === "ArrowFunctionExpression" && e.body.type !== "BlockStatement"
-            ? c(value)
+            ? // use implicit return only if function is arrow function and have expression as a body
+              c(value)
             : // ignore what was evaluated in function body, return statement in error continuation should carry the value
               c(),
         exception => (exception.type === "ReturnStatement" ? c(exception.value) : cerr(exception)),
