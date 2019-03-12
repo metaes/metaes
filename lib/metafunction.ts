@@ -38,24 +38,13 @@ export const evaluateMetaFunction = (
     () =>
       evaluate(
         e.body,
-        value => {
+        value =>
           // use implicit return only if function is arrow function and have expression as a body
-          if (e.type === "ArrowFunctionExpression" && e.body.type !== "BlockStatement") {
-            c(value);
-          } else {
-            // ignore what was evaluated in function body, return statement in error continuation should carry the value
-            c();
-          }
-        },
-        exception => {
-          switch (exception.type) {
-            case "ReturnStatement":
-              c(exception.value);
-              break;
-            default:
-              cerr(exception);
-          }
-        },
+          e.type === "ArrowFunctionExpression" && e.body.type !== "BlockStatement"
+            ? c(value)
+            : // ignore what was evaluated in function body, return statement in error continuation should carry the value
+              c(),
+        exception => (exception.type === "ReturnStatement" ? c(exception.value) : cerr(exception)),
         env,
         Object.assign({}, executionTimeConfig, config)
       ),

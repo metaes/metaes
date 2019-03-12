@@ -68,12 +68,11 @@ export function GetValue<T>(
 ) {
   let _env: Environment | undefined = env;
   do {
-    if (name in _env.values) {
+    if (Object.hasOwnProperty.call(_env.values, name)) {
       return c(_env.values[name]);
     }
   } while ((_env = _env.prev));
 
-  console.log
   cerr({
     type: "ReferenceError",
     value: new ReferenceError(`"${name}" is not defined.`)

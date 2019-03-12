@@ -56,3 +56,12 @@
   }
   result;
 }
+
+// it: should not throw
+{
+  let {
+    // @ts-ignore
+    d: { e }
+  } = { d: 2 };
+  typeof e === "undefined";
+}
