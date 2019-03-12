@@ -190,9 +190,7 @@ export function evalFnAsPromise<T extends any[]>(
   environment?: Environment,
   config?: EvaluationConfig
 ): Promise<any> {
-  return new Promise((resolve, reject) =>
-    evalFn({ context, source, args }, resolve, reject, environment, config)
-  );
+  return new Promise((resolve, reject) => evalFn({ context, source, args }, resolve, reject, environment, config));
 }
 
 export const consoleLoggingMetaesContext = (environment: Environment = { values: {} }) =>

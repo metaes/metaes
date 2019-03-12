@@ -6,6 +6,7 @@ import * as NodeTypes from "../nodeTypes";
 import { callWithCurrentContinuation } from "../callcc";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { IfStatement } from "./statements";
+import { RemoteObject } from "../remote";
 
 export function CallExpression(
   e: NodeTypes.CallExpression,
@@ -65,16 +66,32 @@ export function CallExpression(
                 }
               }
               if (!e_callee.computed && e_callee.property.type === "Identifier") {
-                run(object[e_callee.property.name]);
+                if (object instanceof RemoteObject) {
+                  evaluate(
+                    { type: "Apply", e, fn: e_callee.property.name, thisObj: object, args },
+                    c,
+                    cerr,
+                    env,
+                    config
+                  );
+                } else {
+                  evaluate({ type: "GetProperty", object, property: e_callee.property.name }, run, cerr, env, config);
+                }
               } else {
-                evaluate(e_callee.property, propertyValue => run(object[propertyValue]), cerr, env, config);
+                evaluate(
+                  e_callee.property,
+                  propertyValue =>
+                    evaluate({ type: "GetProperty", object, property: propertyValue }, run, cerr, env, config),
+                  cerr,
+                  env,
+                  config
+                );
               }
             },
             cerr,
             env,
             config
           );
-
           break;
         case "ArrowFunctionExpression":
           evaluate(

@@ -8,7 +8,8 @@ export function Identifier(e: NodeTypes.Identifier, c, cerr, env: Environment, c
     { type: "GetValue", name: e.name },
     c,
     exception => {
-      (exception.location = e), cerr(exception);
+      exception.location = e;
+      cerr(exception);
     },
     env,
     config
@@ -21,7 +22,13 @@ export function Literal(e: NodeTypes.Literal, c) {
 
 export function Apply({ fn, thisObj, args }: NodeTypes.Apply, c, cerr) {
   try {
-    c(fn.apply(thisObj, args));
+    if (typeof fn === "function") {
+      c(fn.apply(thisObj, args));
+    } else if (thisObj) {
+      c(thisObj[fn].apply(thisObj, args));
+    } else {
+      throw new TypeError(`Couldn't call method '${fn}' on undefined or null.`);
+    }
   } catch (e) {
     cerr(e);
   }

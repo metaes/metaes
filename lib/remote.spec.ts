@@ -1,7 +1,10 @@
+require("source-map-support").install();
+
 import { assert } from "chai";
 import { after, before, beforeEach, describe, it } from "mocha";
 import { Environment } from "./environment";
-import { Identifier } from "./interpreter/base";
+import { NotImplementedException } from "./exceptions";
+import { Apply, GetProperty, Identifier } from "./interpreter/base";
 import { ECMAScriptInterpreters } from "./interpreters";
 import {
   consoleLoggingMetaesContext,
@@ -226,11 +229,33 @@ describe("Remote objects", () => {
 
   before(() => {
     remoteContext = new MetaesContext(undefined, undefined, {
-      values: { stringMessage: "Hello", objectMessage: { value: "Hello" } }
+      values: {
+        stringMessage: "Hello",
+        objectMessage: { value: "Hello" },
+        storage: {
+          addFile(file) {
+            return file.length > 5;
+          }
+        }
+      }
     });
 
     interpreters = {
       values: {
+        Apply({ fn, thisObj, args }, c, cerr) {
+          if (thisObj instanceof RemoteObject) {
+            cerr(NotImplementedException("Cant call remote objects"));
+          } else {
+            Apply.apply(null, arguments);
+          }
+        },
+        GetProperty({ object, property }, c, cerr) {
+          if (object instanceof RemoteObject) {
+            cerr(NotImplementedException(`Remote property access is not supported yet: ${object}.${property}`));
+          } else {
+            GetProperty.apply(null, arguments);
+          }
+        },
         Identifier(e, c, cerr, env, config) {
           Identifier(
             e,
@@ -272,6 +297,18 @@ describe("Remote objects", () => {
   });
 
   it("should query object value from different context", async () => {
-    assert.isTrue((await localContext.evalAsPromise("objectMessage")) instanceof RemoteObject);
+    assert.isTrue(
+      (await localContext.evalAsPromise("objectMessage")) instanceof RemoteObject,
+      "object is transferred as a RemoteObject reference"
+    );
+    assert.equal(
+      await localContext.evalAsPromise("objectMessage.value"),
+      2,
+      "remote object property access is executed on remote context"
+    );
+  });
+
+  it("should call remote method with local arguments", async () => {
+    await localContext.evalAsPromise("storage.addFile(file);", { values: { file: "A file" } });
   });
 });
