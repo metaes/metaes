@@ -226,15 +226,17 @@ describe("Raw HTTP calls", () => {
 
 describe("Remote objects", () => {
   let remoteContext: MetaesContext, interpreters: Environment, localContext: MetaesContext;
+  let remoteObjects;
 
   before(() => {
+    remoteObjects = new Map();
     remoteContext = new MetaesContext(undefined, undefined, {
       values: {
         stringMessage: "Hello",
         objectMessage: { value: "Hello" },
         storage: {
           addFile(contents, name) {
-            return contents.length > 5 && name.indexOf(".") > 0;
+            return `${name}: "${contents}" was saved.`;
           }
         }
       }
@@ -245,7 +247,7 @@ describe("Remote objects", () => {
         Apply({ e, fn, thisValue, args }, c, cerr, config) {
           if (thisValue instanceof RemoteObject) {
             const values = Object.assign(
-              { fn, thisValue },
+              { fn },
               args.reduce((result, next, i) => {
                 result["arg" + i] = next;
                 return result;
@@ -260,7 +262,7 @@ describe("Remote objects", () => {
                       computed: false,
                       object: {
                         type: "Identifier",
-                        name: "thisValue"
+                        name: remoteObjects.get(thisValue)
                       },
                       property: e.callee.property
                     }
@@ -297,17 +299,20 @@ describe("Remote objects", () => {
               if (type === "ReferenceError") {
                 remoteContext.evaluate(
                   e,
-                  value =>
-                    c(
-                      typeof value === "object" && !(value instanceof RemoteObject)
-                        ? /**
-                           * A case when remote context is just other object in the same VM.
-                           * Want to convert it to RemoteObject anyway, because changing object
-                           * in non-original context may cause observations or interceptors break.
-                           */
-                          RemoteObject.create()
-                        : value
-                    ),
+                  value => {
+                    if (typeof value === "object" && !(value instanceof RemoteObject)) {
+                      /**
+                       * A case when remote context is just other object in the same VM.
+                       * Want to convert it to RemoteObject anyway, because changing object
+                       * in non-original context may cause observations or interceptors break.
+                       */
+                      const ro = RemoteObject.create();
+                      remoteObjects.set(ro, e.name);
+                      c(ro);
+                    } else {
+                      c(value);
+                    }
+                  },
                   cerr
                 );
               } else {
@@ -341,12 +346,11 @@ describe("Remote objects", () => {
   });
 
   it("should call remote method with local arguments", async () => {
-    try {
+    assert.equal(
       await localContext.evalAsPromise(`let extension="txt"; storage.addFile(contents, "test" + "." + extension);`, {
         values: { contents: "File contents" }
-      });
-    } catch (e) {
-      throw e.value || e;
-    }
+      }),
+      'test.txt: "File contents" was saved.'
+    );
   });
 });
