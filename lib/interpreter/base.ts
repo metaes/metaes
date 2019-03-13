@@ -25,10 +25,8 @@ export function Apply({ fn, thisValue, args }: NodeTypes.Apply, c, cerr, _env, c
   try {
     if (isMetaFunction(fn)) {
       evaluateMetaFunction(getMetaFunction(fn), c, cerr, thisValue, args, config);
-    } else if (typeof fn === "function") {
-      c(fn.apply(thisValue, args));
     } else {
-      throw new TypeError(`Couldn't call method '${fn}' on undefined or null.`);
+      c(fn.apply(thisValue, args));
     }
   } catch (e) {
     cerr(e);
