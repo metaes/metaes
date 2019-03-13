@@ -4,7 +4,7 @@ import { assert } from "chai";
 import { after, before, beforeEach, describe, it } from "mocha";
 import { Environment } from "./environment";
 import { NotImplementedException } from "./exceptions";
-import { Apply, GetProperty, Identifier } from "./interpreter/base";
+import { Apply, GetProperty, Identifier, SetProperty } from "./interpreter/base";
 import { ECMAScriptInterpreters } from "./interpreters";
 import {
   consoleLoggingMetaesContext,
@@ -234,6 +234,7 @@ describe("Remote objects", () => {
       values: {
         stringMessage: "Hello",
         objectMessage: { value: "Hello" },
+        valuesContainer: { i: 0 },
         storage: {
           addFile(contents, name) {
             return `${name}: "${contents}" was saved.`;
@@ -241,10 +242,9 @@ describe("Remote objects", () => {
         }
       }
     });
-    [].reduce;
     interpreters = {
       values: {
-        Apply({ e, fn, thisValue, args }, c, cerr, config) {
+        Apply({ e, fn, thisValue, args }, c, cerr, _env, config) {
           if (thisValue instanceof RemoteObject) {
             const values = Object.assign(
               { fn },
@@ -253,22 +253,23 @@ describe("Remote objects", () => {
                 return result;
               }, {})
             );
+            const callee = thisValue
+              ? {
+                  type: "MemberExpression",
+                  object: {
+                    type: "Identifier",
+                    name: remoteObjects.get(thisValue)
+                  },
+                  property: e.callee.property
+                }
+              : {
+                  type: "Identifier",
+                  name: "fn"
+                };
             remoteContext.evaluate(
               {
                 type: "CallExpression",
-                callee: thisValue
-                  ? {
-                      type: "MemberExpression",
-                      object: {
-                        type: "Identifier",
-                        name: remoteObjects.get(thisValue)
-                      },
-                      property: e.callee.property
-                    }
-                  : {
-                      type: "Identifier",
-                      name: "fn"
-                    },
+                callee,
                 arguments: args.map((_, i) => ({ type: "Identifier", name: "arg" + i }))
               },
               c,
@@ -283,26 +284,14 @@ describe("Remote objects", () => {
           }
         },
         GetProperty({ object, property }, c, cerr) {
-          if (object instanceof RemoteObject) {
-            remoteContext.evaluate(
-              {
-                type: "MemberExpression",
-
-                object: {
-                  type: "Identifier",
-                  name: remoteObjects.get(object)
-                },
-                property: {
-                  type: "Identifier",
-                  name: property
-                }
-              },
-              c,
-              cerr
-            );
-          } else {
-            GetProperty.apply(null, arguments);
-          }
+          object instanceof RemoteObject
+            ? remoteContext.evaluate(`${remoteObjects.get(object)}.${property}`, c, cerr)
+            : GetProperty.apply(null, arguments);
+        },
+        SetProperty({ object, property, value, operator }, c, cerr) {
+          object instanceof RemoteObject
+            ? remoteContext.evaluate(`${remoteObjects.get(object)}.${property}${operator}${value}`, c, cerr)
+            : SetProperty.apply(null, arguments);
         },
         Identifier(e, c, cerr, env, config) {
           Identifier(
@@ -366,5 +355,9 @@ describe("Remote objects", () => {
       }),
       'test.txt: "File contents" was saved.'
     );
+  });
+
+  it("should set property on remote object", async () => {
+    assert.equal(await localContext.evalAsPromise(`valuesContainer.i = 44; valuesContainer.i`), 44);
   });
 });
