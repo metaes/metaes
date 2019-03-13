@@ -1,12 +1,12 @@
-import { evaluate, evaluateArray } from "../evaluate";
-import { Environment, GetValue, getEnvironmentForValue } from "../environment";
-import { LocatedError, NotImplementedException, toException } from "../exceptions";
-import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
-import * as NodeTypes from "../nodeTypes";
 import { callWithCurrentContinuation } from "../callcc";
+import { Environment, getEnvironmentForValue, GetValue } from "../environment";
+import { evaluate, evaluateArray } from "../evaluate";
+import { LocatedError, NotImplementedException, toException } from "../exceptions";
+import { createMetaFunction } from "../metafunction";
+import * as NodeTypes from "../nodeTypes";
+import { RemoteObject } from "../remote";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { IfStatement } from "./statements";
-import { RemoteObject } from "../remote";
 
 export function CallExpression(
   e: NodeTypes.CallExpression,
@@ -34,8 +34,6 @@ export function CallExpression(
                     } catch (e) {
                       cerr({ value: e, message: "Error in continuation receiver." });
                     }
-                  } else if (isMetaFunction(callee)) {
-                    evaluateMetaFunction(getMetaFunction(callee), c, cerr, undefined, args, config);
                   } else {
                     evaluate({ type: "Apply", e, fn: callee, args }, c, cerr, env, config);
                   }

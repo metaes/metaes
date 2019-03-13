@@ -233,8 +233,8 @@ describe("Remote objects", () => {
         stringMessage: "Hello",
         objectMessage: { value: "Hello" },
         storage: {
-          addFile(file) {
-            return file.length > 5;
+          addFile(contents, name) {
+            return contents.length > 5 && name.indexOf(".") > 0;
           }
         }
       }
@@ -244,7 +244,7 @@ describe("Remote objects", () => {
       values: {
         Apply({ fn, thisObj, args }, c, cerr) {
           if (thisObj instanceof RemoteObject) {
-            cerr(NotImplementedException("Cant call remote objects"));
+            remoteContext.evaluate({ type: "Apply", fn, thisObj, args }, c, cerr, { values: { fn, thisObj, args } });
           } else {
             Apply.apply(null, arguments);
           }
@@ -309,6 +309,12 @@ describe("Remote objects", () => {
   });
 
   it("should call remote method with local arguments", async () => {
-    await localContext.evalAsPromise("storage.addFile(file);", { values: { file: "A file" } });
+    try {
+      await localContext.evalAsPromise(`let extension="txt"; storage.addFile(contents, "test" + "." + extension);`, {
+        values: { contents: "File contents" }
+      });
+    } catch (e) {
+      throw e.value || e;
+    }
   });
 });

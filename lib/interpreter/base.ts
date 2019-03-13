@@ -2,6 +2,7 @@ import { evaluate } from "../evaluate";
 import { Environment } from "../environment";
 import { NotImplementedException } from "../exceptions";
 import * as NodeTypes from "../nodeTypes";
+import { isMetaFunction, evaluateMetaFunction, getMetaFunction } from "../metafunction";
 
 export function Identifier(e: NodeTypes.Identifier, c, cerr, env: Environment, config) {
   evaluate(
@@ -20,9 +21,11 @@ export function Literal(e: NodeTypes.Literal, c) {
   c(e.value);
 }
 
-export function Apply({ fn, thisObj, args }: NodeTypes.Apply, c, cerr) {
+export function Apply({ fn, thisObj, args }: NodeTypes.Apply, c, cerr, _env, config) {
   try {
-    if (typeof fn === "function") {
+    if (typeof fn === "function" && isMetaFunction(fn)) {
+      evaluateMetaFunction(getMetaFunction(fn), c, cerr, thisObj, args, config);
+    } else if (typeof fn === "function") {
       c(fn.apply(thisObj, args));
     } else if (thisObj) {
       c(thisObj[fn].apply(thisObj, args));
