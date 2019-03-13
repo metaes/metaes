@@ -21,14 +21,12 @@ export function Literal(e: NodeTypes.Literal, c) {
   c(e.value);
 }
 
-export function Apply({ fn, thisObj, args }: NodeTypes.Apply, c, cerr, _env, config) {
+export function Apply({ fn, thisValue, args }: NodeTypes.Apply, c, cerr, _env, config) {
   try {
-    if (typeof fn === "function" && isMetaFunction(fn)) {
-      evaluateMetaFunction(getMetaFunction(fn), c, cerr, thisObj, args, config);
+    if (isMetaFunction(fn)) {
+      evaluateMetaFunction(getMetaFunction(fn), c, cerr, thisValue, args, config);
     } else if (typeof fn === "function") {
-      c(fn.apply(thisObj, args));
-    } else if (thisObj) {
-      c(thisObj[fn].apply(thisObj, args));
+      c(fn.apply(thisValue, args));
     } else {
       throw new TypeError(`Couldn't call method '${fn}' on undefined or null.`);
     }

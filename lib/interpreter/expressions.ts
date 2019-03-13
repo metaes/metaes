@@ -56,7 +56,7 @@ export function CallExpression(
             object => {
               function run(property) {
                 if (typeof property === "function") {
-                  evaluate({ type: "Apply", e, fn: property, thisObj: object, args }, c, cerr, env, config);
+                  evaluate({ type: "Apply", e, fn: property, thisValue: object, args }, c, cerr, env, config);
                 } else {
                   cerr({
                     value: new TypeError(typeof property + " is not a function")
@@ -66,7 +66,7 @@ export function CallExpression(
               if (!e_callee.computed && e_callee.property.type === "Identifier") {
                 if (object instanceof RemoteObject) {
                   evaluate(
-                    { type: "Apply", e, fn: e_callee.property.name, thisObj: object, args },
+                    { type: "Apply", e, fn: e_callee.property.name, thisValue: object, args },
                     c,
                     cerr,
                     env,
@@ -96,8 +96,8 @@ export function CallExpression(
             e.callee,
             callee => {
               try {
-                const cnt = (thisObj?) =>
-                  evaluate({ type: "Apply", e, fn: callee, thisObj, args }, c, cerr, env, config);
+                const cnt = (thisValue?) =>
+                  evaluate({ type: "Apply", e, fn: callee, thisValue, args }, c, cerr, env, config);
                 GetValue({ name: "this" }, cnt, () => cnt(), env);
               } catch (error) {
                 cerr(toException(error, e.callee));

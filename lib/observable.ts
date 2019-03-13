@@ -133,15 +133,15 @@ export class ObservableContext extends MetaesContext {
     if (evaluation.e.type === "Apply") {
       const methodName = evaluation.phase === "enter" ? "apply" : "didApply";
 
-      const { fn, thisObj, args, e: callExpression } = evaluation.e as Apply;
+      const { fn, thisValue, args, e: callExpression } = evaluation.e as Apply;
       const expressionValue = evaluation.phase === "exit" ? getValue(evaluation.e) : void 0;
       if (callExpression) {
         const object =
-          callExpression.callee.type === "MemberExpression" ? getValue(callExpression.callee.object) : thisObj;
+          callExpression.callee.type === "MemberExpression" ? getValue(callExpression.callee.object) : thisValue;
 
         let traps;
         if ((traps = this._getTraps(object))) {
-          traps.forEach(trap => trap[methodName] && trap[methodName](thisObj, fn, args, expressionValue));
+          traps.forEach(trap => trap[methodName] && trap[methodName](thisValue, fn, args, expressionValue));
         }
 
         if (fn === call && (traps = this._getTraps(args[0]))) {

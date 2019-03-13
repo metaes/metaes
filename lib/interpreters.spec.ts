@@ -169,9 +169,9 @@ describe("Example remote context for database access", () => {
           SetProperty.apply(null, arguments);
         }
       },
-      Apply({ thisObj }) {
-        if (thisObj instanceof MetaArray) {
-          thisObj.Apply.apply(thisObj, arguments);
+      Apply({ thisValue }) {
+        if (thisValue instanceof MetaArray) {
+          thisValue.Apply.apply(thisValue, arguments);
         } else {
           Apply.apply(null, arguments);
         }

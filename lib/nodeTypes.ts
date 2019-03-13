@@ -346,10 +346,9 @@ export interface Line extends NodeBase {
 
 export interface Apply extends NodeBase {
   type: "Apply";
-  e?: CallExpression;
-  fn: Function | string;
-  thisObj?: Expression;
-  thisObjValue?: any;
+  e: CallExpression;
+  fn: Function;
+  thisValue: any;
   args: any[];
 }
 
