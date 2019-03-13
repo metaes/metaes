@@ -259,7 +259,6 @@ describe("Remote objects", () => {
                 callee: thisValue
                   ? {
                       type: "MemberExpression",
-                      computed: false,
                       object: {
                         type: "Identifier",
                         name: remoteObjects.get(thisValue)
@@ -285,7 +284,22 @@ describe("Remote objects", () => {
         },
         GetProperty({ object, property }, c, cerr) {
           if (object instanceof RemoteObject) {
-            cerr(NotImplementedException(`Remote property access is not supported yet: ${object}.${property}`));
+            remoteContext.evaluate(
+              {
+                type: "MemberExpression",
+
+                object: {
+                  type: "Identifier",
+                  name: remoteObjects.get(object)
+                },
+                property: {
+                  type: "Identifier",
+                  name: property
+                }
+              },
+              c,
+              cerr
+            );
           } else {
             GetProperty.apply(null, arguments);
           }
@@ -339,8 +353,8 @@ describe("Remote objects", () => {
       "object is transferred as a RemoteObject reference"
     );
     assert.equal(
-      await localContext.evalAsPromise("objectMessage.value"),
-      2,
+      await localContext.evalAsPromise(`let world=" world!"; objectMessage.value+world`),
+      "Hello world!",
       "remote object property access is executed on remote context"
     );
   });
