@@ -29,5 +29,19 @@ describe("Base interpreters", () => {
       metaesEval({ type: "Apply", fn: "foo", args: [1, 2] }, console.log, e => (error = e.value));
       assert.instanceOf(error, TypeError);
     });
+
+    it("should accept calls with thisObject as Identifier", () => {
+      let acceptedArgs;
+      function foo(...args) {
+        acceptedArgs = args;
+      }
+      metaesEval(
+        { type: "Apply", thisObject: { type: "Identifier", name: "foo" }, args: [1, 2] },
+        console.log,
+        console.error,
+        { values: { foo } }
+      );
+      assert.deepEqual(acceptedArgs, [1, 2]);
+    });
   });
 });

@@ -135,20 +135,22 @@ export class ObservableContext extends MetaesContext {
 
       const { fn, thisObj, args, e: callExpression } = evaluation.e as Apply;
       const expressionValue = evaluation.phase === "exit" ? getValue(evaluation.e) : void 0;
-      const object =
-        callExpression.callee.type === "MemberExpression" ? getValue(callExpression.callee.object) : thisObj;
+      if (callExpression) {
+        const object =
+          callExpression.callee.type === "MemberExpression" ? getValue(callExpression.callee.object) : thisObj;
 
-      let traps;
-      if ((traps = this._getTraps(object))) {
-        traps.forEach(trap => trap[methodName] && trap[methodName](thisObj, fn, args, expressionValue));
-      }
+        let traps;
+        if ((traps = this._getTraps(object))) {
+          traps.forEach(trap => trap[methodName] && trap[methodName](thisObj, fn, args, expressionValue));
+        }
 
-      if (fn === call && (traps = this._getTraps(args[0]))) {
-        traps.forEach(trap => trap[methodName] && trap[methodName](args[0], object, args.slice(1), expressionValue));
-      }
+        if (fn === call && (traps = this._getTraps(args[0]))) {
+          traps.forEach(trap => trap[methodName] && trap[methodName](args[0], object, args.slice(1), expressionValue));
+        }
 
-      if (fn === apply && (traps = this._getTraps(args[0]))) {
-        traps.forEach(trap => trap[methodName] && trap[methodName](args[0], object, args[1], expressionValue));
+        if (fn === apply && (traps = this._getTraps(args[0]))) {
+          traps.forEach(trap => trap[methodName] && trap[methodName](args[0], object, args[1], expressionValue));
+        }
       }
     }
 
