@@ -239,12 +239,44 @@ describe("Remote objects", () => {
         }
       }
     });
-
+    [].reduce;
     interpreters = {
       values: {
-        Apply({ fn, thisValue, args }, c, cerr) {
+        Apply({ e, fn, thisValue, args }, c, cerr, config) {
           if (thisValue instanceof RemoteObject) {
-            remoteContext.evaluate({ type: "Apply", fn, thisValue, args }, c, cerr, { values: { fn, thisValue, args } });
+            const values = Object.assign(
+              { fn, thisValue },
+              args.reduce((result, next, i) => {
+                result["arg" + i] = next;
+                return result;
+              }, {})
+            );
+            remoteContext.evaluate(
+              {
+                type: "CallExpression",
+                callee: thisValue
+                  ? {
+                      type: "MemberExpression",
+                      computed: false,
+                      object: {
+                        type: "Identifier",
+                        name: "thisValue"
+                      },
+                      property: e.callee.property
+                    }
+                  : {
+                      type: "Identifier",
+                      name: "fn"
+                    },
+                arguments: args.map((_, i) => ({ type: "Identifier", name: "arg" + i }))
+              },
+              c,
+              cerr,
+              {
+                values
+              },
+              config
+            );
           } else {
             Apply.apply(null, arguments);
           }
@@ -308,7 +340,7 @@ describe("Remote objects", () => {
     );
   });
 
-  it.skip("should call remote method with local arguments", async () => {
+  it("should call remote method with local arguments", async () => {
     try {
       await localContext.evalAsPromise(`let extension="txt"; storage.addFile(contents, "test" + "." + extension);`, {
         values: { contents: "File contents" }
