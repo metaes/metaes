@@ -224,111 +224,30 @@ describe("Raw HTTP calls", () => {
 });
 
 describe("Remote objects", () => {
-  let remoteContext: MetaesContext, interpreters: Environment, localContext: MetaesContext;
-  let remoteObjects;
+  let localContext: MetaesContext;
 
   before(() => {
-    remoteObjects = new Map();
-    remoteContext = new MetaesContext(undefined, undefined, {
-      values: {
-        stringMessage: "Hello",
-        objectMessage: { value: "Hello" },
-        valuesContainer: { i: 0 },
-        storage: {
-          addFile(contents, name) {
-            return `${name}: "${contents}" was saved.`;
-          }
-        }
-      }
-    });
-    interpreters = {
-      values: {
-        Apply({ e, fn, thisValue, args }, c, cerr, _env, config) {
-          if (thisValue instanceof RemoteObject) {
-            const values = Object.assign(
-              { fn },
-              args.reduce((result, next, i) => {
-                result["arg" + i] = next;
-                return result;
-              }, {})
-            );
-            const callee = thisValue
-              ? {
-                  type: "MemberExpression",
-                  object: {
-                    type: "Identifier",
-                    name: remoteObjects.get(thisValue)
-                  },
-                  property: e.callee.property
+    localContext = new MetaesContext(
+      undefined,
+      undefined,
+      { values: {} },
+      {
+        interpreters: getBindingInterpretersFor(
+          new MetaesContext(undefined, console.error, {
+            values: {
+              stringMessage: "Hello",
+              objectMessage: { value: "Hello" },
+              valuesContainer: { i: 0 },
+              storage: {
+                addFile(contents, name) {
+                  return `${name}: "${contents}" was saved.`;
                 }
-              : {
-                  type: "Identifier",
-                  name: "fn"
-                };
-            remoteContext.evaluate(
-              {
-                type: "CallExpression",
-                callee,
-                arguments: args.map((_, i) => ({ type: "Identifier", name: "arg" + i }))
-              },
-              c,
-              cerr,
-              {
-                values
-              },
-              config
-            );
-          } else {
-            Apply.apply(null, arguments);
-          }
-        },
-        GetProperty({ object, property }, c, cerr) {
-          object instanceof RemoteObject
-            ? remoteContext.evaluate(`${remoteObjects.get(object)}.${property}`, c, cerr)
-            : GetProperty.apply(null, arguments);
-        },
-        SetProperty({ object, property, value, operator }, c, cerr) {
-          object instanceof RemoteObject
-            ? remoteContext.evaluate(`${remoteObjects.get(object)}.${property}${operator}${value}`, c, cerr)
-            : SetProperty.apply(null, arguments);
-        },
-        Identifier(e, c, cerr, env, config) {
-          Identifier(
-            e,
-            c,
-            exception => {
-              const { type } = exception;
-              if (type === "ReferenceError") {
-                remoteContext.evaluate(
-                  e,
-                  value => {
-                    if (typeof value === "object" && !(value instanceof RemoteObject)) {
-                      /**
-                       * A case when remote context is just other object in the same VM.
-                       * Want to convert it to RemoteObject anyway, because changing object
-                       * in non-original context may cause observations or interceptors break.
-                       */
-                      const ro = RemoteObject.create();
-                      remoteObjects.set(ro, e.name);
-                      c(ro);
-                    } else {
-                      c(value);
-                    }
-                  },
-                  cerr
-                );
-              } else {
-                cerr(exception);
               }
-            },
-            env,
-            config
-          );
-        }
-      },
-      prev: ECMAScriptInterpreters
-    };
-    localContext = new MetaesContext(undefined, undefined, { values: {} }, { interpreters });
+            }
+          })
+        )
+      }
+    );
   });
 
   it("should query remote primitive value from different context", async () => {
@@ -360,3 +279,95 @@ describe("Remote objects", () => {
     assert.equal(await localContext.evalAsPromise(`valuesContainer.i = 44; valuesContainer.i`), 44);
   });
 });
+
+function getBindingInterpretersFor(context: Context) {
+  const remoteObjects = new Map();
+  const interpreters = {
+    values: {
+      Apply({ e, fn, thisValue, args }, c, cerr, _env, config) {
+        if (thisValue instanceof RemoteObject) {
+          const values = Object.assign(
+            { fn },
+            args.reduce((result, next, i) => {
+              result["arg" + i] = next;
+              return result;
+            }, {})
+          );
+          const callee = thisValue
+            ? {
+                type: "MemberExpression",
+                object: {
+                  type: "Identifier",
+                  name: remoteObjects.get(thisValue)
+                },
+                property: e.callee.property
+              }
+            : {
+                type: "Identifier",
+                name: "fn"
+              };
+          context.evaluate(
+            {
+              type: "CallExpression",
+              callee,
+              arguments: args.map((_, i) => ({ type: "Identifier", name: "arg" + i }))
+            },
+            c,
+            cerr,
+            {
+              values
+            },
+            config
+          );
+        } else {
+          Apply.apply(null, arguments);
+        }
+      },
+      GetProperty({ object, property }, c, cerr) {
+        object instanceof RemoteObject
+          ? context.evaluate(`${remoteObjects.get(object)}.${property}`, c, cerr)
+          : GetProperty.apply(null, arguments);
+      },
+      SetProperty({ object, property, value, operator }, c, cerr) {
+        object instanceof RemoteObject
+          ? context.evaluate(`${remoteObjects.get(object)}.${property}${operator}${value}`, c, cerr)
+          : SetProperty.apply(null, arguments);
+      },
+      Identifier(e, c, cerr, env, config) {
+        Identifier(
+          e,
+          c,
+          exception => {
+            const { type } = exception;
+            if (type === "ReferenceError") {
+              context.evaluate(
+                e,
+                value => {
+                  if (typeof value === "object" && !(value instanceof RemoteObject)) {
+                    /**
+                     * A case when remote context is just other object in the same VM.
+                     * Want to convert it to RemoteObject anyway, because changing object
+                     * in non-original context may cause observations or interceptors break.
+                     */
+                    const ro = RemoteObject.create();
+                    remoteObjects.set(ro, e.name);
+                    c(ro);
+                  } else {
+                    c(value);
+                  }
+                },
+                cerr
+              );
+            } else {
+              cerr(exception);
+            }
+          },
+          env,
+          config
+        );
+      }
+    },
+    prev: ECMAScriptInterpreters
+  };
+  return interpreters;
+}
