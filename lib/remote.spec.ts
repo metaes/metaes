@@ -3,7 +3,6 @@ require("source-map-support").install();
 import { assert } from "chai";
 import { after, before, beforeEach, describe, it } from "mocha";
 import { Environment } from "./environment";
-import { NotImplementedException } from "./exceptions";
 import { Apply, GetProperty, Identifier, SetProperty } from "./interpreter/base";
 import { ECMAScriptInterpreters } from "./interpreters";
 import {
