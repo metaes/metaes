@@ -80,87 +80,104 @@ describe("Remote", () => {
 
   after(() => server.close());
 
-  defineTestsFor("Remote HTTP messaging", () => createHTTPConnector("http://localhost:" + server.address().port));
-  defineTestsFor("Remote WebSocket messaging", () =>
+  createTestsFor("Remote HTTP messaging", () => createHTTPConnector("http://localhost:" + server.address().port));
+  createTestsFor("Remote WebSocket messaging", () =>
     createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port)
   );
 });
 
-function defineTestsFor(describeName: string, getContext: () => Promise<Context> | Context) {
+function createTestsFor(describeName: string, getContext: () => Promise<Context> | Context) {
   describe(describeName, () => {
-    let context;
-    before(async () => (context = await getContext()));
-    after(() => context.close && context.close());
-
-    it("should correctly deliver primitive success value", async () =>
-      assert.equal(4, await evalAsPromise(context, "2+2")));
-
-    it("should correctly deliver primitive success value in multiple simultaneous contexts", async () => {
-      assert.equal(4, await evalAsPromise(context, "2+2"));
-      assert.equal(2, await evalAsPromise(context, "1+1"));
-    });
-
-    it("should correctly deliver primitive success value using environment in multiple simultaneous contexts", async () => {
-      assert.equal(4, await evalAsPromise(context, "a+b", { values: { a: 1, b: 3 } }));
-      assert.equal(2, await evalAsPromise(context, "a-b", { values: { a: 4, b: 2 } }));
-    });
-
-    it("should correctly deliver primitive success value using continuation", () =>
-      new Promise((resolve, reject) => {
-        context.evaluate("2+2", value => {
-          try {
-            assert.equal(value, 4);
-            resolve();
-          } catch (e) {
-            reject(e);
-          }
-        });
-      }));
-
-    it("should not throw when c and cerr are not defined and result is correct", () => context.evaluate("2+2"));
-
-    it("should not throw when cerr is not defined, evaluation is synchronous and result is incorrect", async () =>
-      context.evaluate("throw 1;"));
-
-    it("should correctly deliver primitive success value and use env", async () =>
-      assert.equal(4, await evalAsPromise(context, "2+a", { values: { a: 2 } })));
-
-    it("should correctly deliver non-primitve success value and use env", async () => {
-      let value = [1, 2, 3];
-      assert.equal(
-        value.toString(),
-        (await evalAsPromise(context, "a", {
-          values: { a: [1, 2, 3] }
-        })).toString()
+    describe("Bound contexts", () => {
+      let context;
+      before(
+        async () =>
+          (context = new MetaesContext(
+            undefined,
+            undefined,
+            { values: {} },
+            {
+              interpreters: getBindingInterpretersFor(await getContext())
+            }
+          ))
       );
+      after(() => context.close && context.close());
     });
+    describe("Basic contexts", () => {
+      let context;
+      before(async () => (context = await getContext()));
+      after(() => context.close && context.close());
 
-    it("should return correct value reading a disk file", async () => {
-      const command = "cat tsconfig.json";
+      it("should correctly deliver primitive success value", async () =>
+        assert.equal(4, await evalAsPromise(context, "2+2")));
 
-      assert.equal(
-        require("child_process")
-          .execSync(command)
-          .toString(),
-        await evalFnBodyAsPromise(
-          { context, source: (child_process, command) => child_process.execSync(command).toString() },
-          {
-            values: { command: command }
+      it("should correctly deliver primitive success value in multiple simultaneous contexts", async () => {
+        assert.equal(4, await evalAsPromise(context, "2+2"));
+        assert.equal(2, await evalAsPromise(context, "1+1"));
+      });
+
+      it("should correctly deliver primitive success value using environment in multiple simultaneous contexts", async () => {
+        assert.equal(4, await evalAsPromise(context, "a+b", { values: { a: 1, b: 3 } }));
+        assert.equal(2, await evalAsPromise(context, "a-b", { values: { a: 4, b: 2 } }));
+      });
+
+      it("should correctly deliver primitive success value using continuation", () =>
+        new Promise((resolve, reject) => {
+          context.evaluate("2+2", value => {
+            try {
+              assert.equal(value, 4);
+              resolve();
+            } catch (e) {
+              reject(e);
+            }
+          });
+        }));
+
+      it("should not throw when c and cerr are not defined and result is correct", () => context.evaluate("2+2"));
+
+      it("should not throw when cerr is not defined, evaluation is synchronous and result is incorrect", async () =>
+        context.evaluate("throw 1;"));
+
+      it("should correctly deliver primitive success value and use env", async () =>
+        assert.equal(4, await evalAsPromise(context, "2+a", { values: { a: 2 } })));
+
+      it("should correctly deliver non-primitve success value and use env", async () => {
+        let value = [1, 2, 3];
+        assert.equal(
+          value.toString(),
+          (await evalAsPromise(context, "a", {
+            values: { a: [1, 2, 3] }
+          })).toString()
+        );
+      });
+
+      it("should return correct value reading a disk file", async () => {
+        const command = "cat tsconfig.json";
+
+        assert.equal(
+          require("child_process")
+            .execSync(command)
+            .toString(),
+          await evalFnBodyAsPromise(
+            { context, source: (child_process, command) => child_process.execSync(command).toString() },
+            {
+              values: { command: command }
+            }
+          )
+        );
+      });
+
+      it("should throw an exception", async () => {
+        let thrown = false;
+        try {
+          await evalFnBody(context, () => window); // window is undefined on nodejs
+        } catch (e) {
+          if (e) {
+            thrown = true;
           }
-        )
-      );
-    });
-
-    it("should throw an exception", async () => {
-      let thrown = false;
-      try {
-        await evalFnBody(context, () => window); // window is undefined on nodejs
-      } catch (e) {
-        if (e) {
-          thrown = true;
         }
-      }
-      assert.equal(true, thrown);
+        assert.equal(true, thrown);
+      });
     });
   });
 }
@@ -224,28 +241,50 @@ describe("Raw HTTP calls", () => {
 });
 
 describe("Remote objects", () => {
+  let getOtherContext = () =>
+    new MetaesContext(undefined, console.error, {
+      values: {
+        stringMessage: "Hello",
+        objectMessage: { value: "Hello" },
+        valuesContainer: { i: 0 },
+        storage: {
+          addFile(contents, name) {
+            return `${name}: "${contents}" was saved.`;
+          }
+        }
+      }
+    });
+  describe("In other local context", () => {
+    createRemoteContextTestsFor(() => getOtherContext());
+  });
+
+  describe("In behind-network context", () => {
+    let server;
+
+    before(async () => {
+      server = await runWSServer(undefined, getOtherContext());
+      patchNodeFetch();
+    });
+
+    after(() => server.close());
+
+    describe("HTTP", () =>
+      createRemoteContextTestsFor(() => createHTTPConnector("http://localhost:" + server.address().port)));
+    describe("WebSockets", () =>
+      createRemoteContextTestsFor(() => createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port)));
+  });
+});
+
+function createRemoteContextTestsFor(getContext: () => Promise<Context> | Context) {
   let localContext: MetaesContext;
 
-  before(() => {
+  before(async () => {
     localContext = new MetaesContext(
       undefined,
       undefined,
       { values: {} },
       {
-        interpreters: getBindingInterpretersFor(
-          new MetaesContext(undefined, console.error, {
-            values: {
-              stringMessage: "Hello",
-              objectMessage: { value: "Hello" },
-              valuesContainer: { i: 0 },
-              storage: {
-                addFile(contents, name) {
-                  return `${name}: "${contents}" was saved.`;
-                }
-              }
-            }
-          })
-        )
+        interpreters: getBindingInterpretersFor(await getContext())
       }
     );
   });
@@ -278,11 +317,11 @@ describe("Remote objects", () => {
   it("should set property on remote object", async () => {
     assert.equal(await localContext.evalAsPromise(`valuesContainer.i = 44; valuesContainer.i`), 44);
   });
-});
+}
 
 function getBindingInterpretersFor(context: Context) {
   const remoteObjects = new Map();
-  const interpreters = {
+  return {
     values: {
       Apply({ e, fn, thisValue, args }, c, cerr, _env, config) {
         if (thisValue instanceof RemoteObject) {
@@ -369,5 +408,4 @@ function getBindingInterpretersFor(context: Context) {
     },
     prev: ECMAScriptInterpreters
   };
-  return interpreters;
 }
