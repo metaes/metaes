@@ -1,10 +1,9 @@
 import { evaluate } from "./evaluate";
 import { Environment, toEnvironment } from "./environment";
 import { ECMAScriptInterpreters } from "./interpreters";
-import { ASTNode } from "./nodes/nodes";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
-import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, Phase, Script, Source } from "./types";
+import { Continuation, ErrorContinuation, Evaluate, EvaluationConfig, Phase, Script, Source, ASTNode } from "./types";
 
 export interface Context {
   evaluate: Evaluate;

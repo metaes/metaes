@@ -4,7 +4,6 @@ import { evaluate, evaluateArray } from "../evaluate";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
-import { RemoteObject } from "../remote";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { IfStatement } from "./statements";
 
@@ -54,32 +53,22 @@ export function CallExpression(
           evaluate(
             e_callee.object,
             object => {
-              function run(property) {
-                if (typeof property === "function") {
-                  evaluate({ type: "Apply", e, fn: property, thisValue: object, args }, c, cerr, env, config);
-                } else {
-                  cerr({
-                    value: new TypeError(typeof property + " is not a function")
-                  });
-                }
+              function evalApply(property) {
+                evaluate({ type: "Apply", e, fn: property, thisValue: object, args }, c, cerr, env, config);
               }
               if (!e_callee.computed && e_callee.property.type === "Identifier") {
-                if (object instanceof RemoteObject) {
-                  evaluate(
-                    { type: "Apply", e, fn: e_callee.property.name, thisValue: object, args },
-                    c,
-                    cerr,
-                    env,
-                    config
-                  );
-                } else {
-                  evaluate({ type: "GetProperty", object, property: e_callee.property.name }, run, cerr, env, config);
-                }
+                evaluate(
+                  { type: "GetProperty", object, property: e_callee.property.name },
+                  evalApply,
+                  cerr,
+                  env,
+                  config
+                );
               } else {
                 evaluate(
                   e_callee.property,
                   propertyValue =>
-                    evaluate({ type: "GetProperty", object, property: propertyValue }, run, cerr, env, config),
+                    evaluate({ type: "GetProperty", object, property: propertyValue }, evalApply, cerr, env, config),
                   cerr,
                   env,
                   config
@@ -98,7 +87,7 @@ export function CallExpression(
               try {
                 const cnt = (thisValue?) =>
                   evaluate({ type: "Apply", e, fn: callee, thisValue, args }, c, cerr, env, config);
-                GetValue({ name: "this" }, cnt, () => cnt(), env);
+                GetValue({ name: "this" }, cnt, () => cnt(undefined), env);
               } catch (error) {
                 cerr(toException(error, e.callee));
               }
@@ -507,7 +496,11 @@ export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: En
       );
       break;
     default:
-      cerr(NotImplementedException(`Support of argument of type ${e.argument.type} not implemented yet.`));
+      cerr(
+        NotImplementedException(
+          `Support of argument of type '${e.argument.type}' in UpdateExpression is not implemented yet.`
+        )
+      );
   }
 }
 

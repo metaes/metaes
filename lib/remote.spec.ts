@@ -270,13 +270,13 @@ describe("Remote objects", () => {
 
     describe("HTTP", () =>
       createRemoteContextTestsFor(() => createHTTPConnector("http://localhost:" + server.address().port)));
-    describe.only("WebSockets", () =>
+    describe("WebSockets", () =>
       createRemoteContextTestsFor(() => createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port)));
   });
 });
 
 function createRemoteContextTestsFor(getContext: () => Promise<Context> | Context) {
-  let localContext: MetaesContext;
+  let localContext: MetaesContext, _eval;
 
   before(async () => {
     localContext = new MetaesContext(
@@ -287,36 +287,43 @@ function createRemoteContextTestsFor(getContext: () => Promise<Context> | Contex
         interpreters: getBindingInterpretersFor(await getContext())
       }
     );
+    _eval = async script => {
+      try {
+        return await localContext.evalAsPromise(script);
+      } catch (e) {
+        throw e.value || e;
+      }
+    };
   });
-  //
-  // it("should query remote primitive value from different context", async () => {
-  //   assert.equal("Hello", await localContext.evalAsPromise("stringMessage"));
-  // });
+
+  it("should query remote primitive value from different context", async () => {
+    assert.equal("Hello", await _eval("stringMessage"));
+  });
 
   it("should query object value from different context", async () => {
-    // assert.isTrue(
-    //   (await localContext.evalAsPromise("objectMessage")) instanceof RemoteObject,
-    //   "object is transferred as a RemoteObject reference"
-    // );
+    assert.isTrue(
+      (await _eval("objectMessage")) instanceof RemoteObject,
+      "object is transferred as a RemoteObject reference"
+    );
     assert.equal(
-      await localContext.evalAsPromise(`let world=" world!"; objectMessage.value+world`),
+      await _eval(`let world=" world!"; objectMessage.value+world`),
       "Hello world!",
       "remote object property access is executed on remote context"
     );
   });
-  //
-  // it("should call remote method with local arguments", async () => {
-  //   assert.equal(
-  //     await localContext.evalAsPromise(`let extension="txt"; storage.addFile(contents, "test" + "." + extension);`, {
-  //       values: { contents: "File contents" }
-  //     }),
-  //     'test.txt: "File contents" was saved.'
-  //   );
-  // });
-  //
-  // it("should set property on remote object", async () => {
-  //   assert.equal(await localContext.evalAsPromise(`valuesContainer.i = 44; valuesContainer.i`), 44);
-  // });
+
+  it("should call remote method with local arguments", async () => {
+    assert.equal(
+      await _eval(`let extension="txt"; storage.addFile(contents, "test" + "." + extension);`, {
+        values: { contents: "File contents" }
+      }),
+      'test.txt: "File contents" was saved.'
+    );
+  });
+
+  it("should set property on remote object", async () => {
+    assert.equal(await _eval(`valuesContainer.i = 44; valuesContainer.i`), 44);
+  });
 }
 
 function getBindingInterpretersFor(context: Context) {
@@ -325,6 +332,7 @@ function getBindingInterpretersFor(context: Context) {
     values: {
       Apply({ e, fn, thisValue, args }, c, cerr, _env, config) {
         if (thisValue instanceof RemoteObject) {
+          console.log({ fn });
           const values = Object.assign(
             { fn },
             args.reduce((result, next, i) => {

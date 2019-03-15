@@ -1,8 +1,7 @@
 import { Environment, EnvironmentBase, Reference } from "./environment";
 import { log } from "./logging";
 import { Context, evalFnBody, isScript, metaesEval } from "./metaes";
-import { ASTNode } from "./nodes/nodes";
-import { Continuation, ErrorContinuation, EvaluationConfig, Script, Source } from "./types";
+import { ASTNode, Continuation, ErrorContinuation, EvaluationConfig, Script, Source } from "./types";
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
 

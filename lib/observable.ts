@@ -1,8 +1,7 @@
 import { MetaesContext } from "./metaes";
-import { ASTNode } from "./nodes/nodes";
 import { Apply } from "./nodeTypes";
 import { createCache } from "./parse";
-import { Evaluation } from "./types";
+import { Evaluation, ASTNode } from "./types";
 import { Environment } from "./environment";
 
 type Traps = {

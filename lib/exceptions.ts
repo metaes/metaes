@@ -1,5 +1,4 @@
-import { ASTNode } from "./nodes/nodes";
-import { MetaesException } from "./types";
+import { MetaesException, ASTNode } from "./types";
 
 export const toException = (value: Error | MetaesException, location?: ASTNode): MetaesException =>
   value instanceof Error ? { type: "Error", value, location } : value;

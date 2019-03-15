@@ -1,5 +1,4 @@
 import { Environment, Reference } from "./environment";
-import { ASTNode } from "./nodes/nodes";
 import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
@@ -68,4 +67,21 @@ export type MetaesFunction = {
   e: FunctionNode;
   closure: Environment;
   config: EvaluationConfig;
+};
+
+export interface NodeLoc {
+  start: { column: number; line: number };
+  end: { column: number; line: number };
+}
+
+export interface NodeBase {
+  loc?: NodeLoc;
+  range?: [number, number];
+}
+
+export type ASTNode = NodeBase & {
+  type: any;
+
+  // Any other node specific props are allowed
+  [key: string]: any;
 };
