@@ -258,21 +258,21 @@ describe("Remote objects", () => {
     createRemoteContextTestsFor(() => getOtherContext());
   });
 
-  describe("In behind-network context", () => {
-    let server;
+  // describe("In behind-network context", () => {
+  //   let server;
 
-    before(async () => {
-      server = await runWSServer(undefined, getOtherContext());
-      patchNodeFetch();
-    });
+  //   before(async () => {
+  //     server = await runWSServer(undefined, getOtherContext());
+  //     patchNodeFetch();
+  //   });
 
-    after(() => server.close());
+  //   after(() => server.close());
 
-    describe("HTTP", () =>
-      createRemoteContextTestsFor(() => createHTTPConnector("http://localhost:" + server.address().port)));
-    describe("WebSockets", () =>
-      createRemoteContextTestsFor(() => createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port)));
-  });
+  //   // describe("HTTP", () =>
+  //   //   createRemoteContextTestsFor(() => createHTTPConnector("http://localhost:" + server.address().port)));
+  //   describe("WebSockets", () =>
+  //     createRemoteContextTestsFor(() => createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port)));
+  // });
 });
 
 function createRemoteContextTestsFor(getContext: () => Promise<Context> | Context) {
@@ -281,15 +281,15 @@ function createRemoteContextTestsFor(getContext: () => Promise<Context> | Contex
   before(async () => {
     localContext = new MetaesContext(
       undefined,
-      undefined,
+      console.error,
       { values: {} },
       {
         interpreters: getBindingInterpretersFor(await getContext())
       }
     );
-    _eval = async script => {
+    _eval = async (script, env?) => {
       try {
-        return await localContext.evalAsPromise(script);
+        return await localContext.evalAsPromise(script, env);
       } catch (e) {
         throw e.value || e;
       }
@@ -326,13 +326,64 @@ function createRemoteContextTestsFor(getContext: () => Promise<Context> | Contex
   });
 }
 
-function getBindingInterpretersFor(context: Context) {
-  const remoteObjects = new Map();
+describe.only("Remote references", () => {
+  let context: MetaesContext, _eval, server;
+  before(() => {
+    before(async () => {
+      server = await runWSServer();
+      patchNodeFetch();
+    });
+    const me = {
+      firstName: "User1",
+      lastName: "Surname1",
+      setOnlineStatus(_flag) {},
+      logout() {}
+    };
+
+    const interpreters = getBindingInterpretersFor(
+      new MetaesContext(undefined, console.error, {
+        values: {
+          me,
+          posts: [
+            {
+              title: "Post1",
+              body: "Body of post1",
+              likedBy: [me]
+            },
+            {
+              title: "Post2",
+              body: "Body of post2",
+              likedBy: [me]
+            }
+          ]
+        }
+      })
+    );
+    context = new MetaesContext(undefined, console.error, { values: {} }, { interpreters });
+    _eval = async (script, env?) => {
+      try {
+        return await context.evalAsPromise(script, env);
+      } catch (e) {
+        throw e.value || e;
+      }
+    };
+  });
+  it("should get remote object", async () => {
+    console.log(await _eval("me"));
+  });
+});
+
+function getBindingInterpretersFor(otherContext: Context) {
+  const remoteObjects = new WeakSet();
+  const mappingContext: Context = {
+    evaluate(input, c, cerr, env, config) {
+      otherContext.evaluate(input, c, cerr, env, config);
+    }
+  };
   return {
     values: {
       Apply({ e, fn, thisValue, args }, c, cerr, _env, config) {
-        if (thisValue instanceof RemoteObject) {
-          console.log({ fn });
+        if (remoteObjects.has(thisValue)) {
           const values = Object.assign(
             { fn },
             args.reduce((result, next, i) => {
@@ -345,7 +396,7 @@ function getBindingInterpretersFor(context: Context) {
                 type: "MemberExpression",
                 object: {
                   type: "Identifier",
-                  name: remoteObjects.get(thisValue)
+                  name: thisValue
                 },
                 property: e.callee.property
               }
@@ -353,7 +404,7 @@ function getBindingInterpretersFor(context: Context) {
                 type: "Identifier",
                 name: "fn"
               };
-          context.evaluate(
+          mappingContext.evaluate(
             {
               type: "CallExpression",
               callee,
@@ -371,14 +422,29 @@ function getBindingInterpretersFor(context: Context) {
         }
       },
       GetProperty({ object, property }, c, cerr) {
-        object instanceof RemoteObject
-          ? context.evaluate(`${remoteObjects.get(object)}.${property}`, c, cerr)
-          : GetProperty.apply(null, arguments);
+        if (remoteObjects.has(object)) {
+          mappingContext.evaluate(
+            {
+              type: "MemberExpression",
+              object: { type: "Identifier", name },
+              property: { type: "Identifier", name: property }
+            },
+            c,
+            cerr,
+            {
+              values: { [name]: object }
+            }
+          );
+        } else {
+          GetProperty.apply(null, arguments);
+        }
       },
       SetProperty({ object, property, value, operator }, c, cerr) {
-        object instanceof RemoteObject
-          ? context.evaluate(`${remoteObjects.get(object)}.${property}${operator}${value}`, c, cerr)
-          : SetProperty.apply(null, arguments);
+        // object instanceof RemoteObject
+        //   ? mappingContext.evaluate(`${remoteObjectsToNames.get(object)}.${property}${operator}${value}`, c, cerr)
+        //   : SetProperty.apply(null, arguments);
+
+        SetProperty.apply(null, arguments);
       },
       Identifier(e, c, cerr, env, config) {
         Identifier(
@@ -387,21 +453,13 @@ function getBindingInterpretersFor(context: Context) {
           exception => {
             const { type } = exception;
             if (type === "ReferenceError") {
-              context.evaluate(
+              otherContext.evaluate(
                 e,
                 value => {
-                  if (typeof value === "object" && !(value instanceof RemoteObject)) {
-                    /**
-                     * A case when remote context is just other object in the same VM.
-                     * Want to convert it to RemoteObject anyway, because changing object
-                     * in non-original context may cause observations or interceptors break.
-                     */
-                    const ro = RemoteObject.create();
-                    remoteObjects.set(ro, e.name);
-                    c(ro);
-                  } else {
-                    c(value);
+                  if (typeof value === "object") {
+                    remoteObjects.add(value);
                   }
+                  c(value);
                 },
                 cerr
               );
