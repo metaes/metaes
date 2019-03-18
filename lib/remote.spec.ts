@@ -401,7 +401,7 @@ describe.only("References acquisition", () => {
     };
     context = new MetaesContext(undefined, console.error, _globalEnv, {
       interceptor({ e, value, phase, env }) {
-        if (e.type === "Identifier" && phase === "exit" && env && getEnvironmentForValue(env, e.name) === _globalEnv) {
+        if (e.type === "Identifier" && phase === "exit") {
           _allReferences.push([e.name, value]);
           // console.log(e.type, value);
           // console.log("env", getEnvironmentForValue(env, e.name));
@@ -426,7 +426,16 @@ describe.only("References acquisition", () => {
             (k = getRootEnvKey(value)) &&
             !_remainingReferences.find(([_k, _v]) => _v === value)
           ) {
-            _remainingReferences.push([k, value]);
+            let newName;
+            // check for possible new name
+            _allReferences.find(([_k, _v]) => {
+              if (_v === value) {
+                newName = _k;
+                return true;
+              }
+              return false;
+            });
+            _remainingReferences.push([newName || k, value]);
           }
           return value;
         });
@@ -459,6 +468,12 @@ describe.only("References acquisition", () => {
 
   it("should acquire references only for returned value", async () => {
     await _eval(`posts; me`);
+    assert.deepEqual(_remainingReferences, [["me", _globalEnv.values.me]]);
+    // assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
+  });
+
+  it("should acquire references under different name, but pointing to the same object.", async () => {
+    await _eval(`var _me = me; _me;`);
     assert.deepEqual(_remainingReferences, [["me", _globalEnv.values.me]]);
     // assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
   });
