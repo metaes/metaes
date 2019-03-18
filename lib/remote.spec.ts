@@ -1,8 +1,8 @@
 require("source-map-support").install();
 
 import { assert } from "chai";
-import { after, before, beforeEach, describe, it } from "mocha";
-import { Environment } from "./environment";
+import { after, before, afterEach, beforeEach, describe, it } from "mocha";
+import { Environment, getEnvironmentForValue } from "./environment";
 import { Apply, GetProperty, Identifier, SetProperty } from "./interpreter/base";
 import { ECMAScriptInterpreters } from "./interpreters";
 import {
@@ -323,7 +323,7 @@ function createRemoteContextTestsFor(getContext: () => Promise<Context> | Contex
   });
 }
 
-describe.only("Remote references", () => {
+describe("Remote references", () => {
   let serverContext: Context, _eval, server;
   before(async () => {
     const me = {
@@ -367,6 +367,107 @@ describe.only("Remote references", () => {
     const result = await _eval("me");
     assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
   });
+});
+
+describe.only("References acquisition", () => {
+  let context,
+    _globalEnv,
+    _eval,
+    _allReferences: [string, any][] = [],
+    _remainingReferences: [string, any][] = [];
+  before(() => {
+    const me = {
+      firstName: "User1",
+      lastName: "Surname1",
+      setOnlineStatus(_flag) {},
+      logout() {}
+    };
+    _globalEnv = {
+      values: {
+        me,
+        posts: [
+          {
+            title: "Post1",
+            body: "Body of post1",
+            likedBy: [me]
+          },
+          {
+            title: "Post2",
+            body: "Body of post2",
+            likedBy: [me]
+          }
+        ]
+      }
+    };
+    context = new MetaesContext(undefined, console.error, _globalEnv, {
+      interceptor({ e, value, phase, env }) {
+        if (e.type === "Identifier" && phase === "exit" && env && getEnvironmentForValue(env, e.name) === _globalEnv) {
+          _allReferences.push([e.name, value]);
+          // console.log(e.type, value);
+          // console.log("env", getEnvironmentForValue(env, e.name));
+        }
+      }
+    });
+    _eval = async (script, env = { values: {} }) => {
+      try {
+        const result = await evalAsPromise(context, script, env);
+        function getRootEnvKey(value: any) {
+          for (let k in _globalEnv.values) {
+            if (_globalEnv.values[k] === value) {
+              return k;
+            }
+          }
+          return null;
+        }
+        let k;
+        JSON.stringify(result, function(key, value) {
+          if (
+            typeof value === "object" &&
+            (k = getRootEnvKey(value)) &&
+            !_remainingReferences.find(([_k, _v]) => _v === value)
+          ) {
+            _remainingReferences.push([k, value]);
+          }
+          return value;
+        });
+        return result;
+      } catch (e) {
+        throw e.value || e;
+      }
+    };
+  });
+  afterEach(() => {
+    _remainingReferences.length = _allReferences.length = 0;
+  });
+
+  it("should acquire one reference", async () => {
+    await _eval("me");
+    assert.deepEqual(_remainingReferences, [["me", _globalEnv.values.me]]);
+  });
+
+  it("should acquire multiple references", async () => {
+    await _eval(`[me, posts]`);
+    assert.deepEqual(_remainingReferences, [["me", _globalEnv.values.me], ["posts", _globalEnv.values.posts]]);
+    // assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
+  });
+
+  it("should not acquire local references", async () => {
+    await _eval(`var local = 'anything'; [local,me]`);
+    assert.deepEqual(_remainingReferences, [["me", _globalEnv.values.me]]);
+    // assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
+  });
+
+  it("should acquire references only for returned value", async () => {
+    await _eval(`posts; me`);
+    assert.deepEqual(_remainingReferences, [["me", _globalEnv.values.me]]);
+    // assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
+  });
+
+  // it("should acquire multiple references", async () => {
+  //   const result = await _eval(`[me, posts, posts[0], posts[0].likedBy, posts[0].likedBy[0]]`);
+  //   console.log("_references", _references);
+  //   assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
+  // });
 });
 
 function getBindingInterpretersFor(otherContext: Context) {
