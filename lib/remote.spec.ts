@@ -374,8 +374,9 @@ describe.only("References acquisition", () => {
   let context,
     _globalEnv,
     _eval,
-    _allReferences: [string, any][] = [],
-    _finalReferences: [string, any][] = [];
+    _allReferences = new Set(),
+    _finalReferences = new Set(),
+    _parentOf = new Map<object, object>();
   before(() => {
     const me = {
       firstName: "User1",
@@ -407,15 +408,36 @@ describe.only("References acquisition", () => {
         ]
       }
     };
+
+    function belongsToRootEnv(value: any) {
+      for (let k in _globalEnv.values) {
+        if (_globalEnv.values[k] === value) {
+          return true;
+        }
+      }
+      return false;
+    }
+    function belongsToRootHeap(value) {
+      while ((value = _parentOf.get(value))) {
+        if (value === _globalEnv.values) {
+          return true;
+        }
+      }
+      return false;
+    }
     context = new MetaesContext(undefined, console.error, _globalEnv, {
       interpreters: {
         values: {
           GetProperty(e: NodeTypes.GetProperty, c, cerr, env, config) {
-            const { object, property } = e;
-            console.log("OP", { object, property });
+            const { object } = e;
+            _allReferences.add(object);
             GetProperty(
               e,
               value => {
+                if (typeof value === "object" || typeof value === "function") {
+                  _allReferences.add(value);
+                  _parentOf.set(value, object);
+                }
                 c(value);
               },
               cerr,
@@ -427,7 +449,10 @@ describe.only("References acquisition", () => {
             Identifier(
               e,
               value => {
-                _allReferences.push([e.name, value]);
+                _allReferences.add(value);
+                if (belongsToRootEnv(value)) {
+                  _parentOf.set(value, _globalEnv.values);
+                }
                 c(value);
               },
               cerr,
@@ -442,31 +467,9 @@ describe.only("References acquisition", () => {
     _eval = async (script, env = { values: {} }) => {
       try {
         const result = await evalAsPromise(context, script, env);
-        function getRootEnvKey(value: any) {
-          for (let k in _globalEnv.values) {
-            if (_globalEnv.values[k] === value) {
-              return k;
-            }
-          }
-          return null;
-        }
-        let k;
         JSON.stringify(result, function(key, value) {
-          if (
-            typeof value === "object" &&
-            (k = getRootEnvKey(value)) &&
-            !_finalReferences.find(([_k, _v]) => _v === value)
-          ) {
-            let newName;
-            // check for possible new name
-            _allReferences.find(([_k, _v]) => {
-              if (_v === value) {
-                newName = _k;
-                return true;
-              }
-              return false;
-            });
-            _finalReferences.push([newName || k, value]);
+          if (value && (typeof value === "object" || typeof value === "function") && belongsToRootHeap(value)) {
+            _finalReferences.add(value);
           }
           return value;
         });
@@ -476,44 +479,49 @@ describe.only("References acquisition", () => {
       }
     };
   });
+
   afterEach(() => {
-    _finalReferences.length = _allReferences.length = 0;
+    _finalReferences.clear();
+    _allReferences.clear();
+    _parentOf.clear();
   });
 
   it("should acquire one reference", async () => {
     await _eval("me");
-    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me]]);
+    assert.includeMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
   it("should acquire multiple references in array", async () => {
     await _eval(`[me, posts]`);
-    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me], ["posts", _globalEnv.values.posts]]);
+    assert.includeMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.posts]);
   });
 
   it("should acquire multiple references in object", async () => {
     await _eval(`({me, posts})`);
-    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me], ["posts", _globalEnv.values.posts]]);
+    assert.includeMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.posts]);
   });
 
   it("should not acquire local references", async () => {
     await _eval(`var local = 'anything'; [local,me]`);
-    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me]]);
+    assert.includeMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
   it("should acquire references only for returned value", async () => {
     await _eval(`posts; me`);
-    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me]]);
+    assert.includeMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
   it("should acquire references under different name, but pointing to the same object.", async () => {
     await _eval(`var _me = me; _me;`);
-    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me]]);
+    assert.includeMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
-  it.only("should acquire any deep references", async () => {
-    const result = await _eval(`[me, me.location, me.location.address]`);
-    console.log({ _remainingReferences: _finalReferences });
-    assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
+  it("should acquire any deep references", async () => {
+    await _eval(`[me, me.location, me.location.address]`);
+    assert.sameMembers(
+      [..._finalReferences],
+      [_globalEnv.values.me, _globalEnv.values.me.location, _globalEnv.values.me.location.address]
+    );
   });
 });
 
