@@ -33,7 +33,7 @@ export function Apply({ fn, thisValue, args }: NodeTypes.Apply, c, cerr, _env, c
   }
 }
 
-export function GetProperty({ object, property }: NodeTypes.GetProperty, c) {
+export function GetProperty({ object, property }: NodeTypes.GetProperty, c, _cerr, _env, _config) {
   c(object[property]);
 }
 
