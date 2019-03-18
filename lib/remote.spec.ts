@@ -1,8 +1,9 @@
 require("source-map-support").install();
 
 import { assert } from "chai";
-import { after, before, afterEach, beforeEach, describe, it } from "mocha";
-import { Environment, getEnvironmentForValue } from "./environment";
+import { after, afterEach, before, beforeEach, describe, it } from "mocha";
+import * as NodeTypes from "../lib/nodeTypes";
+import { Environment } from "./environment";
 import { Apply, GetProperty, Identifier, SetProperty } from "./interpreter/base";
 import { ECMAScriptInterpreters } from "./interpreters";
 import {
@@ -374,11 +375,18 @@ describe.only("References acquisition", () => {
     _globalEnv,
     _eval,
     _allReferences: [string, any][] = [],
-    _remainingReferences: [string, any][] = [];
+    _finalReferences: [string, any][] = [];
   before(() => {
     const me = {
       firstName: "User1",
       lastName: "Surname1",
+      location: {
+        country: "PL",
+        address: {
+          street: "Street 1",
+          city: "City 1"
+        }
+      },
       setOnlineStatus(_flag) {},
       logout() {}
     };
@@ -400,12 +408,35 @@ describe.only("References acquisition", () => {
       }
     };
     context = new MetaesContext(undefined, console.error, _globalEnv, {
-      interceptor({ e, value, phase, env }) {
-        if (e.type === "Identifier" && phase === "exit") {
-          _allReferences.push([e.name, value]);
-          // console.log(e.type, value);
-          // console.log("env", getEnvironmentForValue(env, e.name));
-        }
+      interpreters: {
+        values: {
+          GetProperty(e: NodeTypes.GetProperty, c, cerr, env, config) {
+            const { object, property } = e;
+            console.log("OP", { object, property });
+            GetProperty(
+              e,
+              value => {
+                c(value);
+              },
+              cerr,
+              env,
+              config
+            );
+          },
+          Identifier(e, c, cerr, env, config) {
+            Identifier(
+              e,
+              value => {
+                _allReferences.push([e.name, value]);
+                c(value);
+              },
+              cerr,
+              env,
+              config
+            );
+          }
+        },
+        prev: ECMAScriptInterpreters
       }
     });
     _eval = async (script, env = { values: {} }) => {
@@ -424,7 +455,7 @@ describe.only("References acquisition", () => {
           if (
             typeof value === "object" &&
             (k = getRootEnvKey(value)) &&
-            !_remainingReferences.find(([_k, _v]) => _v === value)
+            !_finalReferences.find(([_k, _v]) => _v === value)
           ) {
             let newName;
             // check for possible new name
@@ -435,7 +466,7 @@ describe.only("References acquisition", () => {
               }
               return false;
             });
-            _remainingReferences.push([newName || k, value]);
+            _finalReferences.push([newName || k, value]);
           }
           return value;
         });
@@ -446,43 +477,44 @@ describe.only("References acquisition", () => {
     };
   });
   afterEach(() => {
-    _remainingReferences.length = _allReferences.length = 0;
+    _finalReferences.length = _allReferences.length = 0;
   });
 
   it("should acquire one reference", async () => {
     await _eval("me");
-    assert.deepEqual(_remainingReferences, [["me", _globalEnv.values.me]]);
+    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me]]);
   });
 
-  it("should acquire multiple references", async () => {
+  it("should acquire multiple references in array", async () => {
     await _eval(`[me, posts]`);
-    assert.deepEqual(_remainingReferences, [["me", _globalEnv.values.me], ["posts", _globalEnv.values.posts]]);
-    // assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
+    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me], ["posts", _globalEnv.values.posts]]);
+  });
+
+  it("should acquire multiple references in object", async () => {
+    await _eval(`({me, posts})`);
+    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me], ["posts", _globalEnv.values.posts]]);
   });
 
   it("should not acquire local references", async () => {
     await _eval(`var local = 'anything'; [local,me]`);
-    assert.deepEqual(_remainingReferences, [["me", _globalEnv.values.me]]);
-    // assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
+    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me]]);
   });
 
   it("should acquire references only for returned value", async () => {
     await _eval(`posts; me`);
-    assert.deepEqual(_remainingReferences, [["me", _globalEnv.values.me]]);
-    // assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
+    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me]]);
   });
 
   it("should acquire references under different name, but pointing to the same object.", async () => {
     await _eval(`var _me = me; _me;`);
-    assert.deepEqual(_remainingReferences, [["me", _globalEnv.values.me]]);
-    // assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
+    assert.deepEqual(_finalReferences, [["me", _globalEnv.values.me]]);
   });
 
-  // it("should acquire multiple references", async () => {
-  //   const result = await _eval(`[me, posts, posts[0], posts[0].likedBy, posts[0].likedBy[0]]`);
-  //   console.log("_references", _references);
-  //   assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
-  // });
+  it.only("should acquire any deep references", async () => {
+    const result = await _eval(`[me, me.location, me.location.address]`);
+    console.log({ _remainingReferences: _finalReferences });
+    assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
+  });
 });
 
 function getBindingInterpretersFor(otherContext: Context) {
