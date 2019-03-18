@@ -178,10 +178,10 @@ export const createHTTPConnector = (url: string): Context => {
           c && c(value);
         }
       } catch (e) {
+        log("[Client: Sending message error]", e);
         if (cerr) {
           cerr(e);
         }
-        log("[Client: Sending message error]", e);
       }
     }
   };
