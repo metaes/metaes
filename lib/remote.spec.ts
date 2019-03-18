@@ -374,7 +374,7 @@ describe.only("References acquisition", () => {
   let context,
     _globalEnv,
     _eval,
-    _allReferences = new Set(),
+    _encounteredReferences = new Set(),
     _finalReferences = new Set(),
     _parentOf = new Map<object, object>();
   before(() => {
@@ -430,12 +430,12 @@ describe.only("References acquisition", () => {
         values: {
           GetProperty(e: NodeTypes.GetProperty, c, cerr, env, config) {
             const { object } = e;
-            _allReferences.add(object);
+            _encounteredReferences.add(object);
             GetProperty(
               e,
               value => {
                 if (typeof value === "object" || typeof value === "function") {
-                  _allReferences.add(value);
+                  _encounteredReferences.add(value);
                   _parentOf.set(value, object);
                 }
                 c(value);
@@ -449,7 +449,7 @@ describe.only("References acquisition", () => {
             Identifier(
               e,
               value => {
-                _allReferences.add(value);
+                _encounteredReferences.add(value);
                 if (belongsToRootEnv(value)) {
                   _parentOf.set(value, _globalEnv.values);
                 }
@@ -468,7 +468,12 @@ describe.only("References acquisition", () => {
       try {
         const result = await evalAsPromise(context, script, env);
         JSON.stringify(result, function(key, value) {
-          if (value && (typeof value === "object" || typeof value === "function") && belongsToRootHeap(value)) {
+          if (
+            value &&
+            (typeof value === "object" || typeof value === "function") &&
+            _encounteredReferences.has(value) &&
+            belongsToRootHeap(value)
+          ) {
             _finalReferences.add(value);
           }
           return value;
@@ -482,46 +487,43 @@ describe.only("References acquisition", () => {
 
   afterEach(() => {
     _finalReferences.clear();
-    _allReferences.clear();
+    _encounteredReferences.clear();
     _parentOf.clear();
   });
 
   it("should acquire one reference", async () => {
     await _eval("me");
-    assert.includeMembers([..._finalReferences], [_globalEnv.values.me]);
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
   it("should acquire multiple references in array", async () => {
     await _eval(`[me, posts]`);
-    assert.includeMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.posts]);
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.posts]);
   });
 
   it("should acquire multiple references in object", async () => {
     await _eval(`({me, posts})`);
-    assert.includeMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.posts]);
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.posts]);
   });
 
   it("should not acquire local references", async () => {
     await _eval(`var local = 'anything'; [local,me]`);
-    assert.includeMembers([..._finalReferences], [_globalEnv.values.me]);
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
   it("should acquire references only for returned value", async () => {
     await _eval(`posts; me`);
-    assert.includeMembers([..._finalReferences], [_globalEnv.values.me]);
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
   it("should acquire references under different name, but pointing to the same object.", async () => {
     await _eval(`var _me = me; _me;`);
-    assert.includeMembers([..._finalReferences], [_globalEnv.values.me]);
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
   it("should acquire any deep references", async () => {
-    await _eval(`[me, me.location, me.location.address]`);
-    assert.sameMembers(
-      [..._finalReferences],
-      [_globalEnv.values.me, _globalEnv.values.me.location, _globalEnv.values.me.location.address]
-    );
+    await _eval(`posts; me; [me.location, me.location.address]`);
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.me.location, _globalEnv.values.me.location.address]);
   });
 });
 
