@@ -20,7 +20,6 @@ import {
   environmentToMessage,
   getReferencesMap,
   mergeValues,
-  patchNodeFetch,
   RemoteObject
 } from "./remote";
 import { runWSServer } from "./server";
@@ -188,7 +187,6 @@ describe("Raw HTTP calls", () => {
   before(async () => {
     server = await runWSServer();
     url = `http://localhost:` + server.address().port;
-    patchNodeFetch();
   });
 
   after(() => server.close());
@@ -263,7 +261,6 @@ describe("Remote objects", () => {
 
   //   before(async () => {
   //     server = await runWSServer(undefined, getOtherContext());
-  //     patchNodeFetch();
   //   });
 
   //   after(() => server.close());
@@ -327,20 +324,16 @@ function createRemoteContextTestsFor(getContext: () => Promise<Context> | Contex
 }
 
 describe.only("Remote references", () => {
-  let context: MetaesContext, _eval, server;
-  before(() => {
-    before(async () => {
-      server = await runWSServer();
-      patchNodeFetch();
-    });
+  let serverContext: Context, _eval, server;
+  before(async () => {
     const me = {
       firstName: "User1",
       lastName: "Surname1",
       setOnlineStatus(_flag) {},
       logout() {}
     };
-
-    const interpreters = getBindingInterpretersFor(
+    server = await runWSServer(
+      undefined,
       new MetaesContext(undefined, console.error, {
         values: {
           me,
@@ -359,17 +352,20 @@ describe.only("Remote references", () => {
         }
       })
     );
-    context = new MetaesContext(undefined, console.error, { values: {} }, { interpreters });
+    serverContext = createHTTPConnector("http://localhost:" + server.address().port);
     _eval = async (script, env?) => {
       try {
-        return await context.evalAsPromise(script, env);
+        return await evalAsPromise(serverContext, script, env);
       } catch (e) {
         throw e.value || e;
       }
     };
   });
+  after(() => server.close());
+
   it("should get remote object", async () => {
-    console.log(await _eval("me"));
+    const result = await _eval("me");
+    assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
   });
 });
 
