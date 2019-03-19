@@ -480,16 +480,16 @@ describe.only("References acquisition", () => {
 
         function sourceify(value, sourceifyRoot = false) {
           function _toSource(value: any, tabs: string, depth: number) {
-            switch (typeof value) {
+            let type = typeof value;
+            switch (type) {
               case "string":
                 return `"${value}"`;
               case "boolean":
               case "number":
               case "undefined":
                 return "" + value;
-              case "function":
-                return "function " + value.name + "(" + "args" + ") {}";
               case "object":
+              case "function":
                 if (value === null) {
                   return "null";
                 }
@@ -513,6 +513,9 @@ describe.only("References acquisition", () => {
                           .join(",\n" + tabs + "  ") +
                         `\n${tabs}}`;
                 }
+              default:
+                throw new Error(`Can't stringify value of type '${typeof value}'.`);
+                break;
             }
           }
           return _toSource(value, "", 0);
@@ -579,6 +582,11 @@ describe.only("References acquisition", () => {
   it("should acquire no refrences", async () => {
     await _eval(`me.location.address.street`);
     assert.sameMembers([..._finalReferences], []);
+  });
+
+  it("should support functions", async () => {
+    await _eval(`me.logout; me.setOnlineStatus`);
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.me.setOnlineStatus]);
   });
 });
 
