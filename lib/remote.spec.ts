@@ -498,11 +498,8 @@ describe.only("References acquisition", () => {
         const ids = new Map();
         let counter = 0;
 
-        function toSource(value) {
+        function sourceify(value, sourceifyRoot = false) {
           function _toSource(value: any, tabs: string, depth: number) {
-            if (Array.isArray(value)) {
-              return "[" + value.map(v => _toSource(v, tabs, depth + 1)).join(", ") + "]";
-            }
             switch (typeof value) {
               case "string":
                 return `"${value}"`;
@@ -516,7 +513,7 @@ describe.only("References acquisition", () => {
                 if (value === null) {
                   return "null";
                 }
-                if (depth > 0 && _encounteredReferences.has(value) && belongsToRootHeap(value)) {
+                if (!sourceifyRoot && _encounteredReferences.has(value) && belongsToRootHeap(value)) {
                   _finalReferences.add(value);
                   let id = ids.get(value);
                   if (!id) {
@@ -524,28 +521,30 @@ describe.only("References acquisition", () => {
                     ids.set(value, id);
                   }
                   return id;
+                } else {
+                  return Array.isArray(value)
+                    ? "[" + value.map(v => _toSource(v, tabs, depth + 1)).join(", ") + "]"
+                    : "{\n" +
+                        tabs +
+                        "  " +
+                        Object.getOwnPropertyNames(value)
+                          .map(k => k + ": " + _toSource(value[k], tabs + "  ", depth + 1))
+                          .filter(x => !!x)
+                          .join(",\n" + tabs + "  ") +
+                        `\n${tabs}}`;
                 }
-                return (
-                  "{\n" +
-                  tabs +
-                  "  " +
-                  Object.getOwnPropertyNames(value)
-                    .map(k => k + ": " + _toSource(value[k], tabs + "  ", depth + 1))
-                    .filter(x => !!x)
-                    .join(",\n" + tabs + "  ") +
-                  `\n${tabs}}`
-                );
             }
           }
           return _toSource(value, "", 0);
         }
 
-        const source = toSource(result);
+        const source = sourceify(result);
         const refs = {};
-        _finalReferences.forEach(ref => (refs[ids.get(ref)] = toSource(ref)));
+        _finalReferences.forEach(ref => (refs[ids.get(ref)] = sourceify(ref, true)));
         console.log(">> Source:");
         [..._finalReferences].reverse().forEach(ref => {
-          console.log(`${ids.get(ref)}=${toSource(ref)};`);
+          const variable = `${ids.get(ref)}=${sourceify(ref, true)};`;
+          console.log(variable);
         });
         console.log(`(${source});`);
         console.log("<< End");
