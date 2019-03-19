@@ -474,26 +474,6 @@ describe.only("References acquisition", () => {
     });
     _eval = async (script, env = { values: {} }) => {
       try {
-        // const stringify = (target, stringifyRoot = false) =>
-        //   JSON.stringify(target, function(_key, value) {
-        //     if (
-        //       value &&
-        //       (typeof value === "object" || typeof value === "function") &&
-        //       _encounteredReferences.has(value) &&
-        //       belongsToRootHeap(value) &&
-        //       !stringifyRoot
-        //     ) {
-        //       _finalReferences.add(value);
-        //       //stringify(value);
-        //       const id = "ref" + counter++;
-        //       ids.set(value, id);
-        //       return id;
-        //     } else {
-        //       return value;
-        //     }
-        //   });
-        // console.log("stringify:", stringify(result));
-
         const result = await evalAsPromise(context, script, env);
         const ids = new Map();
         let counter = 0;
