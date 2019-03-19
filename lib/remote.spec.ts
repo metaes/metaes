@@ -425,6 +425,14 @@ describe.only("References acquisition", () => {
       }
       return false;
     }
+
+    function uuidv4() {
+      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+        var r = (Math.random() * 16) | 0,
+          v = c == "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    }
     context = new MetaesContext(undefined, console.error, _globalEnv, {
       interpreters: {
         values: {
@@ -469,6 +477,45 @@ describe.only("References acquisition", () => {
         const result = await evalAsPromise(context, script, env);
         let counter = 0;
         const ids = new Map();
+
+        function toSource(value) {
+          function _toSource(value: any, tabs: string, depth: number) {
+            if (Array.isArray(value)) {
+              return "[" + value.map(v => _toSource(v, tabs, depth + 1)).join(", ") + "]";
+            }
+            switch (typeof value) {
+              case "string":
+                return `"${value}"`;
+              case "boolean":
+              case "number":
+              case "undefined":
+                return "" + value;
+              case "function":
+                return "function " + value.name + "(" + "args" + ") {...}";
+              case "object":
+                if (value === null) {
+                  return "null";
+                }
+                function printKeyValue(k, v) {
+                  return k + ": " + _toSource(v, tabs + "  ", depth + 1);
+                }
+                let names = Object.getOwnPropertyNames(value);
+
+                return (
+                  "{\n" +
+                  tabs +
+                  "  " +
+                  names
+                    .map(k => printKeyValue(k, value[k]))
+                    .filter(x => !!x)
+                    .join(",\n" + tabs + "  ") +
+                  `\n${tabs}}`
+                );
+            }
+          }
+          return _toSource(value, "", 0);
+        }
+
         const stringify = (target, stringifyRoot = false) =>
           JSON.stringify(target, function(_key, value) {
             if (
@@ -480,14 +527,15 @@ describe.only("References acquisition", () => {
             ) {
               _finalReferences.add(value);
               //stringify(value);
-              const id = "reference" + counter++;
+              const id = "ref" + counter++;
               ids.set(value, id);
               return id;
             } else {
               return value;
             }
           });
-        console.log(stringify(result));
+        console.log("stringify:", stringify(result));
+        console.log("source:", toSource(result));
         const refs = {};
         _finalReferences.forEach(ref => (refs[ids.get(ref)] = stringify(ref, true)));
         console.log("\t", { refs });
@@ -534,8 +582,8 @@ describe.only("References acquisition", () => {
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
-  it("should acquire any deep references", async () => {
-    await _eval(`posts; me; [me.location, me.location.address]`);
+  it.only("should acquire any deep references", async () => {
+    await _eval(`posts; me; [me.location, me.location.address, "a string", 1, true, false, null]`);
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me.location, _globalEnv.values.me.location.address]);
   });
 
