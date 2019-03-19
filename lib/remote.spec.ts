@@ -518,9 +518,11 @@ describe.only("References acquisition", () => {
                 }
                 if (depth > 0 && _encounteredReferences.has(value) && belongsToRootHeap(value)) {
                   _finalReferences.add(value);
-                  //toSource(value);
-                  const id = "ref" + counter++;
-                  ids.set(value, id);
+                  let id = ids.get(value);
+                  if (!id) {
+                    id = "ref" + counter++;
+                    ids.set(value, id);
+                  }
                   return id;
                 }
                 return (
@@ -565,7 +567,7 @@ describe.only("References acquisition", () => {
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
-  it.only("should acquire multiple references in array", async () => {
+  it("should acquire multiple references in array", async () => {
     await _eval(`[me, posts]`);
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.posts]);
   });
