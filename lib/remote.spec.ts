@@ -474,9 +474,29 @@ describe.only("References acquisition", () => {
     });
     _eval = async (script, env = { values: {} }) => {
       try {
+        // const stringify = (target, stringifyRoot = false) =>
+        //   JSON.stringify(target, function(_key, value) {
+        //     if (
+        //       value &&
+        //       (typeof value === "object" || typeof value === "function") &&
+        //       _encounteredReferences.has(value) &&
+        //       belongsToRootHeap(value) &&
+        //       !stringifyRoot
+        //     ) {
+        //       _finalReferences.add(value);
+        //       //stringify(value);
+        //       const id = "ref" + counter++;
+        //       ids.set(value, id);
+        //       return id;
+        //     } else {
+        //       return value;
+        //     }
+        //   });
+        // console.log("stringify:", stringify(result));
+
         const result = await evalAsPromise(context, script, env);
-        let counter = 0;
         const ids = new Map();
+        let counter = 0;
 
         function toSource(value) {
           function _toSource(value: any, tabs: string, depth: number) {
@@ -491,22 +511,24 @@ describe.only("References acquisition", () => {
               case "undefined":
                 return "" + value;
               case "function":
-                return "function " + value.name + "(" + "args" + ") {...}";
+                return "function " + value.name + "(" + "args" + ") {}";
               case "object":
                 if (value === null) {
                   return "null";
                 }
-                function printKeyValue(k, v) {
-                  return k + ": " + _toSource(v, tabs + "  ", depth + 1);
+                if (depth > 0 && _encounteredReferences.has(value) && belongsToRootHeap(value)) {
+                  _finalReferences.add(value);
+                  //toSource(value);
+                  const id = "ref" + counter++;
+                  ids.set(value, id);
+                  return id;
                 }
-                let names = Object.getOwnPropertyNames(value);
-
                 return (
                   "{\n" +
                   tabs +
                   "  " +
-                  names
-                    .map(k => printKeyValue(k, value[k]))
+                  Object.getOwnPropertyNames(value)
+                    .map(k => k + ": " + _toSource(value[k], tabs + "  ", depth + 1))
                     .filter(x => !!x)
                     .join(",\n" + tabs + "  ") +
                   `\n${tabs}}`
@@ -516,29 +538,15 @@ describe.only("References acquisition", () => {
           return _toSource(value, "", 0);
         }
 
-        const stringify = (target, stringifyRoot = false) =>
-          JSON.stringify(target, function(_key, value) {
-            if (
-              value &&
-              (typeof value === "object" || typeof value === "function") &&
-              _encounteredReferences.has(value) &&
-              belongsToRootHeap(value) &&
-              !stringifyRoot
-            ) {
-              _finalReferences.add(value);
-              //stringify(value);
-              const id = "ref" + counter++;
-              ids.set(value, id);
-              return id;
-            } else {
-              return value;
-            }
-          });
-        console.log("stringify:", stringify(result));
-        console.log("source:", toSource(result));
+        const source = toSource(result);
         const refs = {};
-        _finalReferences.forEach(ref => (refs[ids.get(ref)] = stringify(ref, true)));
-        console.log("\t", { refs });
+        _finalReferences.forEach(ref => (refs[ids.get(ref)] = toSource(ref)));
+        console.log(">> Source:");
+        [..._finalReferences].reverse().forEach(ref => {
+          console.log(`${ids.get(ref)}=${toSource(ref)};`);
+        });
+        console.log(`(${source});`);
+        console.log("<< End");
         return result;
       } catch (e) {
         throw e.value || e;
@@ -557,7 +565,7 @@ describe.only("References acquisition", () => {
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
-  it("should acquire multiple references in array", async () => {
+  it.only("should acquire multiple references in array", async () => {
     await _eval(`[me, posts]`);
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.posts]);
   });
@@ -582,7 +590,7 @@ describe.only("References acquisition", () => {
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
-  it.only("should acquire any deep references", async () => {
+  it("should acquire any deep references", async () => {
     await _eval(`posts; me; [me.location, me.location.address, "a string", 1, true, false, null]`);
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me.location, _globalEnv.values.me.location.address]);
   });
