@@ -457,9 +457,11 @@ describe.only("References acquisition", () => {
             Identifier(
               e,
               value => {
-                _encounteredReferences.add(value);
-                if (belongsToRootEnv(value)) {
-                  _parentOf.set(value, _globalEnv.values);
+                if (typeof value === "object" || typeof value === "function") {
+                  _encounteredReferences.add(value);
+                  if (belongsToRootEnv(value)) {
+                    _parentOf.set(value, _globalEnv.values);
+                  }
                 }
                 c(value);
               },
@@ -478,7 +480,7 @@ describe.only("References acquisition", () => {
         const ids = new Map();
         let counter = 0;
 
-        function sourceify(value, sourceifyRoot = false) {
+        function sourceify(rootValue, isVariable = false) {
           function _toSource(value: any, tabs: string, depth: number) {
             let type = typeof value;
             switch (type) {
@@ -488,12 +490,13 @@ describe.only("References acquisition", () => {
               case "number":
               case "undefined":
                 return "" + value;
-              case "object":
               case "function":
+              case "object":
                 if (value === null) {
                   return "null";
                 }
-                if (!sourceifyRoot && _encounteredReferences.has(value) && belongsToRootHeap(value)) {
+                const isTop = isVariable && depth === 0 && value === rootValue;
+                if (!isTop && _encounteredReferences.has(value) && belongsToRootHeap(value)) {
                   _finalReferences.add(value);
                   let id = ids.get(value);
                   if (!id) {
@@ -501,31 +504,38 @@ describe.only("References acquisition", () => {
                     ids.set(value, id);
                   }
                   return id;
+                } else if (Array.isArray(value)) {
+                  return "[" + value.map(v => _toSource(v, tabs, depth + 1)).join(", ") + "]";
+                } else if (typeof value === "function" && !_encounteredReferences.has(value)) {
+                  return null;
                 } else {
-                  return Array.isArray(value)
-                    ? "[" + value.map(v => _toSource(v, tabs, depth + 1)).join(", ") + "]"
-                    : "{\n" +
-                        tabs +
-                        "  " +
-                        Object.getOwnPropertyNames(value)
-                          .map(k => k + ": " + _toSource(value[k], tabs + "  ", depth + 1))
-                          .filter(x => !!x)
-                          .join(",\n" + tabs + "  ") +
-                        `\n${tabs}}`;
+                  return (
+                    "{\n" +
+                    tabs +
+                    "  " +
+                    Object.getOwnPropertyNames(value)
+                      .map(k => {
+                        const source = _toSource(value[k], tabs + "  ", depth + 1);
+                        return source ? k + ": " + source : null;
+                      })
+                      .filter(x => !!x)
+                      .join(",\n" + tabs + "  ") +
+                    `\n${tabs}}`
+                  );
                 }
+                break;
               default:
                 throw new Error(`Can't stringify value of type '${typeof value}'.`);
-                break;
             }
           }
-          return _toSource(value, "", 0);
+          return _toSource(rootValue, "", 0);
         }
 
         const source = sourceify(result);
         const refs = {};
         _finalReferences.forEach(ref => (refs[ids.get(ref)] = sourceify(ref, true)));
         console.log(">> Source:");
-        [..._finalReferences].reverse().forEach(ref => {
+        [..._finalReferences].forEach(ref => {
           const variable = `${ids.get(ref)}=${sourceify(ref, true)};`;
           console.log(variable);
         });
@@ -587,6 +597,11 @@ describe.only("References acquisition", () => {
   it("should support functions", async () => {
     await _eval(`me.logout; me.setOnlineStatus`);
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me.setOnlineStatus]);
+  });
+
+  it("should support functions properties serialization", async () => {
+    await _eval(`[me, me.setOnlineStatus]`);
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.me.setOnlineStatus]);
   });
 });
 
