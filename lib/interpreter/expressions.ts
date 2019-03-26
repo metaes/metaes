@@ -2,7 +2,7 @@ import { callcc } from "../callcc";
 import { Environment, getEnvironmentForValue, GetValue } from "../environment";
 import { evaluate, evaluateArray } from "../evaluate";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
-import { createMetaFunction, isMetaFunction } from "../metafunction";
+import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
 import { IfStatement } from "./statements";
