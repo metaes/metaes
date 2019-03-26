@@ -15,16 +15,19 @@ export function evaluate(
   config: EvaluationConfig
 ) {
   const interpreter: Interpreter<any> = GetValueSync(e.type, config.interpreters);
+  const schedule = config.schedule || defaultScheduler;
   if (interpreter) {
     callInterceptor("enter", config, e, env);
-    (config.schedule || defaultScheduler)(function run() {
+    schedule(function run() {
       interpreter(
         e,
         function(value) {
-          callInterceptor("exit", config, e, env, value);
-          c(value);
+          schedule(function exit() {
+            callInterceptor("exit", config, e, env, value);
+            c(value);
+          });
         },
-        function(exception) {
+        function exception(exception) {
           exception = toException(exception);
           if (!exception.location) {
             exception.location = e;
