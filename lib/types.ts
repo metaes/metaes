@@ -42,10 +42,13 @@ export interface Evaluation {
 
 export type Interceptor = (evaluation: Evaluation) => void;
 
+type Schedule = (task: () => void) => void;
+
 export interface EvaluationConfig {
   interceptor: Interceptor;
   interpreters: Environment;
   script: Script;
+  schedule?: Schedule;
 }
 
 export type Continuation<T = any> = (value?: T) => void;

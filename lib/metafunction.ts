@@ -1,5 +1,5 @@
 import { Environment } from "./environment";
-import { evaluate, visitArray } from "./evaluate";
+import { evaluate, visitArray, defaultScheduler } from "./evaluate";
 import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
 import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
@@ -47,7 +47,7 @@ export const evaluateMetaFunction = (
               c(),
         exception => (exception.type === "ReturnStatement" ? c(exception.value) : cerr(exception)),
         env,
-        Object.assign({}, executionTimeConfig, config)
+        Object.assign({}, executionTimeConfig, config, { schedule: defaultScheduler })
       ),
     cerr
   );

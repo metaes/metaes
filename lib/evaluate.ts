@@ -3,6 +3,10 @@ import { NotImplementedException, toException } from "./exceptions";
 import { callInterceptor } from "./metaes";
 import { ASTNode, Continuation, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
 
+export function defaultScheduler(fn) {
+  fn();
+}
+
 export function evaluate(
   e: ASTNode,
   c: Continuation,
@@ -13,23 +17,25 @@ export function evaluate(
   const interpreter: Interpreter<any> = GetValueSync(e.type, config.interpreters);
   if (interpreter) {
     callInterceptor("enter", config, e, env);
-    interpreter(
-      e,
-      function(value) {
-        callInterceptor("exit", config, e, env, value);
-        c(value);
-      },
-      function(exception) {
-        exception = toException(exception);
-        if (!exception.location) {
-          exception.location = e;
-        }
-        callInterceptor("exit", config, e, env, exception);
-        cerr(exception);
-      },
-      env,
-      config
-    );
+    (config.schedule || defaultScheduler)(function run() {
+      interpreter(
+        e,
+        function(value) {
+          callInterceptor("exit", config, e, env, value);
+          c(value);
+        },
+        function(exception) {
+          exception = toException(exception);
+          if (!exception.location) {
+            exception.location = e;
+          }
+          callInterceptor("exit", config, e, env, exception);
+          cerr(exception);
+        },
+        env,
+        config
+      );
+    });
   } else {
     const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
     callInterceptor("exit", config, e, env, exception);
