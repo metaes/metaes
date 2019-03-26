@@ -1,7 +1,36 @@
-import { Environment, GetValue } from "./environment";
+import { Environment, GetValueSync } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
 import { callInterceptor } from "./metaes";
 import { ASTNode, Continuation, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
+
+const _trampoline: any[] = [];
+let _trampolineExecuting = false;
+
+export function runTrampoline() {
+  if (_trampolineExecuting) {
+    return;
+  }
+  _trampolineExecuting = true;
+  while (_trampoline.length) {
+    try {
+      _trampoline.pop()();
+    } catch {
+      // errors will be handled in `cerr` continuation
+    }
+  }
+  _trampolineExecuting = false;
+}
+
+function checkTrampoline() {
+  if (!_trampolineExecuting) {
+    runTrampoline();
+  }
+}
+
+function trampolinePush(fn) {
+  _trampoline.push(fn);
+  checkTrampoline();
+}
 
 export function evaluate(
   e: ASTNode,
@@ -10,16 +39,18 @@ export function evaluate(
   env: Environment,
   config: EvaluationConfig
 ) {
-  callInterceptor("enter", config, e, env);
-  GetValue(
-    { name: e.type },
-    (interpreter: Interpreter<ASTNode>) => {
+  const interpreter: Interpreter<any> = GetValueSync(e.type, config.interpreters);
+  if (interpreter) {
+    trampolinePush(function() {
+      callInterceptor("enter", config, e, env);
       try {
         interpreter(
           e,
           value => {
             callInterceptor("exit", config, e, env, value);
-            c(value);
+            trampolinePush(function() {
+              c(value);
+            });
           },
           exception => {
             exception = toException(exception);
@@ -35,14 +66,12 @@ export function evaluate(
       } catch (error) {
         throw error;
       }
-    },
-    () => {
-      const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
-      cerr(exception);
-      callInterceptor("exit", config, e, env, exception);
-    },
-    config.interpreters
-  );
+    });
+  } else {
+    const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
+    cerr(exception);
+    callInterceptor("exit", config, e, env, exception);
+  }
 }
 
 type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;

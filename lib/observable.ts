@@ -45,14 +45,14 @@ export class ObservableContext extends MetaesContext {
       { values: { self: target }, prev: { values: target } },
       {
         interceptor: (evaluation: Evaluation) => {
-          this._flameGraphBuilder("before", evaluation);
-          try {
-            this._interceptor(evaluation);
-          } catch (e) {
-            // TODO: use logger
-            console.log(e);
-          }
-          this._flameGraphBuilder("after", evaluation);
+          // this._flameGraphBuilder("before", evaluation);
+          // try {
+          //   this._interceptor(evaluation);
+          // } catch (e) {
+          //   // TODO: use logger
+          //   console.log(e);
+          // }
+          // this._flameGraphBuilder("after", evaluation);
         }
       },
       createCache()

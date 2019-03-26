@@ -370,7 +370,7 @@ describe("Remote references", () => {
   });
 });
 
-describe.only("References acquisition", () => {
+describe("References acquisition", () => {
   let context,
     _globalEnv,
     _eval,
@@ -391,8 +391,14 @@ describe.only("References acquisition", () => {
       setOnlineStatus(_flag) {},
       logout() {}
     };
+    const val = { _id: "a value" };
     _globalEnv = {
       values: {
+        repeated: [val, val],
+        cyclic: {
+          a: ["a"],
+          b: ["b"]
+        },
         me,
         posts: [
           {
@@ -408,6 +414,8 @@ describe.only("References acquisition", () => {
         ]
       }
     };
+    _globalEnv.values.cyclic.a.push(_globalEnv.values.cyclic.b);
+    //_globalEnv.values.cyclic.b.push(_globalEnv.values.cyclic.b);
 
     function belongsToRootEnv(value: any) {
       for (let k in _globalEnv.values) {
@@ -523,7 +531,6 @@ describe.only("References acquisition", () => {
                     `\n${tabs}}`
                   );
                 }
-                break;
               default:
                 throw new Error(`Can't stringify value of type '${typeof value}'.`);
             }
@@ -601,6 +608,11 @@ describe.only("References acquisition", () => {
 
   it("should support functions properties serialization", async () => {
     await _eval(`[me, me.setOnlineStatus]`);
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.me.setOnlineStatus]);
+  });
+
+  it("should support repeating values", async () => {
+    await _eval(`repeated;`);
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.me.setOnlineStatus]);
   });
 });

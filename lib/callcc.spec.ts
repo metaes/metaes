@@ -4,7 +4,7 @@ import { callWithCurrentContinuation, lifted, liftedAll } from "./callcc";
 import { evalFnAsPromise, evalFnBodyAsPromise, MetaesContext, metaesEval } from "./metaes";
 import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "./metafunction";
 
-describe("Callcc", () => {
+describe.only("Callcc", () => {
   it("should return current env", () => {
     function receiver(_, _c, _cerr, env) {
       assert.equal(env.values.answer, 42);
@@ -90,7 +90,7 @@ describe("Callcc", () => {
     assert.deepEqual(result, [1, 2, 3, 4, 5, 6]);
   });
 
-  it("should accept metaes function as call/cc receiver", async () => {
+  it.only("should accept metaes function as call/cc receiver", async () => {
     const context = new MetaesContext(undefined, undefined, {
       values: { callcc: callWithCurrentContinuation, console }
     });
