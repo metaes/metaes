@@ -2,7 +2,7 @@ import { Environment } from "./environment";
 import { createScript, metaesEval } from "./metaes";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "./types";
 
-export function callWithCurrentContinuation(
+export function callcc(
   _receiver: (
     value: any,
     c: Continuation,
@@ -23,7 +23,7 @@ export function lifted(fn: Function) {
   }
   let result, error;
   metaesEval(script, r => (result = r), e => (error = e), {
-    values: { callcc: callWithCurrentContinuation, fn }
+    values: { callcc, fn }
   });
   if (error) {
     throw error;

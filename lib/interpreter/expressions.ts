@@ -1,4 +1,4 @@
-import { callWithCurrentContinuation } from "../callcc";
+import { callcc } from "../callcc";
 import { Environment, getEnvironmentForValue, GetValue } from "../environment";
 import { evaluate, evaluateArray } from "../evaluate";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
@@ -26,7 +26,7 @@ export function CallExpression(
             callee => {
               if (typeof callee === "function") {
                 try {
-                  if (callee === callWithCurrentContinuation) {
+                  if (callee === callcc) {
                     // Pass continuation to continuation receiver.
                     try {
                       args[0](args[1], c, cerr, env, config);

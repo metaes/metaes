@@ -4,13 +4,14 @@ import { callInterceptor } from "./metaes";
 import { ASTNode, Continuation, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
 
 const _trampoline: any[] = [];
-let _trampolineExecuting = false;
+let _trampolinePopping = false;
 
-export function runTrampoline() {
-  if (_trampolineExecuting) {
+function trampolinePush(fn) {
+  _trampoline.push(fn);
+  if (_trampolinePopping) {
     return;
   }
-  _trampolineExecuting = true;
+  _trampolinePopping = true;
   while (_trampoline.length) {
     try {
       _trampoline.pop()();
@@ -18,18 +19,7 @@ export function runTrampoline() {
       // errors will be handled in `cerr` continuation
     }
   }
-  _trampolineExecuting = false;
-}
-
-function checkTrampoline() {
-  if (!_trampolineExecuting) {
-    runTrampoline();
-  }
-}
-
-function trampolinePush(fn) {
-  _trampoline.push(fn);
-  checkTrampoline();
+  _trampolinePopping = false;
 }
 
 export function evaluate(
@@ -41,25 +31,25 @@ export function evaluate(
 ) {
   const interpreter: Interpreter<any> = GetValueSync(e.type, config.interpreters);
   if (interpreter) {
-    trampolinePush(function() {
+    trampolinePush(function enter() {
       callInterceptor("enter", config, e, env);
       try {
         interpreter(
           e,
-          value => {
-            callInterceptor("exit", config, e, env, value);
-            trampolinePush(function() {
+          value =>
+            trampolinePush(function exit() {
+              callInterceptor("exit", config, e, env, value);
               c(value);
-            });
-          },
-          exception => {
-            exception = toException(exception);
-            if (!exception.location) {
-              exception.location = e;
-            }
-            callInterceptor("exit", config, e, env, exception);
-            cerr(exception);
-          },
+            }),
+          exception =>
+            trampolinePush(function exit() {
+              exception = toException(exception);
+              if (!exception.location) {
+                exception.location = e;
+              }
+              callInterceptor("exit", config, e, env, exception);
+              cerr(exception);
+            }),
           env,
           config
         );
@@ -68,9 +58,11 @@ export function evaluate(
       }
     });
   } else {
-    const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
-    cerr(exception);
-    callInterceptor("exit", config, e, env, exception);
+    trampolinePush(function exit() {
+      const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
+      callInterceptor("exit", config, e, env, exception);
+      cerr(exception);
+    });
   }
 }
 

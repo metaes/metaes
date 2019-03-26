@@ -1,28 +1,28 @@
 import { assert, expect } from "chai";
 import { describe, it } from "mocha";
-import { callWithCurrentContinuation, lifted, liftedAll } from "./callcc";
+import { callcc, lifted, liftedAll } from "./callcc";
 import { evalFnAsPromise, evalFnBodyAsPromise, MetaesContext, metaesEval } from "./metaes";
 import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "./metafunction";
 
-describe.only("Callcc", () => {
+describe("Callcc", () => {
   it("should return current env", () => {
     function receiver(_, _c, _cerr, env) {
       assert.equal(env.values.answer, 42);
-      assert.equal(env.values.callWithCurrentContinuation, callWithCurrentContinuation);
+      assert.equal(env.values.callcc, callcc);
     }
     metaesEval(
-      "var answer=42; callWithCurrentContinuation(receiver)",
+      "var answer=42; callcc(receiver)",
       console.log,
       e => {
         throw e;
       },
-      { callWithCurrentContinuation, receiver }
+      { callcc, receiver }
     );
   });
 
   it("should call with current continuation with additional arguments", async () => {
     const context = new MetaesContext(undefined, undefined, {
-      values: { callWithCurrentContinuation, receiver }
+      values: { callcc, receiver }
     });
 
     let env;
@@ -35,7 +35,7 @@ describe.only("Callcc", () => {
 
     const result = await evalFnBodyAsPromise({
       context,
-      source: callWithCurrentContinuation => 2 * callWithCurrentContinuation(receiver)
+      source: callcc => 2 * callcc(receiver)
     });
     assert.equal(result, 42);
     assert.containsAllKeys(env, ["values"]);
@@ -44,7 +44,7 @@ describe.only("Callcc", () => {
   it("should continue after call/cc multiple times if user decides to", async () => {
     const result = [];
     const context = new MetaesContext(undefined, undefined, {
-      values: { callcc: callWithCurrentContinuation, receiver, result }
+      values: { callcc, receiver, result }
     });
     let cc;
     function receiver(_, _cc) {
@@ -68,7 +68,7 @@ describe.only("Callcc", () => {
       Should execut first time using passed in value`, async () => {
     const result = [];
     const context = new MetaesContext(undefined, undefined, {
-      values: { callcc: callWithCurrentContinuation, receiver, result }
+      values: { callcc, receiver, result }
     });
     let cc;
     function receiver(value, _cc, _cerr) {
@@ -90,9 +90,9 @@ describe.only("Callcc", () => {
     assert.deepEqual(result, [1, 2, 3, 4, 5, 6]);
   });
 
-  it.only("should accept metaes function as call/cc receiver", async () => {
+  it("should accept metaes function as call/cc receiver", async () => {
     const context = new MetaesContext(undefined, undefined, {
-      values: { callcc: callWithCurrentContinuation, console }
+      values: { callcc, console }
     });
 
     const i = await evalFnAsPromise({
@@ -100,6 +100,7 @@ describe.only("Callcc", () => {
       source: callcc => {
         let evilGoTo;
         let i = 0;
+
         callcc(function(_, cc) {
           evilGoTo = cc;
           evilGoTo();
@@ -110,15 +111,14 @@ describe.only("Callcc", () => {
         }
         return i;
       },
-      args: [callWithCurrentContinuation]
+      args: [callcc]
     });
-
     assert.equal(i, 10);
   });
 
   it("should throw from call/cc receiver", async () => {
     const context = new MetaesContext(undefined, undefined, {
-      values: { callcc: callWithCurrentContinuation, console }
+      values: { callcc, console }
     });
 
     function receiver(_, _cc, cerr) {
@@ -134,14 +134,14 @@ describe.only("Callcc", () => {
           return e;
         }
       },
-      args: [callWithCurrentContinuation, receiver]
+      args: [callcc, receiver]
     });
     expect(error.message).equal("Continuation error");
   });
 
   it("should support custom yield expression", async () => {
     const context = new MetaesContext(undefined, undefined, {
-      values: { callcc: callWithCurrentContinuation, console, isMetaFunction, getMetaFunction, evaluateMetaFunction }
+      values: { callcc, console, isMetaFunction, getMetaFunction, evaluateMetaFunction }
     });
 
     const result = await evalFnBodyAsPromise({
@@ -232,7 +232,7 @@ describe.only("Callcc", () => {
     const context = new MetaesContext(undefined, undefined, {
       values: {
         awaitReceiver_,
-        callcc: callWithCurrentContinuation,
+        callcc,
         console,
         isMetaFunction,
         getMetaFunction,
