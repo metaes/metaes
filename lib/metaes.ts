@@ -39,34 +39,11 @@ export function noop() {}
 
 const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 
-export function getTrampoliningScheduler() {
-  const _trampoline: any[] = [];
-  let _trampolinePopping = false;
-
-  function trampolinePop() {
-    while (_trampoline.length) {
-      try {
-        _trampoline.pop()();
-      } catch (e) {
-        console.log("uncaught, will be rethrown", e);
-      }
-    }
-  }
-
-  return function trampolinePush(fn) {
-    _trampoline.push(fn);
-    if (_trampolinePopping) {
-      return;
-    }
-    _trampolinePopping = true;
-    trampolinePop();
-    _trampolinePopping = false;
-  };
-}
+const hasPerformance = typeof performance === "object";
 
 export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config = {}) => {
   script = toScript(script);
-  config = Object.assign({ schedule: config.schedule || getTrampoliningScheduler(), script }, BaseConfig, config);
+  config = Object.assign({ script }, BaseConfig, config);
 
   try {
     evaluate(
@@ -223,8 +200,6 @@ export const consoleLoggingMetaesContext = (environment: Environment = { values:
       console.log(evaluation);
     }
   });
-
-const hasPerformance = typeof performance === "function";
 
 export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNode, env?: Environment, value?) =>
   config.interceptor !== noop &&
