@@ -1,6 +1,7 @@
 import { assert, expect } from "chai";
 import { describe, it } from "mocha";
 import { callcc, lifted, liftedAll } from "./callcc";
+import { Apply } from "./interpreter/base";
 import { evalFnAsPromise, evalFnBodyAsPromise, MetaesContext, metaesEval } from "./metaes";
 import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "./metafunction";
 
@@ -141,16 +142,15 @@ describe("Callcc", () => {
 
   it("should support custom yield expression", async () => {
     const context = new MetaesContext(undefined, undefined, {
-      values: { callcc, console, isMetaFunction, getMetaFunction, evaluateMetaFunction }
+      values: { callcc, console, isMetaFunction, Apply }
     });
 
     const result = await evalFnBodyAsPromise({
       context,
-      source: (callcc, isMetaFunction, evaluateMetaFunction, getMetaFunction) => {
+      source: (callcc, isMetaFunction, Apply) => {
         function receiver(value, cc, ccerr) {
           ccerr({ type: "NextIteration", value: { value, cc } });
         }
-
         function getIterator(fn) {
           if (!isMetaFunction(fn)) {
             throw "Creating iterator from native function not supported yet";
@@ -160,8 +160,8 @@ describe("Callcc", () => {
           let done = false;
           let error;
           function start() {
-            evaluateMetaFunction(
-              getMetaFunction(fn),
+            Apply(
+              { fn, args: [] },
               () => {
                 done = true;
               },
@@ -172,9 +172,7 @@ describe("Callcc", () => {
                 } else {
                   error = e.value;
                 }
-              },
-              null,
-              []
+              }
             );
           }
 
@@ -218,7 +216,6 @@ describe("Callcc", () => {
         results;
       }
     });
-
     expect(result).deep.eq([
       { value: 1, done: false },
       { value: 2, done: false },
