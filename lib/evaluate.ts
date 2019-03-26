@@ -12,14 +12,18 @@ function trampolinePush(fn) {
     return;
   }
   _trampolinePopping = true;
+  trampolinePop();
+  _trampolinePopping = false;
+}
+
+export function trampolinePop() {
   while (_trampoline.length) {
     try {
       _trampoline.pop()();
-    } catch {
-      // errors will be handled in `cerr` continuation
+    } catch (e) {
+      console.log("uncaught, will be rethrown", e);
     }
   }
-  _trampolinePopping = false;
 }
 
 export function evaluate(
@@ -33,29 +37,25 @@ export function evaluate(
   if (interpreter) {
     trampolinePush(function enter() {
       callInterceptor("enter", config, e, env);
-      try {
-        interpreter(
-          e,
-          value =>
-            trampolinePush(function exit() {
-              callInterceptor("exit", config, e, env, value);
-              c(value);
-            }),
-          exception =>
-            trampolinePush(function exit() {
-              exception = toException(exception);
-              if (!exception.location) {
-                exception.location = e;
-              }
-              callInterceptor("exit", config, e, env, exception);
-              cerr(exception);
-            }),
-          env,
-          config
-        );
-      } catch (error) {
-        throw error;
-      }
+      interpreter(
+        e,
+        value =>
+          trampolinePush(function exit() {
+            callInterceptor("exit", config, e, env, value);
+            c(value);
+          }),
+        exception =>
+          trampolinePush(function exit() {
+            exception = toException(exception);
+            if (!exception.location) {
+              exception.location = e;
+            }
+            callInterceptor("exit", config, e, env, exception);
+            cerr(exception);
+          }),
+        env,
+        config
+      );
     });
   } else {
     trampolinePush(function exit() {

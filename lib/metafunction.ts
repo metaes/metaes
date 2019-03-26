@@ -1,4 +1,4 @@
-import { evaluate, visitArray } from "./evaluate";
+import { evaluate, visitArray, trampolinePop } from "./evaluate";
 import { Environment } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
@@ -58,6 +58,11 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
     let result;
     let exception;
     evaluateMetaFunction(metaFunction, r => (result = r), ex => (exception = toException(ex)), this, args);
+
+    // Don't wait until callstack is popped above this function - enforce MetaES evaluation.
+    // Otherwise result may be obtained too late - not synchronously, even if that would be possible.
+    // trampolinePop();
+
     if (exception) {
       throw exception;
     }
@@ -82,7 +87,7 @@ export function markAsMetaFunction(fn: Function, meta: MetaesFunction) {
 }
 
 export function isMetaFunction(fn: Function) {
-  return (<any>fn)[META_KEY];
+  return !!(<any>fn)[META_KEY];
 }
 
 export function getMetaFunction(fn: Function) {

@@ -2,16 +2,16 @@ import { Environment } from "./environment";
 import { createScript, metaesEval } from "./metaes";
 import { Continuation, ErrorContinuation, EvaluationConfig } from "./types";
 
-export function callcc(
+export function callcc<T, U>(
   _receiver: (
-    value: any,
-    c: Continuation,
+    value: T | undefined,
+    c: Continuation<U>,
     cerr?: ErrorContinuation,
     env?: Environment,
     config?: EvaluationConfig
-  ) => any,
-  _value?: any
-): any {
+  ) => void,
+  _value?: T
+): U {
   throw new Error("Not intended to be called directly, call from Metaes context.");
 }
 
