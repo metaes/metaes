@@ -82,7 +82,7 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
       if (index < items.length) {
         fn(
           items[index],
-          value => {
+          function onNextItem(value) {
             // If true, it means currently may be happening for example a reevaluation of items
             // from certain index using call/cc. Copy accumulated previously results and ignore their tail
             // after given index as this reevalution may happen in the middle of an array.
