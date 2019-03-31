@@ -14,44 +14,13 @@ describe.only("References acquisition", () => {
     _encounteredReferences = new Set(),
     _finalReferences = new Set(),
     _parentOf = new Map<object, object>();
+
+  afterEach(() => {
+    _finalReferences.clear();
+    _encounteredReferences.clear();
+    _parentOf.clear();
+  });
   before(() => {
-    const me = {
-      firstName: "User1",
-      lastName: "Surname1",
-      location: {
-        country: "PL",
-        address: {
-          street: "Street 1",
-          city: "City 1"
-        }
-      },
-      setOnlineStatus(_flag) {},
-      logout() {}
-    };
-    const val = {};
-    _globalEnv = {
-      values: {
-        repeated: [val, val],
-        cyclic: {
-          a: ["a"],
-          b: ["b"]
-        },
-        me,
-        posts: [
-          {
-            title: "Post1",
-            body: "Body of post1",
-            likedBy: [me]
-          },
-          {
-            title: "Post2",
-            body: "Body of post2",
-            likedBy: [me]
-          }
-        ]
-      }
-    };
-    _globalEnv.values.cyclic.a.push(_globalEnv.values.cyclic.b);
     //_globalEnv.values.cyclic.b.push(_globalEnv.values.cyclic.b);
 
     function belongsToRootEnv(value: any) {
@@ -78,47 +47,47 @@ describe.only("References acquisition", () => {
         return v.toString(16);
       });
     }
-    context = new MetaesContext(undefined, console.error, _globalEnv, {
-      interpreters: {
-        values: {
-          GetProperty(e: NodeTypes.GetProperty, c, cerr, env, config) {
-            const { object } = e;
-            _encounteredReferences.add(object);
-            GetProperty(
-              e,
-              value => {
-                if (typeof value === "object" || typeof value === "function") {
-                  _encounteredReferences.add(value);
-                  _parentOf.set(value, object);
-                }
-                c(value);
-              },
-              cerr,
-              env,
-              config
-            );
-          },
-          Identifier(e, c, cerr, env, config) {
-            Identifier(
-              e,
-              value => {
-                if (typeof value === "object" || typeof value === "function") {
-                  _encounteredReferences.add(value);
-                  if (belongsToRootEnv(value)) {
-                    _parentOf.set(value, _globalEnv.values);
-                  }
-                }
-                c(value);
-              },
-              cerr,
-              env,
-              config
-            );
-          }
+
+    const interpreters = {
+      values: {
+        GetProperty(e: NodeTypes.GetProperty, c, cerr, env, config) {
+          const { object } = e;
+          _encounteredReferences.add(object);
+          GetProperty(
+            e,
+            value => {
+              if (typeof value === "object" || typeof value === "function") {
+                _encounteredReferences.add(value);
+                _parentOf.set(value, object);
+              }
+              c(value);
+            },
+            cerr,
+            env,
+            config
+          );
         },
-        prev: ECMAScriptInterpreters
-      }
-    });
+        Identifier(e, c, cerr, env, config) {
+          Identifier(
+            e,
+            value => {
+              if (typeof value === "object" || typeof value === "function") {
+                _encounteredReferences.add(value);
+                if (belongsToRootEnv(value)) {
+                  _parentOf.set(value, _globalEnv.values);
+                }
+              }
+              c(value);
+            },
+            cerr,
+            env,
+            config
+          );
+        }
+      },
+      prev: ECMAScriptInterpreters
+    };
+
     _eval = async (script, env = { values: {} }) => {
       try {
         const result = await evalAsPromise(context, script, env);
@@ -188,12 +157,47 @@ describe.only("References acquisition", () => {
         throw e.value || e;
       }
     };
-  });
+    const me = {
+      firstName: "User1",
+      lastName: "Surname1",
+      location: {
+        country: "PL",
+        address: {
+          street: "Street 1",
+          city: "City 1"
+        }
+      },
+      setOnlineStatus(_flag) {},
+      logout() {}
+    };
+    const val = {};
+    _globalEnv = {
+      values: {
+        repeated: [val, val],
+        cyclic: {
+          a: ["a"],
+          b: ["b"]
+        },
+        me,
+        posts: [
+          {
+            title: "Post1",
+            body: "Body of post1",
+            likedBy: [me]
+          },
+          {
+            title: "Post2",
+            body: "Body of post2",
+            likedBy: [me]
+          }
+        ]
+      }
+    };
+    _globalEnv.values.cyclic.a.push(_globalEnv.values.cyclic.b);
 
-  afterEach(() => {
-    _finalReferences.clear();
-    _encounteredReferences.clear();
-    _parentOf.clear();
+    context = new MetaesContext(undefined, console.error, _globalEnv, {
+      interpreters
+    });
   });
 
   it("should acquire one reference", async () => {
@@ -250,5 +254,11 @@ describe.only("References acquisition", () => {
     await _eval(`[repeated, repeated]`);
     console.log({ _finalReferences });
     assert.sameMembers([..._finalReferences], [_globalEnv.values.repeated]);
+  });
+
+  it("should destruct references chain", async () => {
+    await _eval(`[repeated, repeated[0]]`);
+    console.log({ _finalReferences });
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.repeated, _globalEnv.values.repeated[0]]);
   });
 });
