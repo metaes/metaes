@@ -11,7 +11,7 @@ const privateKey = {};
 export class RemoteObject {
   constructor(key?) {
     if (key !== privateKey) {
-      throw new Error("Can't use consctructor directly, use RemoteObject.create");
+      throw new Error("Can't use constructor directly, use RemoteObject.create");
     }
   }
   static create() {
