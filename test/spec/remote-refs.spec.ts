@@ -21,8 +21,6 @@ describe.only("References acquisition", () => {
     _parentOf.clear();
   });
   before(() => {
-    //_globalEnv.values.cyclic.b.push(_globalEnv.values.cyclic.b);
-
     function belongsToRootEnv(value: any) {
       for (let k in _globalEnv.values) {
         if (_globalEnv.values[k] === value) {
@@ -38,14 +36,6 @@ describe.only("References acquisition", () => {
         }
       }
       return false;
-    }
-
-    function uuidv4() {
-      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-        var r = (Math.random() * 16) | 0,
-          v = c == "x" ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-      });
     }
 
     const interpreters = {
@@ -174,10 +164,7 @@ describe.only("References acquisition", () => {
     _globalEnv = {
       values: {
         repeated: [val, val],
-        cyclic: {
-          a: ["a"],
-          b: ["b"]
-        },
+
         me,
         posts: [
           {
@@ -193,8 +180,6 @@ describe.only("References acquisition", () => {
         ]
       }
     };
-    _globalEnv.values.cyclic.a.push(_globalEnv.values.cyclic.b);
-
     context = new MetaesContext(undefined, console.error, _globalEnv, {
       interpreters
     });
@@ -261,4 +246,17 @@ describe.only("References acquisition", () => {
     console.log({ _finalReferences });
     assert.sameMembers([..._finalReferences], [_globalEnv.values.repeated, _globalEnv.values.repeated[0]]);
   });
+
+  it("should not support cyclic values", () =>
+    new Promise((resolve, reject) =>
+      _eval(`
+    let a = ["a"];
+    let b = ["b"];
+    a.push(b);
+    b.push(b);
+    a;
+    `)
+        .then(reject)
+        .catch(resolve)
+    ));
 });
