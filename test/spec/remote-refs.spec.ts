@@ -28,7 +28,7 @@ describe.only("References acquisition", () => {
       setOnlineStatus(_flag) {},
       logout() {}
     };
-    const val = { _id: "a value" };
+    const val = {};
     _globalEnv = {
       values: {
         repeated: [val, val],
@@ -246,8 +246,9 @@ describe.only("References acquisition", () => {
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.me.setOnlineStatus]);
   });
 
-  it("should support repeating values", async () => {
-    await _eval(`repeated;`);
-    assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.me.setOnlineStatus]);
+  it("should support repeating values as one reference", async () => {
+    await _eval(`[repeated, repeated]`);
+    console.log({ _finalReferences });
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.repeated]);
   });
 });
