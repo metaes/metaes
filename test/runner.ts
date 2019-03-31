@@ -4,8 +4,8 @@ import * as glob from "glob";
 import { zip } from "lodash";
 import { before, describe, it } from "mocha";
 import * as pify from "pify";
-import { metaesEval } from "../lib/metaes";
 import { callcc } from "../lib/callcc";
+import { metaesEval } from "../lib/metaes";
 
 const values = {
   getThisEnv(_, c, _cerr, env) {

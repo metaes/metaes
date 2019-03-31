@@ -1,10 +1,10 @@
 import { assert, expect } from "chai";
 import { describe, it } from "mocha";
-import { callcc, lifted, liftedAll } from "./callcc";
-import { Apply } from "./interpreter/base";
-import { evalFnAsPromise, evalFnBodyAsPromise, MetaesContext, metaesEval } from "./metaes";
-import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "./metafunction";
-import { defaultScheduler } from "./evaluate";
+import { callcc, lifted, liftedAll } from "../../lib/callcc";
+import { Apply } from "../../lib/interpreter/base";
+import { evalFnAsPromise, evalFnBodyAsPromise, MetaesContext, metaesEval } from "../../lib/metaes";
+import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../../lib/metafunction";
+import { defaultScheduler } from "../../lib/evaluate";
 
 describe("Callcc", () => {
   it("should return current env", () => {

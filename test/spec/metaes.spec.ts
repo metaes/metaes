@@ -1,6 +1,6 @@
 import { assert, expect } from "chai";
 import { beforeEach, describe, it } from "mocha";
-import { Context, evalFnBodyAsPromise, MetaesContext } from "./metaes";
+import { Context, evalFnBodyAsPromise, MetaesContext } from "../../lib/metaes";
 
 describe("Evaluation", () => {
   let context: Context;

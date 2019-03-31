@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { describe, it } from "mocha";
-import { evalFn } from "./metaes";
-import { ObservableContext } from "./observable";
+import { evalFn } from "../../lib/metaes";
+import { ObservableContext } from "../../lib/observable";
 
 describe("ObservableContext", () => {
   it("should correctly build tree structure of children", async () => {

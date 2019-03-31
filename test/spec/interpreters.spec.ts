@@ -1,8 +1,8 @@
 import { assert } from "chai";
 import { before, beforeEach, describe, it } from "mocha";
-import { GetProperty, SetProperty, Apply } from "./interpreter/base";
-import { ECMAScriptInterpreters } from "./interpreters";
-import { MetaesContext, evalFnBodyAsPromise } from "./metaes";
+import { GetProperty, SetProperty, Apply } from "../../lib/interpreter/base";
+import { ECMAScriptInterpreters } from "../../lib/interpreters";
+import { MetaesContext, evalFnBodyAsPromise } from "../../lib/metaes";
 
 describe("Interpreters", () => {
   let context: MetaesContext;

@@ -15,8 +15,8 @@
     "email": "krupa.bartosz@gmail.com"
   },
   "scripts": {
-    "test": "tsc; mocha --recursive lib/ test/runner",
-    "test:local": "mocha --recursive lib/ test/runner",
+    "test": "tsc; mocha --recursive test/spec test/runner",
+    "test:local": "mocha --recursive test/spec test/runner",
     "dist:compile": "tsc -p tsconfig-build.json --declaration",
     "dist:copy": "cp package.json README.md tsconfig.json .npmignore build/lib",
     "dist:dry": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish --dry-run",

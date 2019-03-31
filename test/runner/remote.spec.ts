@@ -2,10 +2,10 @@ require("source-map-support").install();
 
 import { assert } from "chai";
 import { after, afterEach, before, beforeEach, describe, it } from "mocha";
-import * as NodeTypes from "../lib/nodeTypes";
-import { Environment } from "./environment";
-import { Apply, GetProperty, Identifier, SetProperty } from "./interpreter/base";
-import { ECMAScriptInterpreters } from "./interpreters";
+import * as NodeTypes from "../../lib/nodeTypes";
+import { Environment } from "../../lib/environment";
+import { Apply, GetProperty, Identifier, SetProperty } from "../../lib/interpreter/base";
+import { ECMAScriptInterpreters } from "../../lib/interpreters";
 import {
   consoleLoggingMetaesContext,
   Context,
@@ -13,7 +13,7 @@ import {
   evalFnBody,
   evalFnBodyAsPromise,
   MetaesContext
-} from "./metaes";
+} from "../../lib/metaes";
 import {
   createHTTPConnector,
   createWSConnector,
@@ -22,8 +22,8 @@ import {
   getReferencesMap,
   mergeValues,
   RemoteObject
-} from "./remote";
-import { runWSServer } from "./server";
+} from "../../lib/remote";
+import { runWSServer } from "../../lib/server";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
 
