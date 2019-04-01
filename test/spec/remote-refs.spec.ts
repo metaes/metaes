@@ -2,11 +2,12 @@ require("source-map-support").install();
 
 import { assert } from "chai";
 import { afterEach, before, describe, it } from "mocha";
-import { GetProperty, Identifier } from "../../lib/interpreter/base";
+import { GetProperty, Identifier, Apply } from "../../lib/interpreter/base";
 import { ECMAScriptInterpreters } from "../../lib/interpreters";
 import { evalAsPromise, MetaesContext, evalFnBodyAsPromise } from "../../lib/metaes";
 import * as NodeTypes from "../../lib/nodeTypes";
 import { environmentToMessage } from "../../lib/remote";
+import { GetValue } from "../../lib/environment";
 
 describe.only("References acquisition", () => {
   let context,
@@ -14,7 +15,7 @@ describe.only("References acquisition", () => {
     _eval,
     _encounteredReferences = new Set(),
     _finalReferences = new Set(),
-    _parentOf = new Map<object, object>(),
+    _closeParentOf = new Map<object, object>(),
     _ids = new Map(),
     _finalSource,
     _finalValues;
@@ -22,7 +23,7 @@ describe.only("References acquisition", () => {
   afterEach(() => {
     _finalReferences.clear();
     _encounteredReferences.clear();
-    _parentOf.clear();
+    _closeParentOf.clear();
     _ids.clear();
   });
   before(() => {
@@ -35,7 +36,7 @@ describe.only("References acquisition", () => {
       return false;
     }
     function belongsToRootHeap(value) {
-      while ((value = _parentOf.get(value))) {
+      while ((value = _closeParentOf.get(value))) {
         if (value === _globalEnv.values) {
           return true;
         }
@@ -45,6 +46,49 @@ describe.only("References acquisition", () => {
 
     const interpreters = {
       values: {
+        Apply(e, c, cerr, env, config) {
+          const { thisValue } = e;
+          if ((thisValue && Array.isArray(thisValue) && belongsToRootEnv(thisValue)) || belongsToRootHeap(thisValue)) {
+            Apply(
+              e,
+              elements => {
+                if (elements && Array.isArray(elements)) {
+                  elements
+                    .filter(element => typeof element === "object" || typeof element === "function")
+                    .forEach(element => {
+                      if (thisValue.includes(element)) {
+                        _encounteredReferences.add(element);
+                        _closeParentOf.set(element, thisValue);
+                      }
+
+                      for (let i in element) {
+                        if (typeof element[i] === "object") {
+                          _encounteredReferences.add(element[i]);
+                          _closeParentOf.set(element[i], thisValue);
+                        }
+                      }
+                    });
+                }
+                c(elements);
+              },
+              cerr,
+              env,
+              config
+            );
+          } else {
+            Apply.apply(null, arguments);
+          }
+        },
+        GetValue({ name }, _c, _cerr, env) {
+          const obj = env.values;
+          if (
+            belongsToRootEnv(obj) ||
+            ((belongsToRootHeap(obj) && typeof obj[name] === "object") || typeof obj[name] === "function")
+          ) {
+            _closeParentOf.set(obj[name], obj);
+          }
+          GetValue.apply(null, arguments);
+        },
         GetProperty(e: NodeTypes.GetProperty, c, cerr, env, config) {
           const { object } = e;
           _encounteredReferences.add(object);
@@ -53,7 +97,7 @@ describe.only("References acquisition", () => {
             value => {
               if (typeof value === "object" || typeof value === "function") {
                 _encounteredReferences.add(value);
-                _parentOf.set(value, object);
+                _closeParentOf.set(value, object);
               }
               c(value);
             },
@@ -69,7 +113,7 @@ describe.only("References acquisition", () => {
               if (typeof value === "object" || typeof value === "function") {
                 _encounteredReferences.add(value);
                 if (belongsToRootEnv(value)) {
-                  _parentOf.set(value, _globalEnv.values);
+                  _closeParentOf.set(value, _globalEnv.values);
                 }
               }
               c(value);
@@ -85,6 +129,7 @@ describe.only("References acquisition", () => {
 
     _eval = async (script, env = { values: {} }) => {
       try {
+        console.log("[_eval]:", script);
         const result =
           typeof script === "function"
             ? await evalFnBodyAsPromise({ context, source: script }, env)
@@ -141,6 +186,10 @@ describe.only("References acquisition", () => {
           }
           return _toSource(rootValue, "", 0);
         }
+
+        function sourceify2(value) {
+          function replacer(key, value) {}
+        }
         const source = sourceify(result);
         const variables = [..._finalReferences]
           .reverse()
@@ -170,23 +219,33 @@ describe.only("References acquisition", () => {
       setOnlineStatus(_flag) {},
       logout() {}
     };
+    const otherUser = {
+      firstName: "Other-firstName",
+      lastName: "Other-lastName"
+    };
+    const comment1 = {
+      author: me,
+      title: "Comment1"
+    };
+    const comment2 = {
+      author: otherUser,
+      title: "Comment2"
+    };
+    const comment3 = {
+      author: otherUser,
+      title: "Comment3"
+    };
     const val = {};
     _globalEnv = {
       values: {
         repeated: [val, val],
         me,
-        posts: [
-          {
-            title: "Post1",
-            body: "Body of post1",
-            likedBy: [me]
-          },
-          {
-            title: "Post2",
-            body: "Body of post2",
-            likedBy: [me]
-          }
-        ]
+        posts: Array.from({ length: 20 }).map((_, i) => ({
+          title: "Post" + i,
+          body: "Body of post" + i,
+          comments: [comment1, comment2, comment3],
+          likedBy: [me]
+        }))
       }
     };
     context = new MetaesContext(undefined, console.error, _globalEnv, {
@@ -198,28 +257,33 @@ describe.only("References acquisition", () => {
     console.log(
       "result",
       await _eval(function() {
-        const {
+        const { firstName, lastName, location } = me;
+        ({
           firstName,
           lastName,
-          location: {
-            country,
-            address: { street, city }
-          }
-        } = me;
-        [me, me.location];
+          location,
+          posts,
+          postsSliced: posts.slice(0, 1),
+          postsMapped: posts.map(({ title, comments }) => ({ title, comments })),
+          postsMappedDeeper: posts.map(({ title, comments, likedBy }) => ({
+            title,
+            comments: comments.map(({ title }) => ({ title })),
+            likedBy
+          }))
+        });
       })
     );
     console.log("[Source]:", _finalSource);
-    console.log(
-      environmentToMessage(context, {
+    console.log("[references]:", {
+      references: environmentToMessage(context, {
         values: _finalValues
-      })
-    );
-    assert.equal(
-      await evalAsPromise(new MetaesContext(), _finalSource, { values: _finalValues }),
-      {},
-      "object is not stringified in default way"
-    );
+      }).references
+    });
+    // assert.equal(
+    //   await evalAsPromise(new MetaesContext(), _finalSource, { values: _finalValues }),
+    //   {},
+    //   "object is not stringified in default way"
+    // );
   });
 
   it("should acquire one reference", async () => {
