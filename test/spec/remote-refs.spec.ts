@@ -4,7 +4,7 @@ import { assert } from "chai";
 import { afterEach, before, describe, it } from "mocha";
 import { GetProperty, Identifier } from "../../lib/interpreter/base";
 import { ECMAScriptInterpreters } from "../../lib/interpreters";
-import { evalAsPromise, MetaesContext } from "../../lib/metaes";
+import { evalAsPromise, MetaesContext, evalFnBodyAsPromise } from "../../lib/metaes";
 import * as NodeTypes from "../../lib/nodeTypes";
 import { environmentToMessage } from "../../lib/remote";
 
@@ -85,7 +85,10 @@ describe.only("References acquisition", () => {
 
     _eval = async (script, env = { values: {} }) => {
       try {
-        const result = await evalAsPromise(context, script, env);
+        const result =
+          typeof script === "function"
+            ? await evalFnBodyAsPromise({ context, source: script }, env)
+            : await evalAsPromise(context, script, env);
 
         let counter = 0;
 
@@ -138,9 +141,11 @@ describe.only("References acquisition", () => {
           }
           return _toSource(rootValue, "", 0);
         }
-
         const source = sourceify(result);
-        const variables = [..._finalReferences].map(ref => `${_ids.get(ref)}=${sourceify(ref, true)};`).join("\n");
+        const variables = [..._finalReferences]
+          .reverse()
+          .map(ref => `${_ids.get(ref)}=${sourceify(ref, true)};`)
+          .join("\n");
         _finalSource = variables + "\n" + `(${source});`;
 
         _finalValues = [..._ids.entries()].reduce((result, [k, v]) => {
@@ -169,7 +174,6 @@ describe.only("References acquisition", () => {
     _globalEnv = {
       values: {
         repeated: [val, val],
-
         me,
         posts: [
           {
@@ -190,19 +194,47 @@ describe.only("References acquisition", () => {
     });
   });
 
-  it("should acquire one reference", async () => {
-    await _eval("me");
-    assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
+  it.only("should send stringified non root heap object", async () => {
+    console.log(
+      "result",
+      await _eval(function() {
+        const {
+          firstName,
+          lastName,
+          location: {
+            country,
+            address: { street, city }
+          }
+        } = me;
+        [me, me.location];
+      })
+    );
     console.log("[Source]:", _finalSource);
+    console.log(
+      environmentToMessage(context, {
+        values: _finalValues
+      })
+    );
     assert.equal(
       await evalAsPromise(new MetaesContext(), _finalSource, { values: _finalValues }),
       {},
       "object is not stringified in default way"
     );
+  });
+
+  it("should acquire one reference", async () => {
+    await _eval("me");
+    assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
+    console.log("[Source]:", _finalSource);
     console.log(
       environmentToMessage(context, {
         values: _finalValues
       })
+    );
+    assert.equal(
+      await evalAsPromise(new MetaesContext(), _finalSource, { values: _finalValues }),
+      {},
+      "object is not stringified in default way"
     );
   });
 
