@@ -4,7 +4,6 @@ import { callcc, lifted, liftedAll } from "../../lib/callcc";
 import { Apply } from "../../lib/interpreter/base";
 import { evalFnAsPromise, evalFnBodyAsPromise, MetaesContext, metaesEval } from "../../lib/metaes";
 import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../../lib/metafunction";
-import { defaultScheduler } from "../../lib/evaluate";
 
 describe("Callcc", () => {
   it("should return current env", () => {
@@ -292,14 +291,9 @@ describe("Callcc", () => {
       });
     }
 
-    const context = new MetaesContext(
-      undefined,
-      console.error,
-      {
-        values: Object.assign({ console, pack, setTimeout, assert }, liftedAll({ socket }))
-      },
-      { schedule: defaultScheduler }
-    );
+    const context = new MetaesContext(undefined, console.error, {
+      values: Object.assign({ console, pack, setTimeout, assert }, liftedAll({ socket }))
+    });
     await evalFnBodyAsPromise({
       context,
       source: assert => {
