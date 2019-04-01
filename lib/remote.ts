@@ -75,6 +75,14 @@ export function environmentFromMessage(context: Context, environment: Environmen
   return { values };
 }
 
+function uuidv4() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    var r = (Math.random() * 16) | 0,
+      v = c == "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export function environmentToMessage(context: Context, environment: EnvironmentBase): EnvironmentBase {
   const referencesMap = getReferencesMap(context);
   const references: { [key: string]: Reference } = {};
@@ -84,7 +92,7 @@ export function environmentToMessage(context: Context, environment: EnvironmentB
     values[key] = value;
     if (typeof value === "function" || typeof value === "object") {
       if (!referencesMap.has(value)) {
-        referencesMap.set(value, Math.random() + "");
+        referencesMap.set(value, uuidv4());
       }
       references[key] = { id: referencesMap.get(value)! };
     }

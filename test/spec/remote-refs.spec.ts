@@ -6,6 +6,7 @@ import { GetProperty, Identifier } from "../../lib/interpreter/base";
 import { ECMAScriptInterpreters } from "../../lib/interpreters";
 import { evalAsPromise, MetaesContext } from "../../lib/metaes";
 import * as NodeTypes from "../../lib/nodeTypes";
+import { environmentToMessage } from "../../lib/remote";
 
 describe.only("References acquisition", () => {
   let context,
@@ -13,12 +14,16 @@ describe.only("References acquisition", () => {
     _eval,
     _encounteredReferences = new Set(),
     _finalReferences = new Set(),
-    _parentOf = new Map<object, object>();
+    _parentOf = new Map<object, object>(),
+    _ids = new Map(),
+    _finalSource,
+    _finalValues;
 
   afterEach(() => {
     _finalReferences.clear();
     _encounteredReferences.clear();
     _parentOf.clear();
+    _ids.clear();
   });
   before(() => {
     function belongsToRootEnv(value: any) {
@@ -81,7 +86,7 @@ describe.only("References acquisition", () => {
     _eval = async (script, env = { values: {} }) => {
       try {
         const result = await evalAsPromise(context, script, env);
-        const ids = new Map();
+
         let counter = 0;
 
         function sourceify(rootValue, isVariable = false) {
@@ -102,10 +107,10 @@ describe.only("References acquisition", () => {
                 const isTop = isVariable && depth === 0 && value === rootValue;
                 if (!isTop && _encounteredReferences.has(value) && belongsToRootHeap(value)) {
                   _finalReferences.add(value);
-                  let id = ids.get(value);
+                  let id = _ids.get(value);
                   if (!id) {
                     id = "ref" + counter++;
-                    ids.set(value, id);
+                    _ids.set(value, id);
                   }
                   return id;
                 } else if (Array.isArray(value)) {
@@ -135,13 +140,13 @@ describe.only("References acquisition", () => {
         }
 
         const source = sourceify(result);
-        console.log(">> Source:");
-        [..._finalReferences].forEach(ref => {
-          const variable = `${ids.get(ref)}=${sourceify(ref, true)};`;
-          console.log(variable);
-        });
-        console.log(`(${source});`);
-        console.log("<< End");
+        const variables = [..._finalReferences].map(ref => `${_ids.get(ref)}=${sourceify(ref, true)};`).join("\n");
+        _finalSource = variables + "\n" + `(${source});`;
+
+        _finalValues = [..._ids.entries()].reduce((result, [k, v]) => {
+          result[v] = k;
+          return result;
+        }, {});
         return result;
       } catch (e) {
         throw e.value || e;
@@ -188,6 +193,17 @@ describe.only("References acquisition", () => {
   it("should acquire one reference", async () => {
     await _eval("me");
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
+    console.log("[Source]:", _finalSource);
+    assert.equal(
+      await evalAsPromise(new MetaesContext(), _finalSource, { values: _finalValues }),
+      {},
+      "object is not stringified in default way"
+    );
+    console.log(
+      environmentToMessage(context, {
+        values: _finalValues
+      })
+    );
   });
 
   it("should acquire multiple references in array", async () => {
