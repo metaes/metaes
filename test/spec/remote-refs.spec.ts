@@ -191,7 +191,7 @@ describe.only("References acquisition", () => {
       values: {
         repeated: [val, val],
         me,
-        posts: Array.from({ length: 5 }).map((_, i) => ({
+        posts: Array.from({ length: 2 }).map((_, i) => ({
           title: "Post" + i,
           body: "Body of post" + i,
           comments: [comment1, comment2, comment3],
@@ -205,28 +205,75 @@ describe.only("References acquisition", () => {
   });
 
   it("should send stringified non root heap object", async () => {
-    await quotedRequest(function() {
-      const { firstName, lastName, location } = me;
-      ({
-        firstName,
-        lastName,
-        location,
-        posts,
-        postsSliced: posts.slice(0, 1),
-        postsMapped: posts.map(({ title, comments }) => ({ title, comments })),
-        postsMappedDeeper: posts.map(({ title, comments }) => ({
-          title,
-          comments: comments.map(({ title }) => ({ title }))
-        }))
-      });
-    });
+    assert.deepEqual(
+      await quotedRequest(function() {
+        const { firstName, lastName, location } = me;
+        ({
+          firstName,
+          lastName,
+          location,
+          posts,
+          postsSliced: posts.slice(0, 1),
+          postsMapped: posts.map(({ title, comments }) => ({ title, comments })),
+          postsMappedDeeper: posts.map(({ title, comments }) => ({
+            title,
+            comments: comments.map(({ title }) => ({ title }))
+          }))
+        });
+      }),
+      {
+        firstName: "User1",
+        lastName: "Surname1",
+        location: "@ref0",
+        posts: "@ref1",
+        postsSliced: ["@ref2"],
+        postsMapped: [
+          {
+            title: "Post0",
+            comments: "@ref3"
+          },
+          {
+            title: "Post1",
+            comments: "@ref4"
+          }
+        ],
+        postsMappedDeeper: [
+          {
+            title: "Post0",
+            comments: [
+              {
+                title: "Comment1"
+              },
+              {
+                title: "Comment2"
+              },
+              {
+                title: "Comment3"
+              }
+            ]
+          },
+          {
+            title: "Post1",
+            comments: [
+              {
+                title: "Comment1"
+              },
+              {
+                title: "Comment2"
+              },
+              {
+                title: "Comment3"
+              }
+            ]
+          }
+        ]
+      }
+    );
     console.log("[references]:", {
       references: environmentToMessage(context, {
         values: _finalValues
       }).references
     });
-    console.log("[Response]:");
-    console.log(_finalResponse);
   });
 
   it("should acquire one reference", async () => {
