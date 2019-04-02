@@ -120,32 +120,25 @@ describe.only("References acquisition", () => {
 
         let counter = 0;
 
-        function sourceify2(value) {
-          return JSON.stringify(
-            value,
-            function replacer(key, value) {
-              if (_encounteredReferences.has(value) && belongsToRootHeap(value)) {
-                _finalReferences.add(value);
-                let id = _ids.get(value);
-                if (!id) {
-                  id = "@ref" + counter++;
-                  _ids.set(value, id);
-                }
-                return id;
-              } else {
-                return value;
-              }
-            },
-            2
-          );
+        function replacer(_, value) {
+          if (_encounteredReferences.has(value) && belongsToRootHeap(value)) {
+            _finalReferences.add(value);
+            let id = _ids.get(value);
+            if (!id) {
+              id = "@ref" + counter++;
+              _ids.set(value, id);
+            }
+            return id;
+          } else {
+            return value;
+          }
         }
-        const source = sourceify2(result);
+        const source = JSON.stringify(result, replacer, 2);
         // const variables = [..._finalReferences]
         //   .reverse()
         //   .map(ref => `${_ids.get(ref)}=${sourceify2(ref)};`)
         //   .join("\n");
         _finalResponse = source;
-
         _finalValues = [..._ids.entries()].reduce((result, [k, v]) => {
           result[v] = k;
           return result;
@@ -206,7 +199,7 @@ describe.only("References acquisition", () => {
 
   it("should send stringified non root heap object", async () => {
     assert.deepEqual(
-      await quotedRequest(function() {
+      await quotedRequest(function(posts, me) {
         const { firstName, lastName, location } = me;
         ({
           firstName,
@@ -277,7 +270,7 @@ describe.only("References acquisition", () => {
   });
 
   it("should acquire one reference", async () => {
-    assert.equal(await quotedRequest("me"), "@ref0");
+    assert.deepEqual(await quotedRequest("me"), "@ref0");
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
     console.log(
       environmentToMessage(context, {
@@ -320,7 +313,7 @@ describe.only("References acquisition", () => {
   });
 
   it("should acquire no refrences", async () => {
-    assert.equal(await quotedRequest(`me.location.address.street`), "Street 1");
+    assert.deepEqual(await quotedRequest(`me.location.address.street`), "Street 1");
     assert.sameMembers([..._finalReferences], []);
   });
 
