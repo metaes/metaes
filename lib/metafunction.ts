@@ -1,5 +1,5 @@
-import { Environment } from "./environment";
-import { evaluate, visitArray, defaultScheduler } from "./evaluate";
+import { Environment, GetValueSync } from "./environment";
+import { evaluate, visitArray } from "./evaluate";
 import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
 import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
@@ -47,7 +47,7 @@ export const evaluateMetaFunction = (
               c(),
         exception => (exception.type === "ReturnStatement" ? c(exception.value) : cerr(exception)),
         env,
-        Object.assign({}, executionTimeConfig, config, { schedule: defaultScheduler })
+        Object.assign({}, executionTimeConfig, config)
       ),
     cerr
   );
@@ -57,7 +57,13 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
   const fn = function(this: any, ...args) {
     let result;
     let exception;
-    evaluateMetaFunction(metaFunction, r => (result = r), ex => (exception = toException(ex)), this, args);
+    (GetValueSync("EvaluateMetaFunction", metaFunction.config.interpreters) || evaluateMetaFunction)(
+      metaFunction,
+      r => (result = r),
+      ex => (exception = toException(ex)),
+      this,
+      args
+    );
     if (exception) {
       throw exception;
     }
@@ -75,16 +81,16 @@ export const createMetaFunction = (e: FunctionNode, closure: Environment, config
     config
   });
 
-const META_KEY = "__meta__";
+const MetaesSymbol = (typeof Symbol === "function" ? Symbol : _ => _)("__metaes__");
 
 export function markAsMetaFunction(fn: Function, meta: MetaesFunction) {
-  (<any>fn)[META_KEY] = meta;
+  fn[MetaesSymbol] = meta;
 }
 
-export function isMetaFunction(fn: Function) {
-  return !!(<any>fn)[META_KEY];
+export function isMetaFunction(fn?: Function) {
+  return fn && !!fn[MetaesSymbol];
 }
 
 export function getMetaFunction(fn: Function) {
-  return (<any>fn)[META_KEY];
+  return fn[MetaesSymbol];
 }

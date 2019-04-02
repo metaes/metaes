@@ -17,7 +17,7 @@ describe.only("References acquisition", () => {
     _finalReferences = new Set(),
     _closeParentOf = new Map<object, object>(),
     _ids = new Map(),
-    _finalSource,
+    _finalResponse,
     _finalValues;
 
   afterEach(() => {
@@ -137,65 +137,31 @@ describe.only("References acquisition", () => {
 
         let counter = 0;
 
-        function sourceify(rootValue, isVariable = false) {
-          function _toSource(value: any, tabs: string, depth: number) {
-            let type = typeof value;
-            switch (type) {
-              case "string":
-                return `"${value}"`;
-              case "boolean":
-              case "number":
-              case "undefined":
-                return "" + value;
-              case "function":
-              case "object":
-                if (value === null) {
-                  return "null";
-                }
-                const isTop = isVariable && depth === 0 && value === rootValue;
-                if (!isTop && _encounteredReferences.has(value) && belongsToRootHeap(value)) {
-                  _finalReferences.add(value);
-                  let id = _ids.get(value);
-                  if (!id) {
-                    id = "ref" + counter++;
-                    _ids.set(value, id);
-                  }
-                  return id;
-                } else if (Array.isArray(value)) {
-                  return "[" + value.map(v => _toSource(v, tabs, depth + 1)).join(", ") + "]";
-                } else if (typeof value === "function" && !_encounteredReferences.has(value)) {
-                  return null;
-                } else {
-                  return (
-                    "{\n" +
-                    tabs +
-                    "  " +
-                    Object.getOwnPropertyNames(value)
-                      .map(k => {
-                        const source = _toSource(value[k], tabs + "  ", depth + 1);
-                        return source ? k + ": " + source : null;
-                      })
-                      .filter(x => !!x)
-                      .join(",\n" + tabs + "  ") +
-                    `\n${tabs}}`
-                  );
-                }
-              default:
-                throw new Error(`Can't stringify value of type '${typeof value}'.`);
-            }
-          }
-          return _toSource(rootValue, "", 0);
-        }
-
         function sourceify2(value) {
-          function replacer(key, value) {}
+          return JSON.stringify(
+            value,
+            function replacer(key, value) {
+              if (_encounteredReferences.has(value) && belongsToRootHeap(value)) {
+                _finalReferences.add(value);
+                let id = _ids.get(value);
+                if (!id) {
+                  id = "@ref" + counter++;
+                  _ids.set(value, id);
+                }
+                return id;
+              } else {
+                return value;
+              }
+            },
+            2
+          );
         }
-        const source = sourceify(result);
-        const variables = [..._finalReferences]
-          .reverse()
-          .map(ref => `${_ids.get(ref)}=${sourceify(ref, true)};`)
-          .join("\n");
-        _finalSource = variables + "\n" + `(${source});`;
+        const source = sourceify2(result);
+        // const variables = [..._finalReferences]
+        //   .reverse()
+        //   .map(ref => `${_ids.get(ref)}=${sourceify2(ref)};`)
+        //   .join("\n");
+        _finalResponse = source;
 
         _finalValues = [..._ids.entries()].reduce((result, [k, v]) => {
           result[v] = k;
@@ -240,7 +206,7 @@ describe.only("References acquisition", () => {
       values: {
         repeated: [val, val],
         me,
-        posts: Array.from({ length: 20 }).map((_, i) => ({
+        posts: Array.from({ length: 5 }).map((_, i) => ({
           title: "Post" + i,
           body: "Body of post" + i,
           comments: [comment1, comment2, comment3],
@@ -265,20 +231,21 @@ describe.only("References acquisition", () => {
           posts,
           postsSliced: posts.slice(0, 1),
           postsMapped: posts.map(({ title, comments }) => ({ title, comments })),
-          postsMappedDeeper: posts.map(({ title, comments, likedBy }) => ({
+          postsMappedDeeper: posts.map(({ title, comments }) => ({
             title,
-            comments: comments.map(({ title }) => ({ title })),
-            likedBy
+            comments: comments.map(({ title }) => ({ title }))
           }))
         });
       })
     );
-    console.log("[Source]:", _finalSource);
     console.log("[references]:", {
       references: environmentToMessage(context, {
         values: _finalValues
       }).references
     });
+    console.log("[Response]:");
+    console.log(_finalResponse);
+
     // assert.equal(
     //   await evalAsPromise(new MetaesContext(), _finalSource, { values: _finalValues }),
     //   {},
@@ -289,14 +256,14 @@ describe.only("References acquisition", () => {
   it("should acquire one reference", async () => {
     await _eval("me");
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
-    console.log("[Source]:", _finalSource);
+    console.log("[Source]:", _finalResponse);
     console.log(
       environmentToMessage(context, {
         values: _finalValues
       })
     );
     assert.equal(
-      await evalAsPromise(new MetaesContext(), _finalSource, { values: _finalValues }),
+      await evalAsPromise(new MetaesContext(), _finalResponse, { values: _finalValues }),
       {},
       "object is not stringified in default way"
     );
@@ -349,13 +316,11 @@ describe.only("References acquisition", () => {
 
   it("should support repeating values as one reference", async () => {
     await _eval(`[repeated, repeated]`);
-    console.log({ _finalReferences });
     assert.sameMembers([..._finalReferences], [_globalEnv.values.repeated]);
   });
 
   it("should destruct references chain", async () => {
     await _eval(`[repeated, repeated[0]]`);
-    console.log({ _finalReferences });
     assert.sameMembers([..._finalReferences], [_globalEnv.values.repeated, _globalEnv.values.repeated[0]]);
   });
 
