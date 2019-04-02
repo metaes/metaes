@@ -126,8 +126,12 @@ export class MetaesContext implements Context {
 export const parseFunction = (fn: Function, cache?: ParseCache) =>
   parse("(" + fn.toString() + ")", { loc: false, range: false }, cache);
 
-export const evalAsPromise = (context: Context, input: Script | Source, environment?: Environment) =>
-  new Promise((resolve, reject) => context.evaluate(input, resolve, reject, environment));
+export const evalAsPromise = (
+  context: Context,
+  input: Script | Source,
+  environment?: Environment,
+  config?: Partial<EvaluationConfig>
+) => new Promise<any>((resolve, reject) => context.evaluate(input, resolve, reject, environment, config));
 
 export const createScriptFromFnBody = (source: Function, cache?: ParseCache) => ({
   ast: (((parseFunction(source, cache) as Program).body[0] as ExpressionStatement).expression as FunctionNode)
@@ -141,7 +145,7 @@ export const evalFnBody = (
   c?: Continuation,
   cerr?: ErrorContinuation,
   environment?: Environment,
-  config?: EvaluationConfig
+  config?: Partial<EvaluationConfig>
 ) =>
   context.evaluate(
     createScriptFromFnBody(source, context instanceof MetaesContext ? context.cache : void 0),
@@ -154,7 +158,7 @@ export const evalFnBody = (
 export const evalFnBodyAsPromise = (
   { context, source }: { context: Context; source: Function },
   environment?: Environment,
-  config?: EvaluationConfig
+  config?: Partial<EvaluationConfig>
 ) => new Promise<any>((resolve, reject) => evalFnBody({ context, source }, resolve, reject, environment, config));
 
 export function evalFn<T extends any[]>(
@@ -162,7 +166,7 @@ export function evalFn<T extends any[]>(
   c?: Continuation,
   cerr?: ErrorContinuation,
   environment?: Environment,
-  config?: EvaluationConfig
+  config?: Partial<EvaluationConfig>
 ) {
   context.evaluate(
     source,
@@ -189,9 +193,9 @@ export function evalFn<T extends any[]>(
 export function evalFnAsPromise<T extends any[]>(
   { context, source, args }: { context: MetaesContext; source: (...T) => void; args?: T },
   environment?: Environment,
-  config?: EvaluationConfig
+  config?: Partial<EvaluationConfig>
 ): Promise<any> {
-  return new Promise((resolve, reject) => evalFn({ context, source, args }, resolve, reject, environment, config));
+  return new Promise<any>((resolve, reject) => evalFn({ context, source, args }, resolve, reject, environment, config));
 }
 
 export const consoleLoggingMetaesContext = (environment: Environment = { values: {} }) =>

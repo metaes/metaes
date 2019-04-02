@@ -1,6 +1,9 @@
-import { Environment, EnvironmentBase, Reference } from "./environment";
+import { Environment, EnvironmentBase, GetValue, Reference, getEnvironmentForValue } from "./environment";
+import { Apply, GetProperty, Identifier } from "./interpreter/base";
+import { ECMAScriptInterpreters } from "./interpreters";
 import { log } from "./logging";
-import { Context, evalFnBody, isScript, metaesEval } from "./metaes";
+import { Context, evalAsPromise, evalFnBody, evalFnBodyAsPromise, isScript, MetaesContext, metaesEval } from "./metaes";
+import * as NodeTypes from "./nodeTypes";
 import { ASTNode, Continuation, ErrorContinuation, EvaluationConfig, Script, Source } from "./types";
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
@@ -269,3 +272,139 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
     };
     connect();
   });
+
+export function getContext(globalEnv: Environment): Context {
+  const context = new MetaesContext(undefined, console.error, globalEnv);
+
+  return {
+    async evaluate(script, c, cerr) {
+      let _encounteredReferences = new Set(),
+        _finalReferences = new Set(),
+        _parentOf = new Map<object, object>(),
+        _finalResponse,
+        _finalValues,
+        _ids = new Map();
+
+      const interpreters = {
+        values: {
+          Apply(e) {
+            const { thisValue, fn } = e;
+            if (
+              thisValue &&
+              Array.isArray(thisValue) &&
+              (belongsToRootEnv(thisValue) || belongsToRootHeap(thisValue)) &&
+              (fn === [].map || fn === [].filter)
+            ) {
+              thisValue
+                .filter(element => typeof element === "object" || typeof element === "function")
+                .forEach(element => {
+                  _encounteredReferences.add(element);
+                  _parentOf.set(element, thisValue);
+                });
+            }
+            Apply.apply(null, arguments);
+          },
+          GetValue({ name }, _c, _cerr, env) {
+            const obj = getEnvironmentForValue(env, name).values;
+            if (
+              belongsToRootEnv(obj) ||
+              ((belongsToRootHeap(obj) && typeof obj[name] === "object") || typeof obj[name] === "function")
+            ) {
+              _parentOf.set(obj[name], obj);
+            }
+            GetValue.apply(null, arguments);
+          },
+          GetProperty(e: NodeTypes.GetProperty, c, cerr, env, config) {
+            const { object } = e;
+            _encounteredReferences.add(object);
+            GetProperty(
+              e,
+              value => {
+                if (typeof value === "object" || typeof value === "function") {
+                  _encounteredReferences.add(value);
+                  _parentOf.set(value, object);
+                }
+                c(value);
+              },
+              cerr,
+              env,
+              config
+            );
+          },
+          Identifier(e, c, cerr, env, config) {
+            Identifier(
+              e,
+              value => {
+                if (typeof value === "object" || typeof value === "function") {
+                  _encounteredReferences.add(value);
+                  if (belongsToRootEnv(value)) {
+                    _parentOf.set(value, globalEnv.values);
+                  }
+                }
+                c(value);
+              },
+              cerr,
+              env,
+              config
+            );
+          }
+        },
+        prev: ECMAScriptInterpreters
+      };
+
+      function belongsToRootEnv(value: any) {
+        for (let k in globalEnv.values) {
+          if (globalEnv.values[k] === value) {
+            return true;
+          }
+        }
+        return false;
+      }
+      function belongsToRootHeap(value) {
+        while ((value = _parentOf.get(value))) {
+          if (value === globalEnv.values) {
+            return true;
+          }
+        }
+        return false;
+      }
+      try {
+        const result =
+          typeof script === "function"
+            ? await evalFnBodyAsPromise({ context, source: script }, { values: {}, prev: globalEnv }, { interpreters })
+            : await evalAsPromise(context, script, { values: {}, prev: globalEnv }, { interpreters });
+
+        let counter = 0;
+
+        function replacer(_, value) {
+          if (_encounteredReferences.has(value) && belongsToRootHeap(value)) {
+            _finalReferences.add(value);
+            let id = _ids.get(value);
+            if (!id) {
+              id = "@ref" + counter++;
+              _ids.set(value, id);
+            }
+            return id;
+          } else {
+            return value;
+          }
+        }
+        const source = JSON.stringify(result, replacer, 2);
+        // const variables = [..._finalReferences]
+        //   .reverse()
+        //   .map(ref => `${_ids.get(ref)}=${sourceify2(ref)};`)
+        //   .join("\n");
+        _finalResponse = source;
+        _finalValues = [..._ids.entries()].reduce((result, [k, v]) => {
+          result[v] = k;
+          return result;
+        }, {});
+        // do not return
+        result;
+        c({ response: JSON.parse(_finalResponse), _finalReferences, _finalValues });
+      } catch (e) {
+        cerr(e.value || e);
+      }
+    }
+  };
+}
