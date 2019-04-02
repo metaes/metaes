@@ -57,13 +57,7 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
   const fn = function(this: any, ...args) {
     let result;
     let exception;
-    (GetValueSync("EvaluateMetaFunction", metaFunction.config.interpreters) || evaluateMetaFunction)(
-      metaFunction,
-      r => (result = r),
-      ex => (exception = toException(ex)),
-      this,
-      args
-    );
+    evaluateMetaFunction(metaFunction, r => (result = r), ex => (exception = toException(ex)), this, args);
     if (exception) {
       throw exception;
     }

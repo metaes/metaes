@@ -15,7 +15,7 @@ describe.only("References acquisition", () => {
     _eval,
     _encounteredReferences = new Set(),
     _finalReferences = new Set(),
-    _closeParentOf = new Map<object, object>(),
+    _parentOf = new Map<object, object>(),
     _ids = new Map(),
     _finalResponse,
     _finalValues;
@@ -23,7 +23,7 @@ describe.only("References acquisition", () => {
   afterEach(() => {
     _finalReferences.clear();
     _encounteredReferences.clear();
-    _closeParentOf.clear();
+    _parentOf.clear();
     _ids.clear();
   });
   before(() => {
@@ -36,7 +36,7 @@ describe.only("References acquisition", () => {
       return false;
     }
     function belongsToRootHeap(value) {
-      while ((value = _closeParentOf.get(value))) {
+      while ((value = _parentOf.get(value))) {
         if (value === _globalEnv.values) {
           return true;
         }
@@ -46,38 +46,20 @@ describe.only("References acquisition", () => {
 
     const interpreters = {
       values: {
-        Apply(e, c, cerr, env, config) {
-          const { thisValue } = e;
-          if ((thisValue && Array.isArray(thisValue) && belongsToRootEnv(thisValue)) || belongsToRootHeap(thisValue)) {
-            Apply(
-              e,
-              elements => {
-                if (elements && Array.isArray(elements)) {
-                  elements
-                    .filter(element => typeof element === "object" || typeof element === "function")
-                    .forEach(element => {
-                      if (thisValue.includes(element)) {
-                        _encounteredReferences.add(element);
-                        _closeParentOf.set(element, thisValue);
-                      }
-
-                      for (let i in element) {
-                        if (typeof element[i] === "object") {
-                          _encounteredReferences.add(element[i]);
-                          _closeParentOf.set(element[i], thisValue);
-                        }
-                      }
-                    });
-                }
-                c(elements);
-              },
-              cerr,
-              env,
-              config
-            );
-          } else {
-            Apply.apply(null, arguments);
+        Apply(e) {
+          const { thisValue, fn } = e;
+          if (
+            (thisValue && Array.isArray(thisValue) && belongsToRootEnv(thisValue)) ||
+            (belongsToRootHeap(thisValue) && (fn === [].map || fn === [].filter))
+          ) {
+            thisValue
+              .filter(element => typeof element === "object" || typeof element === "function")
+              .forEach(element => {
+                _encounteredReferences.add(element);
+                _parentOf.set(element, thisValue);
+              });
           }
+          Apply.apply(null, arguments);
         },
         GetValue({ name }, _c, _cerr, env) {
           const obj = env.values;
@@ -85,7 +67,7 @@ describe.only("References acquisition", () => {
             belongsToRootEnv(obj) ||
             ((belongsToRootHeap(obj) && typeof obj[name] === "object") || typeof obj[name] === "function")
           ) {
-            _closeParentOf.set(obj[name], obj);
+            _parentOf.set(obj[name], obj);
           }
           GetValue.apply(null, arguments);
         },
@@ -97,7 +79,7 @@ describe.only("References acquisition", () => {
             value => {
               if (typeof value === "object" || typeof value === "function") {
                 _encounteredReferences.add(value);
-                _closeParentOf.set(value, object);
+                _parentOf.set(value, object);
               }
               c(value);
             },
@@ -113,7 +95,7 @@ describe.only("References acquisition", () => {
               if (typeof value === "object" || typeof value === "function") {
                 _encounteredReferences.add(value);
                 if (belongsToRootEnv(value)) {
-                  _closeParentOf.set(value, _globalEnv.values);
+                  _parentOf.set(value, _globalEnv.values);
                 }
               }
               c(value);
