@@ -1,8 +1,7 @@
 require("source-map-support").install();
 
 import { assert } from "chai";
-import { after, afterEach, before, beforeEach, describe, it } from "mocha";
-import * as NodeTypes from "../../lib/nodeTypes";
+import { after, before, beforeEach, describe, it } from "mocha";
 import { Environment } from "../../lib/environment";
 import { Apply, GetProperty, Identifier, SetProperty } from "../../lib/interpreter/base";
 import { ECMAScriptInterpreters } from "../../lib/interpreters";

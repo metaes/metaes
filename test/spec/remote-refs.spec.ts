@@ -12,7 +12,7 @@ import { GetValue } from "../../lib/environment";
 describe.only("References acquisition", () => {
   let context,
     _globalEnv,
-    _eval,
+    quotedRequest,
     _encounteredReferences = new Set(),
     _finalReferences = new Set(),
     _parentOf = new Map<object, object>(),
@@ -49,8 +49,10 @@ describe.only("References acquisition", () => {
         Apply(e) {
           const { thisValue, fn } = e;
           if (
-            (thisValue && Array.isArray(thisValue) && belongsToRootEnv(thisValue)) ||
-            (belongsToRootHeap(thisValue) && (fn === [].map || fn === [].filter))
+            thisValue &&
+            Array.isArray(thisValue) &&
+            (belongsToRootEnv(thisValue) || belongsToRootHeap(thisValue)) &&
+            (fn === [].map || fn === [].filter)
           ) {
             thisValue
               .filter(element => typeof element === "object" || typeof element === "function")
@@ -109,9 +111,8 @@ describe.only("References acquisition", () => {
       prev: ECMAScriptInterpreters
     };
 
-    _eval = async (script, env = { values: {} }) => {
+    quotedRequest = async (script, env = { values: {} }) => {
       try {
-        console.log("[_eval]:", script);
         const result =
           typeof script === "function"
             ? await evalFnBodyAsPromise({ context, source: script }, env)
@@ -149,7 +150,9 @@ describe.only("References acquisition", () => {
           result[v] = k;
           return result;
         }, {});
-        return result;
+        // do not return
+        result;
+        return JSON.parse(_finalResponse);
       } catch (e) {
         throw e.value || e;
       }
@@ -201,25 +204,22 @@ describe.only("References acquisition", () => {
     });
   });
 
-  it.only("should send stringified non root heap object", async () => {
-    console.log(
-      "result",
-      await _eval(function() {
-        const { firstName, lastName, location } = me;
-        ({
-          firstName,
-          lastName,
-          location,
-          posts,
-          postsSliced: posts.slice(0, 1),
-          postsMapped: posts.map(({ title, comments }) => ({ title, comments })),
-          postsMappedDeeper: posts.map(({ title, comments }) => ({
-            title,
-            comments: comments.map(({ title }) => ({ title }))
-          }))
-        });
-      })
-    );
+  it("should send stringified non root heap object", async () => {
+    await quotedRequest(function() {
+      const { firstName, lastName, location } = me;
+      ({
+        firstName,
+        lastName,
+        location,
+        posts,
+        postsSliced: posts.slice(0, 1),
+        postsMapped: posts.map(({ title, comments }) => ({ title, comments })),
+        postsMappedDeeper: posts.map(({ title, comments }) => ({
+          title,
+          comments: comments.map(({ title }) => ({ title }))
+        }))
+      });
+    });
     console.log("[references]:", {
       references: environmentToMessage(context, {
         values: _finalValues
@@ -227,88 +227,79 @@ describe.only("References acquisition", () => {
     });
     console.log("[Response]:");
     console.log(_finalResponse);
-
-    // assert.equal(
-    //   await evalAsPromise(new MetaesContext(), _finalSource, { values: _finalValues }),
-    //   {},
-    //   "object is not stringified in default way"
-    // );
   });
 
   it("should acquire one reference", async () => {
-    await _eval("me");
+    assert.equal(await quotedRequest("me"), "@ref0");
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
-    console.log("[Source]:", _finalResponse);
     console.log(
       environmentToMessage(context, {
         values: _finalValues
       })
     );
-    assert.equal(
-      await evalAsPromise(new MetaesContext(), _finalResponse, { values: _finalValues }),
-      {},
-      "object is not stringified in default way"
-    );
   });
 
   it("should acquire multiple references in array", async () => {
-    await _eval(`[me, posts]`);
+    assert.deepEqual(await quotedRequest(`[me, posts]`), ["@ref0", "@ref1"]);
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.posts]);
   });
 
   it("should acquire multiple references in object", async () => {
-    await _eval(`({me, posts})`);
+    assert.deepEqual(await quotedRequest(`({me, posts})`), { me: "@ref0", posts: "@ref1" });
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.posts]);
   });
 
   it("should not acquire local references", async () => {
-    await _eval(`var local = 'anything'; [local,me]`);
+    assert.deepEqual(await quotedRequest(`var local = 'anything'; [local,me]`), ["anything", "@ref0"]);
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
   it("should acquire references only for returned value", async () => {
-    await _eval(`posts; me`);
+    assert.deepEqual(await quotedRequest(`posts; me`), "@ref0");
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
   it("should acquire references under different name, but pointing to the same object.", async () => {
-    await _eval(`var _me = me; _me;`);
+    assert.deepEqual(await quotedRequest(`var _me = me; _me;`), "@ref0");
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me]);
   });
 
   it("should acquire any deep references", async () => {
-    await _eval(`posts; me; [me.location, me.location.address, "a string", 1, true, false, null]`);
+    assert.deepEqual(
+      await quotedRequest(`posts; me; [me.location, me.location.address, "a string", 1, true, false, null]`),
+      ["@ref0", "@ref1", "a string", 1, true, false, null]
+    );
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me.location, _globalEnv.values.me.location.address]);
   });
 
   it("should acquire no refrences", async () => {
-    await _eval(`me.location.address.street`);
+    assert.equal(await quotedRequest(`me.location.address.street`), "Street 1");
     assert.sameMembers([..._finalReferences], []);
   });
 
   it("should support functions", async () => {
-    await _eval(`me.logout; me.setOnlineStatus`);
+    assert.deepEqual(await quotedRequest(`me.logout; me.setOnlineStatus`), "@ref0");
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me.setOnlineStatus]);
   });
 
   it("should support functions properties serialization", async () => {
-    await _eval(`[me, me.setOnlineStatus]`);
+    assert.deepEqual(await quotedRequest(`[me, me.setOnlineStatus]`), ["@ref0", "@ref1"]);
     assert.sameMembers([..._finalReferences], [_globalEnv.values.me, _globalEnv.values.me.setOnlineStatus]);
   });
 
   it("should support repeating values as one reference", async () => {
-    await _eval(`[repeated, repeated]`);
+    assert.deepEqual(await quotedRequest(`[repeated, repeated]`), ["@ref0", "@ref0"]);
     assert.sameMembers([..._finalReferences], [_globalEnv.values.repeated]);
   });
 
   it("should destruct references chain", async () => {
-    await _eval(`[repeated, repeated[0]]`);
+    assert.deepEqual(await quotedRequest(`[repeated, repeated[0]]`), ["@ref0", "@ref1"]);
     assert.sameMembers([..._finalReferences], [_globalEnv.values.repeated, _globalEnv.values.repeated[0]]);
   });
 
   it("should not support cyclic values", () =>
     new Promise((resolve, reject) =>
-      _eval(`
+      quotedRequest(`
     let a = ["a"];
     let b = ["b"];
     a.push(b);
