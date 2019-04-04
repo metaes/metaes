@@ -1,4 +1,4 @@
-import { Environment, EnvironmentBase, GetValue, Reference, getEnvironmentForValue } from "./environment";
+import { Environment, EnvironmentBase, getEnvironmentForValue, GetValue, Reference } from "./environment";
 import { Apply, GetProperty, Identifier } from "./interpreter/base";
 import { ECMAScriptInterpreters } from "./interpreters";
 import { log } from "./logging";
@@ -7,20 +7,6 @@ import * as NodeTypes from "./nodeTypes";
 import { ASTNode, Continuation, ErrorContinuation, EvaluationConfig, Script, Source } from "./types";
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
-
-// Intentionally not exported.
-const privateKey = {};
-
-export class RemoteObject {
-  constructor(key?) {
-    if (key !== privateKey) {
-      throw new Error("Can't use constructor directly, use RemoteObject.create");
-    }
-  }
-  static create() {
-    return Object.freeze(new RemoteObject(privateKey));
-  }
-}
 
 export function patchNodeFetch() {
   if (typeof fetch === "undefined" && typeof global === "object") {
@@ -273,17 +259,16 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
     connect();
   });
 
-export function getContext(globalEnv: Environment): Context {
-  const context = new MetaesContext(undefined, console.error, globalEnv);
-
-  return {
+export function getSerializingContext(environment: Environment) {
+  const innerContext = new MetaesContext(undefined, console.error, environment);
+  const _ids = new Map();
+  const context = {
     async evaluate(script, c, cerr) {
       let _encounteredReferences = new Set(),
         _finalReferences = new Set(),
         _parentOf = new Map<object, object>(),
         _finalResponse,
-        _finalValues,
-        _ids = new Map();
+        _finalValues;
 
       const interpreters = {
         values: {
@@ -338,7 +323,7 @@ export function getContext(globalEnv: Environment): Context {
                 if (typeof value === "object" || typeof value === "function") {
                   _encounteredReferences.add(value);
                   if (belongsToRootEnv(value)) {
-                    _parentOf.set(value, globalEnv.values);
+                    _parentOf.set(value, environment.values);
                   }
                 }
                 c(value);
@@ -353,8 +338,8 @@ export function getContext(globalEnv: Environment): Context {
       };
 
       function belongsToRootEnv(value: any) {
-        for (let k in globalEnv.values) {
-          if (globalEnv.values[k] === value) {
+        for (let k in environment.values) {
+          if (environment.values[k] === value) {
             return true;
           }
         }
@@ -362,7 +347,7 @@ export function getContext(globalEnv: Environment): Context {
       }
       function belongsToRootHeap(value) {
         while ((value = _parentOf.get(value))) {
-          if (value === globalEnv.values) {
+          if (value === environment.values) {
             return true;
           }
         }
@@ -371,8 +356,12 @@ export function getContext(globalEnv: Environment): Context {
       try {
         const result =
           typeof script === "function"
-            ? await evalFnBodyAsPromise({ context, source: script }, { values: {}, prev: globalEnv }, { interpreters })
-            : await evalAsPromise(context, script, { values: {}, prev: globalEnv }, { interpreters });
+            ? await evalFnBodyAsPromise(
+                { context: innerContext, source: script },
+                { values: {}, prev: environment },
+                { interpreters }
+              )
+            : await evalAsPromise(innerContext, script, { values: {}, prev: environment }, { interpreters });
 
         let counter = 0;
 
@@ -401,10 +390,21 @@ export function getContext(globalEnv: Environment): Context {
         }, {});
         // do not return
         result;
-        c({ response: JSON.parse(_finalResponse), _finalReferences, _finalValues });
+
+        function unquote(json: any, env: Environment) {
+          return JSON.parse(JSON.stringify(json), function(key, value) {
+            if (value in _finalValues && _ids.has(value)) {
+              return _ids.get(value);
+            }
+            return value;
+          });
+        }
+        c({ response: JSON.parse(_finalResponse), _finalReferences, _finalValues, unquote });
       } catch (e) {
         cerr(e.value || e);
       }
     }
   };
+
+  return { context };
 }

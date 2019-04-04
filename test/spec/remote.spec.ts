@@ -19,8 +19,7 @@ import {
   environmentFromMessage,
   environmentToMessage,
   getReferencesMap,
-  mergeValues,
-  RemoteObject
+  mergeValues
 } from "../../lib/remote";
 import { runWSServer } from "../../lib/server";
 
@@ -298,10 +297,10 @@ function createRemoteContextTestsFor(getContext: () => Promise<Context> | Contex
   });
 
   it("should query object value from different context", async () => {
-    assert.isTrue(
-      (await _eval("objectMessage")) instanceof RemoteObject,
-      "object is transferred as a RemoteObject reference"
-    );
+    // assert.isTrue(
+    //   (await _eval("objectMessage")) instanceof RemoteObject,
+    //   "object is transferred as a RemoteObject reference"
+    // );
     assert.equal(
       await _eval(`let world=" world!"; objectMessage.value+world`),
       "Hello world!",

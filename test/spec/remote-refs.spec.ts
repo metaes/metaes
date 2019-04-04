@@ -3,10 +3,10 @@ require("source-map-support").install();
 import { assert } from "chai";
 import { before, describe, it } from "mocha";
 import { evalFnBodyAsPromise, Context, evalAsPromise } from "../../lib/metaes";
-import { environmentToMessage, getContext } from "../../lib/remote";
+import { environmentToMessage, getSerializingContext } from "../../lib/remote";
 
 describe.only("References acquisition", () => {
-  let context: Context, globalEnv, quotedRequest, _finalReferences;
+  let context: Context, unquote, globalEnv, quotedRequest, _finalReferences;
 
   before(() => {
     const me = {
@@ -51,11 +51,13 @@ describe.only("References acquisition", () => {
         }))
       }
     };
-    context = getContext(globalEnv);
+    let { context: _context } = getSerializingContext(globalEnv);
+    context = _context;
 
     quotedRequest = async function(input) {
-      const { response, _finalReferences: references } = await evalAsPromise(context, input);
+      const { response, _finalReferences: references, unquote: _unquote } = await evalAsPromise(context, input);
       _finalReferences = references;
+      unquote = _unquote;
       return response;
     };
   });
@@ -134,19 +136,22 @@ describe.only("References acquisition", () => {
     });
   });
 
-  it("should acquire one reference", async () => {
-    const { response, _finalReferences, _finalValues } = await evalAsPromise(context, "me");
+  it.only("should acquire one reference", async () => {
+    const response = await quotedRequest(`me`);
     assert.deepEqual(response, "@ref0");
     assert.sameMembers([..._finalReferences], [globalEnv.values.me]);
-    console.log(
-      environmentToMessage(context, {
-        values: _finalValues
-      })
-    );
+    assert.equal(unquote(response), unquote(response), "should unquote to the same value");
+    // console.log(
+    //   environmentToMessage(context, {
+    //     values: _finalValues
+    //   })
+    // );
   });
 
   it("should acquire multiple references in array", async () => {
-    assert.deepEqual(await quotedRequest(`[me, posts]`), ["@ref0", "@ref1"]);
+    const response = await quotedRequest(`[me, posts]`);
+    console.log("unquote", unquote(response));
+    assert.deepEqual(response, ["@ref0", "@ref1"]);
     assert.sameMembers([..._finalReferences], [globalEnv.values.me, globalEnv.values.posts]);
   });
 
