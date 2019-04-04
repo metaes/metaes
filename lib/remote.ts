@@ -290,10 +290,13 @@ export function getSerializingContext(environment: Environment) {
             Apply.apply(null, arguments);
           },
           GetValue({ name }, _c, _cerr, env) {
-            const obj = getEnvironmentForValue(env, name).values;
+            const _found = getEnvironmentForValue(env, name);
+            let obj;
             if (
-              belongsToRootEnv(obj) ||
-              ((belongsToRootHeap(obj) && typeof obj[name] === "object") || typeof obj[name] === "function")
+              _found &&
+              (obj = _found.values) &&
+              (belongsToRootEnv(obj) ||
+                ((belongsToRootHeap(obj) && typeof obj[name] === "object") || typeof obj[name] === "function"))
             ) {
               _parentOf.set(obj[name], obj);
             }

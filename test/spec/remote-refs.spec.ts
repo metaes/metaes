@@ -141,6 +141,7 @@ describe.only("References acquisition", () => {
     assert.deepEqual(response, "@ref0");
     assert.sameMembers([..._finalReferences], [globalEnv.values.me]);
     assert.equal(unquote(response), unquote(response), "should unquote to the same value");
+    assert.equal(unquote(await quotedRequest(`me`)), unquote(response));
     // console.log(
     //   environmentToMessage(context, {
     //     values: _finalValues
