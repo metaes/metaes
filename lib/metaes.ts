@@ -39,8 +39,6 @@ export function noop() {}
 
 const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 
-const hasPerformance = typeof performance === "object";
-
 export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config = {}) => {
   script = toScript(script);
   config = Object.assign({ script }, BaseConfig, config);
@@ -212,6 +210,6 @@ export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNo
     e,
     phase,
     value,
-    timestamp: hasPerformance ? performance.now() : new Date().getTime(),
+    timestamp: Date.now(),
     env
   });
