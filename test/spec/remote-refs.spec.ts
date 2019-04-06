@@ -2,7 +2,8 @@ require("source-map-support").install();
 
 import { assert } from "chai";
 import { before, describe, it } from "mocha";
-import { evalFnBodyAsPromise, Context, evalAsPromise } from "../../lib/metaes";
+import { Environment } from "../../lib/environment";
+import { Context, evalAsPromise, evalFnBodyAsPromise } from "../../lib/metaes";
 import { environmentToMessage, getSerializingContext } from "../../lib/remote";
 
 describe.only("References acquisition", () => {
@@ -54,8 +55,8 @@ describe.only("References acquisition", () => {
     let { context: _context } = getSerializingContext(globalEnv);
     context = _context;
 
-    quotedRequest = async function(input) {
-      const { response, _finalReferences: references, unquote: _unquote } = await evalAsPromise(context, input);
+    quotedRequest = async function(input, env?: Environment) {
+      const { response, _finalReferences: references, unquote: _unquote } = await evalAsPromise(context, input, env);
       _finalReferences = references;
       unquote = _unquote;
       return response;
@@ -136,12 +137,13 @@ describe.only("References acquisition", () => {
     });
   });
 
-  it.only("should acquire one reference", async () => {
+  it("should acquire one reference", async () => {
     const response = await quotedRequest(`me`);
     assert.deepEqual(response, "@ref0");
     assert.sameMembers([..._finalReferences], [globalEnv.values.me]);
     assert.equal(unquote(response), unquote(response), "should unquote to the same value");
     assert.equal(unquote(await quotedRequest(`me`)), unquote(response));
+    assert.equal(unquote(await quotedRequest(`ref`, { values: { ref: response } })), unquote(response));
     // console.log(
     //   environmentToMessage(context, {
     //     values: _finalValues

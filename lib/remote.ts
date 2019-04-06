@@ -261,9 +261,10 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
 
 export function getSerializingContext(environment: Environment) {
   const innerContext = new MetaesContext(undefined, console.error, environment);
+  let idsCounter = 0;
   const _ids = new Map();
   const context = {
-    async evaluate(script, c, cerr) {
+    async evaluate(script, c, cerr, env) {
       let _encounteredReferences = new Set(),
         _finalReferences = new Set(),
         _parentOf = new Map<object, object>(),
@@ -361,19 +362,16 @@ export function getSerializingContext(environment: Environment) {
           typeof script === "function"
             ? await evalFnBodyAsPromise(
                 { context: innerContext, source: script },
-                { values: {}, prev: environment },
+                env || { values: {}, prev: environment },
                 { interpreters }
               )
-            : await evalAsPromise(innerContext, script, { values: {}, prev: environment }, { interpreters });
-
-        let counter = 0;
-
+            : await evalAsPromise(innerContext, script, env || { values: {}, prev: environment }, { interpreters });
         function replacer(_, value) {
           if (_encounteredReferences.has(value) && belongsToRootHeap(value)) {
             _finalReferences.add(value);
             let id = _ids.get(value);
             if (!id) {
-              id = "@ref" + counter++;
+              id = "@ref" + idsCounter++;
               _ids.set(value, id);
             }
             return id;
