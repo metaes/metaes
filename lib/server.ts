@@ -1,33 +1,18 @@
 import * as bodyParser from "body-parser";
+import * as cors from "cors";
 import * as express from "express";
 import * as helmet from "helmet";
-import * as cors from "cors";
 import * as http from "http";
 import * as WebSocket from "ws";
 import { Environment } from "./environment";
 import { log } from "./logging";
-import { Context, evalAsPromise, MetaesContext } from "./metaes";
+import { Context, evalAsPromise } from "./metaes";
 import { assertMessage, environmentFromMessage, environmentToMessage, mergeValues, MetaesMessage } from "./remote";
 import { Continuation, ErrorContinuation, Source } from "./types";
 
-const testContext = new MetaesContext(
-  value => {
-    console.log("[value]");
-    console.log(value);
-  },
-  e => console.log(e),
-  {
-    values: {
-      fs: require("fs"),
-      child_process: require("child_process"),
-      console
-    }
-  }
-);
-
 const attachErrorMessage = (_, v) => (v instanceof Error ? { message: v.message } : v);
 
-export const runWSServer = (port: number | undefined = undefined, context = testContext) =>
+export const runWSServer = (context: Context, port?: number) =>
   new Promise((resolve, _reject) => {
     const server = http.createServer();
     const app = express();
@@ -37,31 +22,43 @@ export const runWSServer = (port: number | undefined = undefined, context = test
     app.use(helmet());
     app.use(cors());
 
-    // HTTP
-    app.post("/", (req, res) => {
-      const useJSON = req.headers["content-type"].indexOf("application/json") >= 0;
+    function withErrorToResponse(fn, res) {
       try {
-        if (useJSON) {
-          const { input, env } = assertMessage(req.body, false) as MetaesMessage;
-          log("[Server: got message]", { input, env });
-          context.evaluate(
-            input,
-            value => res.send(JSON.stringify(value)),
-            error => res.status(400).send(JSON.stringify(error, attachErrorMessage)),
-            env
-          );
-        } else {
-          context.evaluate(
-            req.body,
-            value => res.send(JSON.stringify(value)),
-            error => res.status(400).send(JSON.stringify(error, attachErrorMessage))
-          );
-        }
+        fn;
       } catch (e) {
         const error = { message: Array.isArray(e) ? e.map(e => e.message) : e.message };
         res.status(400).send(JSON.stringify(error));
       }
-    });
+    }
+    
+    // HTTP
+    app.get("/", (req, res) =>
+      withErrorToResponse(function() {
+        const input = req.query.input || req.url.substring(2);
+        context.evaluate(
+          input,
+          value => res.set("Content-Type", "text/json").send(JSON.stringify(value)),
+          error =>
+            res
+              .status(400)
+              .set("Content-Type", "text/json")
+              .send(JSON.stringify(error, attachErrorMessage)),
+          req.query.env ? JSON.parse(req.query.env) : {}
+        );
+      }, res)
+    );
+    app.post("/", (req, res) =>
+      withErrorToResponse(function() {
+        const { input, env } = assertMessage(req.body, false) as MetaesMessage;
+        log("[Server: got message]", { input, env });
+        context.evaluate(
+          input,
+          value => res.send(JSON.stringify(value)),
+          error => res.status(400).send(JSON.stringify(error, attachErrorMessage)),
+          env
+        );
+      }, res)
+    );
 
     // WS
     const webSocketServer = new WebSocket.Server({ server });
