@@ -71,20 +71,41 @@ describe("Environment operations", () => {
 
 describe("Remote", () => {
   let server;
+  let testContext;
 
   before(async () => {
-    server = await runWSServer();
+    testContext = new MetaesContext(
+      value => {
+        console.log("[value]");
+        console.log(value);
+      },
+      e => console.log(e),
+      {
+        values: {
+          fs: require("fs"),
+          child_process: require("child_process"),
+          console
+        }
+      }
+    );
+    server = await runWSServer(testContext);
   });
 
   after(() => server.close());
 
-  createTestsFor("Remote HTTP messaging", () => createHTTPConnector("http://localhost:" + server.address().port));
-  createTestsFor("Remote WebSocket messaging", () =>
-    createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port)
+  createTestsFor(
+    "Remote HTTP messaging",
+    () => createHTTPConnector("http://localhost:" + server.address().port),
+    testContext
+  );
+  createTestsFor(
+    "Remote WebSocket messaging",
+    () => createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port),
+    testContext
   );
 });
 
-function createTestsFor(describeName: string, getContext: () => Promise<Context> | Context) {
+function createTestsFor(describeName: string, getContext: () => Promise<Context> | Context, testContext) {
   describe(describeName, () => {
     describe("Bound contexts", () => {
       let context;
@@ -178,148 +199,148 @@ function createTestsFor(describeName: string, getContext: () => Promise<Context>
       });
     });
   });
-}
 
-describe("Raw HTTP calls", () => {
-  let server, url;
+  describe("Raw HTTP calls", () => {
+    let server, url;
 
-  before(async () => {
-    server = await runWSServer();
-    url = `http://localhost:` + server.address().port;
+    before(async () => {
+      server = await runWSServer(testContext);
+      url = `http://localhost:` + server.address().port;
+    });
+
+    after(() => server.close());
+
+    it("should return response using string query", async () => {
+      assert.equal(await fetch(url, { method: "post", body: "2+2" }).then(d => d.text()), "4");
+    });
+
+    it("should throw when using string query", async () => {
+      const { json, status } = await fetch(url, { method: "post", body: "throw 1" }).then(async response => ({
+        json: await response.json(),
+        status: response.status
+      }));
+      assert.equal(json.type, "ThrowStatement");
+      assert.equal(status, 400);
+    });
+
+    it("should throw and return error message using string query", async () => {
+      const { json, status } = await fetch(url, { method: "post", body: `foo;` }).then(async response => ({
+        json: await response.json(),
+        status: response.status
+      }));
+      assert.equal(json.type, "ReferenceError");
+      assert.equal(json.value.message, '"foo" is not defined.');
+      assert.equal(status, 400);
+    });
+
+    it("should return response using object", async () => {
+      const response = await fetch(url, {
+        method: "post",
+        body: JSON.stringify({ input: "2+2" }),
+        headers: { "content-type": "application/json" }
+      }).then(d => d.json());
+
+      assert.deepEqual(response, 4);
+    });
+
+    it("should throw when using JSON query", async () => {
+      const { json, status } = await fetch(url, {
+        method: "post",
+        body: JSON.stringify({ input: "throw 1" }),
+        headers: { "content-type": "application/json" }
+      }).then(async response => ({
+        json: await response.json(),
+        status: response.status
+      }));
+      assert.equal(json.type, "ThrowStatement");
+      assert.equal(status, 400);
+    });
   });
 
-  after(() => server.close());
-
-  it("should return response using string query", async () => {
-    assert.equal(await fetch(url, { method: "post", body: "2+2" }).then(d => d.text()), "4");
-  });
-
-  it("should throw when using string query", async () => {
-    const { json, status } = await fetch(url, { method: "post", body: "throw 1" }).then(async response => ({
-      json: await response.json(),
-      status: response.status
-    }));
-    assert.equal(json.type, "ThrowStatement");
-    assert.equal(status, 400);
-  });
-
-  it("should throw and return error message using string query", async () => {
-    const { json, status } = await fetch(url, { method: "post", body: `foo;` }).then(async response => ({
-      json: await response.json(),
-      status: response.status
-    }));
-    assert.equal(json.type, "ReferenceError");
-    assert.equal(json.value.message, '"foo" is not defined.');
-    assert.equal(status, 400);
-  });
-
-  it("should return response using object", async () => {
-    const response = await fetch(url, {
-      method: "post",
-      body: JSON.stringify({ input: "2+2" }),
-      headers: { "content-type": "application/json" }
-    }).then(d => d.json());
-
-    assert.deepEqual(response, 4);
-  });
-
-  it("should throw when using JSON query", async () => {
-    const { json, status } = await fetch(url, {
-      method: "post",
-      body: JSON.stringify({ input: "throw 1" }),
-      headers: { "content-type": "application/json" }
-    }).then(async response => ({
-      json: await response.json(),
-      status: response.status
-    }));
-    assert.equal(json.type, "ThrowStatement");
-    assert.equal(status, 400);
-  });
-});
-
-describe("Remote objects", () => {
-  const getOtherContext = () =>
-    new MetaesContext(undefined, console.error, {
-      values: {
-        stringMessage: "Hello",
-        objectMessage: { value: "Hello" },
-        valuesContainer: { i: 0 },
-        storage: {
-          addFile(contents, name) {
-            return `${name}: "${contents}" was saved.`;
+  describe("Remote objects", () => {
+    const getOtherContext = () =>
+      new MetaesContext(undefined, console.error, {
+        values: {
+          stringMessage: "Hello",
+          objectMessage: { value: "Hello" },
+          valuesContainer: { i: 0 },
+          storage: {
+            addFile(contents, name) {
+              return `${name}: "${contents}" was saved.`;
+            }
           }
         }
-      }
+      });
+    describe("In other local context", () => {
+      createRemoteContextTestsFor(() => getOtherContext());
     });
-  describe("In other local context", () => {
-    createRemoteContextTestsFor(() => getOtherContext());
+
+    // describe("In behind-network context", () => {
+    //   let server;
+
+    //   before(async () => {
+    //     server = await runWSServer(undefined, getOtherContext());
+    //   });
+
+    //   after(() => server.close());
+
+    //   // describe("HTTP", () =>
+    //   //   createRemoteContextTestsFor(() => createHTTPConnector("http://localhost:" + server.address().port)));
+    //   describe("WebSockets", () =>
+    //     createRemoteContextTestsFor(() => createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port)));
+    // });
   });
 
-  // describe("In behind-network context", () => {
-  //   let server;
+  function createRemoteContextTestsFor(getContext: () => Promise<Context> | Context) {
+    let localContext: MetaesContext, _eval;
 
-  //   before(async () => {
-  //     server = await runWSServer(undefined, getOtherContext());
-  //   });
+    before(async () => {
+      localContext = new MetaesContext(
+        undefined,
+        console.error,
+        { values: {} },
+        {
+          interpreters: getBindingInterpretersFor(await getContext())
+        }
+      );
+      _eval = async (script, env?) => {
+        try {
+          return await localContext.evalAsPromise(script, env);
+        } catch (e) {
+          throw e.value || e;
+        }
+      };
+    });
 
-  //   after(() => server.close());
+    it("should query remote primitive value from different context", async () => {
+      assert.equal("Hello", await _eval("stringMessage"));
+    });
 
-  //   // describe("HTTP", () =>
-  //   //   createRemoteContextTestsFor(() => createHTTPConnector("http://localhost:" + server.address().port)));
-  //   describe("WebSockets", () =>
-  //     createRemoteContextTestsFor(() => createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port)));
-  // });
-});
+    it("should query object value from different context", async () => {
+      // assert.isTrue(
+      //   (await _eval("objectMessage")) instanceof RemoteObject,
+      //   "object is transferred as a RemoteObject reference"
+      // );
+      assert.equal(
+        await _eval(`let world=" world!"; objectMessage.value+world`),
+        "Hello world!",
+        "remote object property access is executed on remote context"
+      );
+    });
 
-function createRemoteContextTestsFor(getContext: () => Promise<Context> | Context) {
-  let localContext: MetaesContext, _eval;
+    it("should call remote method with local arguments", async () => {
+      assert.equal(
+        await _eval(`let extension="txt"; storage.addFile(contents, "test" + "." + extension);`, {
+          values: { contents: "File contents" }
+        }),
+        'test.txt: "File contents" was saved.'
+      );
+    });
 
-  before(async () => {
-    localContext = new MetaesContext(
-      undefined,
-      console.error,
-      { values: {} },
-      {
-        interpreters: getBindingInterpretersFor(await getContext())
-      }
-    );
-    _eval = async (script, env?) => {
-      try {
-        return await localContext.evalAsPromise(script, env);
-      } catch (e) {
-        throw e.value || e;
-      }
-    };
-  });
-
-  it("should query remote primitive value from different context", async () => {
-    assert.equal("Hello", await _eval("stringMessage"));
-  });
-
-  it("should query object value from different context", async () => {
-    // assert.isTrue(
-    //   (await _eval("objectMessage")) instanceof RemoteObject,
-    //   "object is transferred as a RemoteObject reference"
-    // );
-    assert.equal(
-      await _eval(`let world=" world!"; objectMessage.value+world`),
-      "Hello world!",
-      "remote object property access is executed on remote context"
-    );
-  });
-
-  it("should call remote method with local arguments", async () => {
-    assert.equal(
-      await _eval(`let extension="txt"; storage.addFile(contents, "test" + "." + extension);`, {
-        values: { contents: "File contents" }
-      }),
-      'test.txt: "File contents" was saved.'
-    );
-  });
-
-  it("should set property on remote object", async () => {
-    assert.equal(await _eval(`valuesContainer.i = 44; valuesContainer.i`), 44);
-  });
+    it("should set property on remote object", async () => {
+      assert.equal(await _eval(`valuesContainer.i = 44; valuesContainer.i`), 44);
+    });
+  }
 }
 
 describe("Remote references", () => {
@@ -332,7 +353,6 @@ describe("Remote references", () => {
       logout() {}
     };
     server = await runWSServer(
-      undefined,
       new MetaesContext(undefined, console.error, {
         values: {
           me,
