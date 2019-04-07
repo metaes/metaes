@@ -3,10 +3,11 @@ require("source-map-support").install();
 import { assert } from "chai";
 import { before, describe, it } from "mocha";
 import { Environment } from "../../lib/environment";
-import { Context, evalAsPromise, evalFnBodyAsPromise } from "../../lib/metaes";
-import { environmentToMessage, getSerializingContext } from "../../lib/remote";
+import { Context, evalAsPromise, evalFnBodyAsPromise, MetaesContext } from "../../lib/metaes";
+import { environmentToMessage, getSerializingContext, createHTTPConnector } from "../../lib/remote";
+import { runWSServer } from "../../lib/server";
 
-describe.only("References acquisition", () => {
+describe.skip("References acquisition", () => {
   let context: Context, unquote, globalEnv, quotedRequest, _finalReferences;
 
   before(() => {
@@ -61,6 +62,29 @@ describe.only("References acquisition", () => {
       unquote = _unquote;
       return response;
     };
+  });
+
+  it.skip("should support e2e", async () => {
+    const server = await runWSServer(new MetaesContext(undefined, console.error, globalEnv));
+    const clientContext = createHTTPConnector("http://localhost:" + server.address().port);
+    console.log(await evalAsPromise(clientContext, "me"));
+    server.close();
+  });
+
+  it("should acquire one reference", async () => {
+    const response = await quotedRequest(`me`);
+    assert.deepEqual(response, "@ref0");
+    assert.sameMembers([..._finalReferences], [globalEnv.values.me]);
+    assert.equal(unquote(response), unquote(response), "should unquote to the same value");
+    assert.equal(unquote(await quotedRequest(`me`)), unquote(response));
+    assert.equal(await quotedRequest(`me.firstName`), "User1");
+    console.log(unquote(await quotedRequest(`me`)));
+    assert.equal(unquote(await quotedRequest(`ref`, { values: { ref: response } })), unquote(response));
+    // console.log(
+    //   environmentToMessage(context, {
+    //     values: _finalValues
+    //   })
+    // );
   });
 
   it("should send stringified non root heap object", async () => {
@@ -135,20 +159,6 @@ describe.only("References acquisition", () => {
         values: _finalValues
       }).references
     });
-  });
-
-  it("should acquire one reference", async () => {
-    const response = await quotedRequest(`me`);
-    assert.deepEqual(response, "@ref0");
-    assert.sameMembers([..._finalReferences], [globalEnv.values.me]);
-    assert.equal(unquote(response), unquote(response), "should unquote to the same value");
-    assert.equal(unquote(await quotedRequest(`me`)), unquote(response));
-    assert.equal(unquote(await quotedRequest(`ref`, { values: { ref: response } })), unquote(response));
-    // console.log(
-    //   environmentToMessage(context, {
-    //     values: _finalValues
-    //   })
-    // );
   });
 
   it("should acquire multiple references in array", async () => {

@@ -260,13 +260,13 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
   });
 
 export function getSerializingContext(environment: Environment) {
-  const innerContext = new MetaesContext(undefined, console.error, environment);
   let idsCounter = 0;
-  const _ids = new Map();
+  const _valueToId = new Map<object, string>();
+  const innerContext = new MetaesContext(undefined, console.error, environment);
+  const _finalReferences = new Set();
   const context = {
     async evaluate(script, c, cerr, env) {
       let _encounteredReferences = new Set(),
-        _finalReferences = new Set(),
         _parentOf = new Map<object, object>(),
         _finalResponse,
         _finalValues;
@@ -366,13 +366,14 @@ export function getSerializingContext(environment: Environment) {
                 { interpreters }
               )
             : await evalAsPromise(innerContext, script, env || { values: {}, prev: environment }, { interpreters });
+
         function replacer(_, value) {
           if (_encounteredReferences.has(value) && belongsToRootHeap(value)) {
             _finalReferences.add(value);
-            let id = _ids.get(value);
+            let id = _valueToId.get(value);
             if (!id) {
               id = "@ref" + idsCounter++;
-              _ids.set(value, id);
+              _valueToId.set(value, id);
             }
             return id;
           } else {
@@ -380,12 +381,8 @@ export function getSerializingContext(environment: Environment) {
           }
         }
         const source = JSON.stringify(result, replacer, 2);
-        // const variables = [..._finalReferences]
-        //   .reverse()
-        //   .map(ref => `${_ids.get(ref)}=${sourceify2(ref)};`)
-        //   .join("\n");
         _finalResponse = source;
-        _finalValues = [..._ids.entries()].reduce((result, [k, v]) => {
+        _finalValues = [..._valueToId.entries()].reduce((result, [k, v]) => {
           result[v] = k;
           return result;
         }, {});
@@ -394,8 +391,12 @@ export function getSerializingContext(environment: Environment) {
 
         function unquote(json: any, env: Environment) {
           return JSON.parse(JSON.stringify(json), function(key, value) {
-            if (value in _finalValues && _ids.has(value)) {
-              return _ids.get(value);
+            if (value in _finalValues) {
+              for (let [val, id] of _valueToId) {
+                if (value === id) {
+                  return val;
+                }
+              }
             }
             return value;
           });
