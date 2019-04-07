@@ -268,8 +268,8 @@ export function ForInStatement(e: NodeTypes.ForInStatement, c, cerr, env, config
   );
 }
 
-export function ForStatement(e: NodeTypes.ForStatement, _c, cerr, env, config) {
-  evaluate(e.init, _init => cerr(NotImplementedException(`${e.type} is not implemented yet`)), cerr, env, config);
+export function ForStatement(e: NodeTypes.ForStatement, _c, cerr) {
+  cerr(NotImplementedException(`${e.type} is not implemented yet`));
 }
 
 export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config) {
