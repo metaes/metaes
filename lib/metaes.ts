@@ -69,20 +69,11 @@ export class MetaesContext implements Context {
     public cache?: ParseCache
   ) {}
 
-  /**
-   * Runs metaesEval configured by provided parameters.
-   * @param source
-   * @param c
-   * @param cerr
-   * @param environment - If user provides environment with `prev` field it means he wants to completely replace current evaluation environment.
-   *                      If `prev` is not defined, new environment will be built using provided values and refering to context's original environment with `prev`.
-   * @param config
-   */
   evaluate(
     input: Script | Source,
     c?: Continuation,
     cerr?: ErrorContinuation,
-    environment?: Environment,
+    environment?: Environment | object,
     config?: Partial<EvaluationConfig>
   ) {
     input = toScript(input, this.cache);
@@ -90,7 +81,7 @@ export class MetaesContext implements Context {
     let env = this.environment;
 
     if (environment) {
-      env = environment.prev ? environment : Object.assign({ prev: this.environment }, environment);
+      env = { values: "values" in environment ? environment.values : environment, prev: this.environment };
     }
     if (!config) {
       config = Object.assign({}, this.defaultConfig, { script: input });
