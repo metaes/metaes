@@ -82,7 +82,6 @@ export const runWSServer = (context: Context, port?: number) =>
           const { input, env } = assertMessage(JSON.parse(message)) as MetaesMessage;
           environment = env ? environmentFromMessage(clientContext, env) : { values: {} };
           log("[Server: got raw message]:", message);
-
           log("[Server: client environmentFromJSON]", environment);
 
           const result = await evalAsPromise(context, input, environment);
