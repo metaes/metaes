@@ -1,18 +1,4 @@
-import { Continuation, ErrorContinuation } from "./types";
-
-export interface Reference {
-  id?: string;
-}
-
-export interface EnvironmentBase<T = any> {
-  values: { [key: string]: T };
-  references?: { [key: string]: Reference };
-}
-
-export interface Environment<T = any> extends EnvironmentBase<T> {
-  prev?: Environment<T>;
-  internal?: boolean;
-}
+import { Continuation, ErrorContinuation, EnvironmentBase, Environment } from "./types";
 
 export function toEnvironment(environment?: any | EnvironmentBase | Environment): Environment {
   return environment ? ("values" in environment ? environment : { values: environment }) : { values: {} };
@@ -81,11 +67,11 @@ export function GetValue<T>(
 
 export function GetValueSync<T>(name: string, env: Environment<T>): T | null {
   let _env: Environment | undefined = env;
-  while(_env && _env.values){
+  while (_env && _env.values) {
     if (Object.hasOwnProperty.call(_env.values, name)) {
       return _env.values[name];
     }
-    _env = _env.prev
+    _env = _env.prev;
   }
   return null;
 }

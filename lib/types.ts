@@ -1,4 +1,3 @@
-import { Environment, Reference } from "./environment";
 import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
@@ -19,9 +18,9 @@ export type Script = {
 
 export type Source = string | ASTNode | Function;
 
-export type Evaluate = (
+export type Evaluate<T = any> = (
   input: Script | Source,
-  c?: Continuation | null,
+  c?: Continuation<T> | null,
   cerr?: ErrorContinuation | null,
   environment?: Environment | object,
   config?: Partial<EvaluationConfig>
@@ -88,3 +87,21 @@ export type ASTNode = NodeBase & {
   // Any other node specific props are allowed
   [key: string]: any;
 };
+
+export interface Reference {
+  id?: string;
+  type?: string;
+}
+
+export interface EnvironmentBase<T = any> {
+  values: { [key: string]: T };
+  refs?: { [key: string]: Reference };
+}
+
+export interface Environment<T = any> extends EnvironmentBase<T> {
+  prev?: Environment<T>;
+  internal?: boolean;
+}
+
+export type MetaesMessage = { input: Script | string | ASTNode; env?: EnvironmentBase };
+

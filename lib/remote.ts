@@ -1,10 +1,19 @@
-import { Environment, EnvironmentBase, getEnvironmentForValue, GetValue, Reference } from "./environment";
+import { getEnvironmentForValue, GetValue } from "./environment";
 import { Apply, GetProperty, Identifier } from "./interpreter/base";
 import { ECMAScriptInterpreters } from "./interpreters";
 import { log } from "./logging";
 import { Context, evalAsPromise, evalFnBody, evalFnBodyAsPromise, isScript, MetaesContext, metaesEval } from "./metaes";
 import * as NodeTypes from "./nodeTypes";
-import { ASTNode, Continuation, ErrorContinuation, EvaluationConfig, Script, Source } from "./types";
+import {
+  Continuation,
+  ErrorContinuation,
+  EvaluationConfig,
+  Source,
+  Environment,
+  EnvironmentBase,
+  Reference,
+  MetaesMessage
+} from "./types";
 
 const referencesMaps = new Map<Context, Map<object | Function, string>>();
 
@@ -41,13 +50,11 @@ export const getReferencesMap = (context: Context) => {
   return env;
 };
 
-export type MetaesMessage = { input: Script | string | ASTNode; env?: EnvironmentBase };
-
 export function environmentFromMessage(context: Context, environment: EnvironmentBase): Environment {
   const referencesMap = getReferencesMap(context);
   const values = environment.values || {};
-  if (environment.references) {
-    outer: for (let [key, { id }] of Object.entries(environment.references)) {
+  if (environment.refs) {
+    outer: for (let [key, { id }] of Object.entries(environment.refs)) {
       for (let [value, boundaryId] of referencesMap.entries()) {
         if (boundaryId === id) {
           values[key] = value;
@@ -86,7 +93,7 @@ export function environmentToMessage(context: Context, environment: EnvironmentB
       references[key] = { id: referencesMap.get(value)! };
     }
   }
-  return Object.keys(references).length ? { references, values } : { values };
+  return Object.keys(references).length ? { refs: references, values } : { values };
 }
 
 export function assertMessage(message: MetaesMessage, requiresEnvironment = true): MetaesMessage {
@@ -129,7 +136,7 @@ function createRemoteFunction(context: Context, id: string) {
       console.error,
       environmentFromMessage(context, {
         values: { args },
-        references: { fn: { id } }
+        refs: { fn: { id } }
       })
     );
   referencesMap.set(fn, id);
@@ -259,17 +266,33 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
     connect();
   });
 
+export function getParsingContext(context: Context) {
+  return {
+    evaluate(input, c, cerr, env, config) {
+      context.evaluate(
+        input,
+        value => {
+          console.log("value:", value);
+          c(value);
+        },
+        cerr,
+        env,
+        config
+      );
+    }
+  };
+}
+
 export function getSerializingContext(environment: Environment) {
-  let idsCounter = 0;
   const _valueToId = new Map<object, string>();
+  const _idsToValues = new Map<string, object>();
   const innerContext = new MetaesContext(undefined, console.error, environment);
-  const _finalReferences = new Set();
+
   const context = {
     async evaluate(script, c, cerr, env) {
       let _encounteredReferences = new Set(),
         _parentOf = new Map<object, object>(),
-        _finalResponse,
-        _finalValues;
+        _finalReferences = new Set();
 
       const interpreters = {
         values: {
@@ -370,36 +393,30 @@ export function getSerializingContext(environment: Environment) {
         function replacer(_, value) {
           if (_encounteredReferences.has(value) && belongsToRootHeap(value)) {
             _finalReferences.add(value);
+
             let id = _valueToId.get(value);
             if (!id) {
-              id = "@ref" + idsCounter++;
+              id = uuidv4();
               _valueToId.set(value, id);
+              _idsToValues.set(id, value);
             }
-            return id;
+            return "@" + id;
           } else {
             return value;
           }
         }
-        JSON.stringify(result, replacer);
-        _finalResponse = JSON.stringify(result, replacer);
-        _finalValues = [..._valueToId.entries()].reduce((result, [k, v]) => {
-          result[v] = k;
-          return result;
-        }, {});
 
-        function unquote(json: any, env: Environment) {
-          return JSON.parse(JSON.stringify(json), function(key, value) {
-            if (value in _finalValues) {
-              for (let [val, id] of _valueToId) {
-                if (value === id) {
-                  return val;
-                }
-              }
-            }
-            return value;
-          });
-        }
-        c(_finalResponse);
+        c({
+          input: JSON.stringify(result, replacer),
+          env: {
+            refs: [..._finalReferences]
+              .map(value => [_valueToId.get(value), value])
+              .reduce((prev, [k, v]) => {
+                prev[k] = { type: typeof v };
+                return prev;
+              }, {})
+          }
+        });
       } catch (e) {
         cerr(e.value || e);
       }
@@ -408,3 +425,13 @@ export function getSerializingContext(environment: Environment) {
 
   return context;
 }
+
+// JSON.stringify(result, replacer);
+
+// const unquote = (json: any) =>
+//   JSON.parse(JSON.stringify(json), function(_, value) {
+//     if (_idsToValues.has(value)) {
+//       return "buka";
+//     }
+//     return value;
+//   });

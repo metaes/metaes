@@ -2,10 +2,10 @@ require("source-map-support").install();
 
 import { assert } from "chai";
 import { before, describe, it } from "mocha";
-import { Environment } from "../../lib/environment";
-import { Context, evalAsPromise, evalFnBodyAsPromise, MetaesContext } from "../../lib/metaes";
-import { environmentToMessage, getSerializingContext, createHTTPConnector } from "../../lib/remote";
+import { Context, evalAsPromise, evalFnBodyAsPromise } from "../../lib/metaes";
+import { createHTTPConnector, environmentToMessage, getParsingContext, getSerializingContext } from "../../lib/remote";
 import { runWSServer } from "../../lib/server";
+import { Environment } from "../../lib/types";
 
 describe.only("References acquisition", () => {
   let context: Context, unquote, globalEnv, quotedRequest, _finalReferences;
@@ -66,8 +66,19 @@ describe.only("References acquisition", () => {
 
   it.only("should support e2e", async () => {
     const server = await runWSServer(getSerializingContext(globalEnv));
-    const clientContext = createHTTPConnector("http://localhost:" + server.address().port);
-    console.log(await evalAsPromise(clientContext, "me"));
+    const rawContext = createHTTPConnector("http://localhost:" + server.address().port);
+    const client = getParsingContext(rawContext);
+    console.log(await evalAsPromise(client, "[me, 1, 'test']"));
+
+    console.log(
+      await evalAsPromise(
+        rawContext,
+        `
+      remoteFunction([1,2,3]);
+      remoteFunction({val:localvalue, val2: [1,2,3]})
+    `
+      )
+    );
     server.close();
   });
 
@@ -157,7 +168,7 @@ describe.only("References acquisition", () => {
     console.log("[references]:", {
       references: environmentToMessage(context, {
         values: _finalValues
-      }).references
+      }).refs
     });
   });
 
