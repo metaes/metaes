@@ -380,14 +380,12 @@ export function getSerializingContext(environment: Environment) {
             return value;
           }
         }
-        const source = JSON.stringify(result, replacer, 2);
-        _finalResponse = source;
+        JSON.stringify(result, replacer);
+        _finalResponse = JSON.stringify(result, replacer);
         _finalValues = [..._valueToId.entries()].reduce((result, [k, v]) => {
           result[v] = k;
           return result;
         }, {});
-        // do not return
-        result;
 
         function unquote(json: any, env: Environment) {
           return JSON.parse(JSON.stringify(json), function(key, value) {
@@ -401,12 +399,12 @@ export function getSerializingContext(environment: Environment) {
             return value;
           });
         }
-        c({ response: JSON.parse(_finalResponse), _finalReferences, _finalValues, unquote });
+        c(_finalResponse);
       } catch (e) {
         cerr(e.value || e);
       }
     }
   };
 
-  return { context };
+  return context;
 }

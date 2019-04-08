@@ -7,7 +7,7 @@ import { Context, evalAsPromise, evalFnBodyAsPromise, MetaesContext } from "../.
 import { environmentToMessage, getSerializingContext, createHTTPConnector } from "../../lib/remote";
 import { runWSServer } from "../../lib/server";
 
-describe.skip("References acquisition", () => {
+describe.only("References acquisition", () => {
   let context: Context, unquote, globalEnv, quotedRequest, _finalReferences;
 
   before(() => {
@@ -64,8 +64,8 @@ describe.skip("References acquisition", () => {
     };
   });
 
-  it.skip("should support e2e", async () => {
-    const server = await runWSServer(new MetaesContext(undefined, console.error, globalEnv));
+  it.only("should support e2e", async () => {
+    const server = await runWSServer(getSerializingContext(globalEnv));
     const clientContext = createHTTPConnector("http://localhost:" + server.address().port);
     console.log(await evalAsPromise(clientContext, "me"));
     server.close();
