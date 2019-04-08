@@ -24,13 +24,13 @@ export const runWSServer = (context: Context, port?: number) =>
 
     function withErrorToResponse(fn, res) {
       try {
-        fn;
+        fn();
       } catch (e) {
         const error = { message: Array.isArray(e) ? e.map(e => e.message) : e.message };
         res.status(400).send(JSON.stringify(error));
       }
     }
-    
+
     // HTTP
     app.get("/", (req, res) =>
       withErrorToResponse(function() {
