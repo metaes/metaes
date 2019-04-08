@@ -1,8 +1,7 @@
-import { Environment, GetValueSync } from "./environment";
 import { evaluate, visitArray } from "./evaluate";
 import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
-import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
+import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction, Environment } from "./types";
 
 // TODO: move to interpreter style
 export const evaluateMetaFunction = (

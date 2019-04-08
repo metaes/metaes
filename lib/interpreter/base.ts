@@ -1,8 +1,8 @@
 import { evaluate } from "../evaluate";
-import { Environment } from "../environment";
 import { NotImplementedException } from "../exceptions";
+import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
-import { isMetaFunction, evaluateMetaFunction, getMetaFunction } from "../metafunction";
+import { Environment } from "../types";
 
 export function Identifier(e: NodeTypes.Identifier, c, cerr, env: Environment, config) {
   evaluate(

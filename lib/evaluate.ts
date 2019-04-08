@@ -1,7 +1,7 @@
-import { Environment, GetValueSync } from "./environment";
+import { GetValueSync } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
 import { callInterceptor } from "./metaes";
-import { ASTNode, Continuation, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
+import { ASTNode, Continuation, Environment, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
 
 export function defaultScheduler(fn) {
   fn();

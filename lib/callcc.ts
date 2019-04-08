@@ -1,6 +1,5 @@
-import { Environment } from "./environment";
 import { createScript, metaesEval } from "./metaes";
-import { Continuation, ErrorContinuation, EvaluationConfig } from "./types";
+import { Continuation, Environment, ErrorContinuation, EvaluationConfig } from "./types";
 
 export function callcc<T, U>(
   _receiver: (

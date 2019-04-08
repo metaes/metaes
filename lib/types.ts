@@ -103,5 +103,10 @@ export interface Environment<T = any> extends EnvironmentBase<T> {
   internal?: boolean;
 }
 
-export type MetaesMessage = { input: Script | string | ASTNode; env?: EnvironmentBase };
+type JSON_T = string | number | boolean | Date | JSON_Object | JSON_Array;
+type JSON_Object = {
+  [x: string]: JSON_T;
+};
+interface JSON_Array extends Array<string | number | boolean | Date | JSON_Object | JSON_Array> {}
 
+export type MetaesMessage = JSON_T | { input: Script | string | ASTNode } & (EnvironmentBase | { env: Environment });

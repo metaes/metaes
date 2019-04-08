@@ -4,11 +4,10 @@ import * as express from "express";
 import * as helmet from "helmet";
 import * as http from "http";
 import * as WebSocket from "ws";
-import { Environment } from "./environment";
 import { log } from "./logging";
 import { Context, evalAsPromise } from "./metaes";
-import { assertMessage, environmentFromMessage, environmentToMessage, mergeValues, MetaesMessage } from "./remote";
-import { Continuation, ErrorContinuation, Source } from "./types";
+import { assertMessage, environmentFromMessage, environmentToMessage, mergeValues } from "./remote";
+import { Continuation, Environment, ErrorContinuation, MetaesMessage, Source } from "./types";
 
 const attachErrorMessage = (_, v) => (v instanceof Error ? { message: v.message } : v);
 

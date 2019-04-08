@@ -15,8 +15,6 @@ import {
   MetaesMessage
 } from "./types";
 
-const referencesMaps = new Map<Context, Map<object | Function, string>>();
-
 export function patchNodeFetch() {
   if (typeof fetch === "undefined" && typeof global === "object") {
     /**
@@ -41,17 +39,11 @@ export function mergeValues(values: object, environment?: Environment): Environm
   }
 }
 
-export const getReferencesMap = (context: Context) => {
-  let env = referencesMaps.get(context);
-  if (!env) {
-    referencesMaps.set(context, (env = new Map()));
-    return env;
-  }
-  return env;
-};
-
-export function environmentFromMessage(context: Context, environment: EnvironmentBase): Environment {
-  const referencesMap = getReferencesMap(context);
+export function environmentFromMessage(
+  environment: EnvironmentBase,
+  referencesMap: Map<object | Function, string>,
+  context: Context
+): Environment {
   const values = environment.values || {};
   if (environment.refs) {
     outer: for (let [key, { id }] of Object.entries(environment.refs)) {
@@ -64,7 +56,7 @@ export function environmentFromMessage(context: Context, environment: Environmen
       // TODO: don't know yet if it's function or object. Solve this ambiguity
       // Set value only if nothing in values dict was provided.
       if (!values[key]) {
-        values[key] = createRemoteFunction(context, id);
+        values[key] = createRemoteFunction(id, referencesMap, context);
       }
     }
   }
@@ -79,8 +71,10 @@ function uuidv4() {
   });
 }
 
-export function environmentToMessage(context: Context, environment: EnvironmentBase): EnvironmentBase {
-  const referencesMap = getReferencesMap(context);
+export function environmentToMessage(
+  environment: EnvironmentBase,
+  referencesMap: Map<object | Function, string>
+): EnvironmentBase {
   const references: { [key: string]: Reference } = {};
   const values = {};
 
@@ -122,8 +116,7 @@ export function assertMessage(message: MetaesMessage, requiresEnvironment = true
   return message;
 }
 
-function createRemoteFunction(context: Context, id: string) {
-  const referencesMap = getReferencesMap(context);
+function createRemoteFunction(id: string, referencesMap, context: Context) {
   const fn = (...args) =>
     evalFnBody(
       {
@@ -134,10 +127,14 @@ function createRemoteFunction(context: Context, id: string) {
       },
       console.log,
       console.error,
-      environmentFromMessage(context, {
-        values: { args },
-        refs: { fn: { id } }
-      })
+      environmentFromMessage(
+        {
+          values: { args },
+          refs: { fn: { id } }
+        },
+        referencesMap,
+        context
+      )
     );
   referencesMap.set(fn, id);
   return fn;
@@ -145,6 +142,8 @@ function createRemoteFunction(context: Context, id: string) {
 
 export const createHTTPConnector = (url: string): Context => {
   patchNodeFetch();
+
+  const referencesMap = new Map();
 
   function send(message: MetaesMessage) {
     log("[Client: sending message]", message);
@@ -171,7 +170,7 @@ export const createHTTPConnector = (url: string): Context => {
       try {
         const { status, text } = await send({
           input,
-          env: environmentToMessage(context, mergeValues({ c, cerr }, environment))
+          env: environmentToMessage(mergeValues({ c, cerr }, environment), referencesMap)
         });
         log("[Client: Got response, raw]", text);
         const value = JSON.parse(text);
@@ -198,6 +197,8 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
   connectionString: string
 ) =>
   new Promise<ClosableContext>((resolve, reject) => {
+    const referencesMap = new Map();
+
     const connect = () => {
       const socket = new WebSocketConstructor(connectionString);
       let context: ClosableContext;
@@ -218,7 +219,7 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
           const message = assertMessage(JSON.parse(e.data) as MetaesMessage);
 
           if (message.env) {
-            const env = environmentFromMessage(context, message.env);
+            const env = environmentFromMessage(message.env, referencesMap, context);
             log("[Client: raw message]", e.data);
             log("[Client: message]", message);
             log("[Client: env is]", env);
@@ -250,7 +251,7 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
             try {
               send({
                 input,
-                env: environmentToMessage(context, mergeValues({ c, cerr }, environment))
+                env: environmentToMessage(mergeValues({ c, cerr }, environment), referencesMap)
               });
             } catch (e) {
               if (cerr) {
@@ -272,6 +273,7 @@ export function getParsingContext(context: Context) {
       context.evaluate(
         input,
         value => {
+          console.log("assert", assertMessage(value));
           console.log("value:", value);
           c(value);
         },
@@ -406,6 +408,7 @@ export function getSerializingContext(environment: Environment) {
           }
         }
 
+        // TODO: should produce various levels or message accuracy
         c({
           input: JSON.stringify(result, replacer),
           env: {
