@@ -91,7 +91,8 @@ export class MetaesContext implements Context {
     let env = this.environment;
 
     if (environment) {
-      env = { values: "values" in environment ? environment.values : environment, prev: this.environment };
+      env = environment.prev ? environment : Object.assign({ prev: this.environment }, environment);
+      // env = { values: "values" in environment ? environment.values : environment, prev: this.environment };
     }
     if (!config) {
       config = Object.assign({}, this.defaultConfig, { script: input });
