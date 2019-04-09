@@ -6,7 +6,7 @@ import * as http from "http";
 import * as WebSocket from "ws";
 import { log } from "./logging";
 import { Context, evalAsPromise } from "./metaes";
-import { assertMessage, environmentFromMessage, environmentToMessage, mergeValues } from "./remote";
+import { messageStingify, environmentFromMessage, environmentToMessage, mergeValues } from "./remote";
 import { Continuation, Environment, ErrorContinuation, MetaesMessage, Source } from "./types";
 
 const attachErrorMessage = (_, v) => (v instanceof Error ? { message: v.message } : v);
@@ -48,7 +48,7 @@ export const runWSServer = (context: Context, port?: number) =>
     );
     app.post("/", (req, res) =>
       withErrorToResponse(function() {
-        const { input, env } = assertMessage(req.body, false) as MetaesMessage;
+        const { input, env } = messageStingify(req.body, false) as MetaesMessage;
         log("[Server: got message]", { input, env });
         context.evaluate(
           input,
@@ -71,14 +71,14 @@ export const runWSServer = (context: Context, port?: number) =>
             env: environmentToMessage(clientContext, mergeValues({}, environment))
           };
           log("[Server sending message]", JSON.stringify(message));
-          connection.send(JSON.stringify(assertMessage(message)));
+          connection.send(JSON.stringify(messageStingify(message)));
         }
       };
 
       connection.on("message", async message => {
         let environment;
         try {
-          const { input, env } = assertMessage(JSON.parse(message)) as MetaesMessage;
+          const { input, env } = messageStingify(JSON.parse(message)) as MetaesMessage;
           environment = env ? environmentFromMessage(clientContext, env) : { values: {} };
           log("[Server: got raw message]:", message);
           log("[Server: client environmentFromJSON]", environment);

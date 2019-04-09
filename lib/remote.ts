@@ -12,7 +12,8 @@ import {
   Environment,
   EnvironmentBase,
   Reference,
-  MetaesMessage
+  MetaesMessage,
+  FullyQualifiedMetaesMessage
 } from "./types";
 
 export function patchNodeFetch() {
@@ -25,6 +26,14 @@ export function patchNodeFetch() {
     const _require = require;
     global.fetch = _require("node-fetch");
   }
+}
+
+function uuidv4() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    var r = (Math.random() * 16) | 0,
+      v = c == "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 // TODO: instead use env.prev and while stringification take into account if prev is present (recursively)
@@ -63,14 +72,6 @@ export function environmentFromMessage(
   return { values };
 }
 
-function uuidv4() {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-    var r = (Math.random() * 16) | 0,
-      v = c == "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
 export function environmentToMessage(
   environment: EnvironmentBase,
   referencesMap: Map<object | Function, string>
@@ -90,7 +91,46 @@ export function environmentToMessage(
   return Object.keys(references).length ? { refs: references, values } : { values };
 }
 
-export function assertMessage(message: MetaesMessage, requiresEnvironment = true): MetaesMessage {
+export function toOptimizedMessage() {}
+
+export function toFullyQualifiedMessage(message: MetaesMessage): FullyQualifiedMetaesMessage {
+  const fqMessage: any = {};
+  if (typeof message !== "object" || Array.isArray(message)) {
+    return { input: message, env: { values: {} } };
+  } else {
+    if ("input" in message) {
+      if (typeof message.input === "string") {
+        try {
+          fqMessage.input = JSON.parse(message.input);
+        } catch {
+          // Couldn't parse JSON, treat it as JavaScript code
+          fqMessage.input = message.input;
+        }
+      }
+      // env
+      if ("env" in message && typeof message.env === "object") {
+        if ("values" in message.env) {
+          fqMessage.env = message.env;
+        } else {
+          fqMessage.env = { values: message.env };
+        }
+      } else {
+        fqMessage.env = { values: {} };
+      }
+      if ("refs" in message && typeof message.refs === "object") {
+        fqMessage.env.refs = message.refs;
+      }
+      return fqMessage;
+    } else {
+      return {
+        input: message,
+        env: { values: {} }
+      };
+    }
+  }
+}
+
+export function parseMessage(value: string): MetaesMessage {
   const errors: Error[] = [];
 
   if (!message.input) {
@@ -147,7 +187,7 @@ export const createHTTPConnector = (url: string): Context => {
 
   function send(message: MetaesMessage) {
     log("[Client: sending message]", message);
-    const stringified = JSON.stringify(assertMessage(message, false));
+    const stringified = JSON.stringify(messageStingify(message, false));
     log("[Client: sending message, after validation]", stringified);
     const config = { method: "POST", body: stringified, headers: { "content-type": "application/json" } };
     return fetch(url, config).then(async response => ({ text: await response.text(), status: response.status }));
@@ -204,7 +244,7 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
       let context: ClosableContext;
 
       const send = (message: MetaesMessage) => {
-        const stringified = JSON.stringify(assertMessage(message));
+        const stringified = JSON.stringify(messageStingify(message));
         log("[Client: sending message]", stringified);
         socket.send(stringified);
       };
@@ -216,7 +256,7 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
 
       socket.addEventListener("message", e => {
         try {
-          const message = assertMessage(JSON.parse(e.data) as MetaesMessage);
+          const message = messageStingify(JSON.parse(e.data) as MetaesMessage);
 
           if (message.env) {
             const env = environmentFromMessage(message.env, referencesMap, context);
@@ -273,7 +313,7 @@ export function getParsingContext(context: Context) {
       context.evaluate(
         input,
         value => {
-          console.log("assert", assertMessage(value));
+          console.log("assert", messageStingify(value));
           console.log("value:", value);
           c(value);
         },
