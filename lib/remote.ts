@@ -1,5 +1,5 @@
 import { getEnvironmentForValue, GetValue } from "./environment";
-import { Apply, GetProperty, Identifier } from "./interpreter/base";
+import { Apply, GetProperty, Identifier, SetProperty } from "./interpreter/base";
 import { ECMAScriptInterpreters } from "./interpreters";
 import { log } from "./logging";
 import { Context, evalAsPromise, evalFnBody, evalFnBodyAsPromise, isScript, MetaesContext, metaesEval } from "./metaes";
@@ -104,6 +104,8 @@ export function toFullyQualifiedMessage(message: MetaesMessage): FullyQualifiedM
           // Couldn't parse JSON, treat it as JavaScript code
           fqMessage.input = message.input;
         }
+      } else {
+        fqMessage.input = message.input;
       }
       // env
       if ("env" in message && typeof message.env === "object") {
@@ -155,11 +157,9 @@ function createRemoteFunction(id: string, referencesMap, context: Context) {
 export const createHTTPConnector = (url: string): Context => {
   patchNodeFetch();
 
-  const referencesMap = new Map();
-
   function send(message: MetaesMessage) {
     log("[Client: sending message]", message);
-    const stringified = JSON.stringify(messageStingify(message, false));
+    const stringified = JSON.stringify(message);
     log("[Client: sending message, after validation]", stringified);
     const config = { method: "POST", body: stringified, headers: { "content-type": "application/json" } };
     return fetch(url, config).then(async response => ({ text: await response.text(), status: response.status }));
@@ -170,7 +170,7 @@ export const createHTTPConnector = (url: string): Context => {
       input: Source,
       c?: Continuation,
       cerr?: ErrorContinuation,
-      environment?: Environment,
+      env?: Environment,
       _config?: EvaluationConfig
     ) {
       if (typeof input === "function") {
@@ -182,7 +182,7 @@ export const createHTTPConnector = (url: string): Context => {
       try {
         const { status, text } = await send({
           input,
-          env: environmentToMessage(mergeValues({ c, cerr }, environment), referencesMap)
+          env
         });
         log("[Client: Got response, raw]", text);
         const value = JSON.parse(text);
@@ -216,7 +216,7 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
       let context: ClosableContext;
 
       const send = (message: MetaesMessage) => {
-        const stringified = JSON.stringify(messageStingify(message));
+        const stringified = JSON.stringify(message);
         log("[Client: sending message]", stringified);
         socket.send(stringified);
       };
@@ -228,7 +228,7 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
 
       socket.addEventListener("message", e => {
         try {
-          const message = messageStingify(JSON.parse(e.data) as MetaesMessage);
+          const message = toFullyQualifiedMessage(JSON.parse(e.data));
 
           if (message.env) {
             const env = environmentFromMessage(message.env, referencesMap, context);
@@ -282,17 +282,7 @@ export const createWSConnector = (WebSocketConstructor: typeof WebSocket, autoRe
 export function getParsingContext(context: Context) {
   return {
     evaluate(input, c, cerr, env, config) {
-      context.evaluate(
-        input,
-        value => {
-          console.log("assert", messageStingify(value));
-          console.log("value:", value);
-          c(value);
-        },
-        cerr,
-        env,
-        config
-      );
+      context.evaluate(input, c, cerr, env, config);
     }
   };
 }
@@ -450,3 +440,105 @@ export function getSerializingContext(environment: Environment) {
 //     }
 //     return value;
 //   });
+
+export function getBindingInterpretersFor(otherContext: Context, allowedReferences?: string[]) {
+  const remoteObjects = new WeakSet();
+
+  return {
+    values: {
+      Apply({ e, fn, thisValue, args }, c, cerr, _env, config) {
+        if (remoteObjects.has(thisValue)) {
+          const values = Object.assign(
+            { fn },
+            args.reduce((result, next, i) => {
+              result["arg" + i] = next;
+              return result;
+            }, {})
+          );
+          const callee = thisValue
+            ? {
+                type: "MemberExpression",
+                object: {
+                  type: "Identifier",
+                  name: thisValue
+                },
+                property: e.callee.property
+              }
+            : {
+                type: "Identifier",
+                name: "fn"
+              };
+          otherContext.evaluate(
+            {
+              type: "CallExpression",
+              callee,
+              arguments: args.map((_, i) => ({ type: "Identifier", name: "arg" + i }))
+            },
+            c,
+            cerr,
+            {
+              values
+            },
+            config
+          );
+        } else {
+          Apply.apply(null, arguments);
+        }
+      },
+      GetProperty({ object, property }, c, cerr) {
+        if (remoteObjects.has(object)) {
+          otherContext.evaluate(
+            {
+              type: "MemberExpression",
+              object: { type: "Identifier", name },
+              property: { type: "Identifier", name: property }
+            },
+            c,
+            cerr,
+            {
+              values: { [name]: object }
+            }
+          );
+        } else {
+          GetProperty.apply(null, arguments);
+        }
+      },
+      SetProperty({ object, property, value, operator }, c, cerr) {
+        // object instanceof RemoteObject
+        //   ? otherContext.evaluate(`${remoteObjectsToNames.get(object)}.${property}${operator}${value}`, c, cerr)
+        //   : SetProperty.apply(null, arguments);
+
+        SetProperty.apply(null, arguments);
+      },
+      Identifier(e, c, cerr, env, config) {
+        Identifier(
+          e,
+          c,
+          exception => {
+            const { type } = exception;
+            if (
+              type === "ReferenceError" &&
+              (!allowedReferences || (allowedReferences && allowedReferences.includes(e.name)))
+            ) {
+              otherContext.evaluate(
+                e.name,
+                value => {
+                  if (typeof value === "object") {
+                    remoteObjects.add(value);
+                  }
+                  c(value);
+                },
+                cerr
+              );
+            } else {
+              cerr(exception);
+            }
+          },
+          env,
+          config
+        );
+      }
+    },
+    prev: ECMAScriptInterpreters
+  };
+}

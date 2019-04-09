@@ -6,8 +6,8 @@ import * as http from "http";
 import * as WebSocket from "ws";
 import { log } from "./logging";
 import { Context, evalAsPromise } from "./metaes";
-import { messageStingify, environmentFromMessage, environmentToMessage, mergeValues } from "./remote";
-import { Continuation, Environment, ErrorContinuation, MetaesMessage, Source } from "./types";
+import { environmentFromMessage, environmentToMessage, mergeValues, toFullyQualifiedMessage } from "./remote";
+import { Continuation, Environment, ErrorContinuation, Source } from "./types";
 
 const attachErrorMessage = (_, v) => (v instanceof Error ? { message: v.message } : v);
 
@@ -33,22 +33,30 @@ export const runWSServer = (context: Context, port?: number) =>
     // HTTP
     app.get("/", (req, res) =>
       withErrorToResponse(function() {
-        const input = req.query.input || req.url.substring(2);
+        const raw: any = { input: decodeURI(req.query.input || req.url.substring(2)) };
+        if (req.query.env) {
+          raw.env = JSON.parse(req.query.env);
+        }
+        if (req.query.refs) {
+          raw.refs = JSON.parse(req.query.refs);
+        }
+        const message = toFullyQualifiedMessage(raw);
         context.evaluate(
-          input,
+          message.input,
           value => res.set("Content-Type", "text/json").send(JSON.stringify(value)),
           error =>
             res
               .status(400)
               .set("Content-Type", "text/json")
               .send(JSON.stringify(error, attachErrorMessage)),
-          req.query.env ? JSON.parse(req.query.env) : {}
+          message.env
         );
       }, res)
     );
     app.post("/", (req, res) =>
       withErrorToResponse(function() {
-        const { input, env } = messageStingify(req.body, false) as MetaesMessage;
+        log("[Server: got HTTP request]", req.body);
+        const { input, env } = toFullyQualifiedMessage(req.body);
         log("[Server: got message]", { input, env });
         context.evaluate(
           input,
@@ -71,14 +79,14 @@ export const runWSServer = (context: Context, port?: number) =>
             env: environmentToMessage(clientContext, mergeValues({}, environment))
           };
           log("[Server sending message]", JSON.stringify(message));
-          connection.send(JSON.stringify(messageStingify(message)));
+          connection.send(JSON.stringify(message));
         }
       };
 
       connection.on("message", async message => {
         let environment;
         try {
-          const { input, env } = messageStingify(JSON.parse(message)) as MetaesMessage;
+          const { input, env } = toFullyQualifiedMessage(JSON.parse(message));
           environment = env ? environmentFromMessage(clientContext, env) : { values: {} };
           log("[Server: got raw message]:", message);
           log("[Server: client environmentFromJSON]", environment);

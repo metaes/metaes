@@ -1,7 +1,7 @@
 import { MetaesContext } from "./metaes";
 import { Apply } from "./nodeTypes";
 import { createCache } from "./parse";
-import { Evaluation, ASTNode, Environment } from "./types";
+import { ASTNode, Environment, Evaluation, EvaluationConfig } from "./types";
 
 type Traps = {
   set?: (target: object, key: string, args: any) => void;
@@ -31,18 +31,19 @@ type FlameGraphs = { [key: string]: FlameGraph };
 
 const { apply, call } = Function;
 
+// TODO: don't inherit from MetaesContext, do it solely with attaching interceptor
 export class ObservableContext extends MetaesContext {
   private _listeners: EvaluationListener[] = [];
   private _handlers: Map<any, Traps[]> = new Map();
   private _flameGraphs: FlameGraphs = {};
   private _globalExecutionStack: EvaluationNode[] = [];
 
-  constructor(target: object, mainTraps?: Traps) {
+  constructor(target: object, mainTraps?: Traps, config?: Partial<EvaluationConfig>) {
     super(
       undefined,
       undefined,
       { values: { self: target }, prev: { values: target } },
-      {
+      Object.assign({}, config, {
         interceptor: (evaluation: Evaluation) => {
           this._flameGraphBuilder("before", evaluation);
           try {
@@ -53,7 +54,7 @@ export class ObservableContext extends MetaesContext {
           }
           this._flameGraphBuilder("after", evaluation);
         }
-      },
+      }),
       createCache()
     );
     if (mainTraps) {

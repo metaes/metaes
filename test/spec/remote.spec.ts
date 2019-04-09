@@ -2,9 +2,6 @@ require("source-map-support").install();
 
 import { assert } from "chai";
 import { after, before, beforeEach, describe, it } from "mocha";
-import { Environment } from "../../lib/environment";
-import { Apply, GetProperty, Identifier, SetProperty } from "../../lib/interpreter/base";
-import { ECMAScriptInterpreters } from "../../lib/interpreters";
 import {
   consoleLoggingMetaesContext,
   Context,
@@ -18,10 +15,11 @@ import {
   createWSConnector,
   environmentFromMessage,
   environmentToMessage,
-  getReferencesMap,
+  getBindingInterpretersFor,
   mergeValues
 } from "../../lib/remote";
 import { runWSServer } from "../../lib/server";
+import { Environment } from "../../lib/types";
 
 const W3CWebSocket = require("websocket").w3cwebsocket;
 
@@ -387,106 +385,3 @@ describe("Remote references", () => {
     assert.equal(Object.keys(result), [], "remote objects by default don't send any keys");
   });
 });
-
-function getBindingInterpretersFor(otherContext: Context) {
-  const remoteObjects = new WeakSet();
-  const mappingContext: Context = {
-    evaluate(input, c, cerr, env, config) {
-      otherContext.evaluate(input, c, cerr, env, config);
-    }
-  };
-  return {
-    values: {
-      Apply({ e, fn, thisValue, args }, c, cerr, _env, config) {
-        if (remoteObjects.has(thisValue)) {
-          const values = Object.assign(
-            { fn },
-            args.reduce((result, next, i) => {
-              result["arg" + i] = next;
-              return result;
-            }, {})
-          );
-          const callee = thisValue
-            ? {
-                type: "MemberExpression",
-                object: {
-                  type: "Identifier",
-                  name: thisValue
-                },
-                property: e.callee.property
-              }
-            : {
-                type: "Identifier",
-                name: "fn"
-              };
-          mappingContext.evaluate(
-            {
-              type: "CallExpression",
-              callee,
-              arguments: args.map((_, i) => ({ type: "Identifier", name: "arg" + i }))
-            },
-            c,
-            cerr,
-            {
-              values
-            },
-            config
-          );
-        } else {
-          Apply.apply(null, arguments);
-        }
-      },
-      GetProperty({ object, property }, c, cerr) {
-        if (remoteObjects.has(object)) {
-          mappingContext.evaluate(
-            {
-              type: "MemberExpression",
-              object: { type: "Identifier", name },
-              property: { type: "Identifier", name: property }
-            },
-            c,
-            cerr,
-            {
-              values: { [name]: object }
-            }
-          );
-        } else {
-          GetProperty.apply(null, arguments);
-        }
-      },
-      SetProperty({ object, property, value, operator }, c, cerr) {
-        // object instanceof RemoteObject
-        //   ? mappingContext.evaluate(`${remoteObjectsToNames.get(object)}.${property}${operator}${value}`, c, cerr)
-        //   : SetProperty.apply(null, arguments);
-
-        SetProperty.apply(null, arguments);
-      },
-      Identifier(e, c, cerr, env, config) {
-        Identifier(
-          e,
-          c,
-          exception => {
-            const { type } = exception;
-            if (type === "ReferenceError") {
-              otherContext.evaluate(
-                e,
-                value => {
-                  if (typeof value === "object") {
-                    remoteObjects.add(value);
-                  }
-                  c(value);
-                },
-                cerr
-              );
-            } else {
-              cerr(exception);
-            }
-          },
-          env,
-          config
-        );
-      }
-    },
-    prev: ECMAScriptInterpreters
-  };
-}
