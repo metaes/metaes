@@ -91,8 +91,6 @@ export function environmentToMessage(
   return Object.keys(references).length ? { refs: references, values } : { values };
 }
 
-export function toOptimizedMessage() {}
-
 export function toFullyQualifiedMessage(message: MetaesMessage): FullyQualifiedMetaesMessage {
   const fqMessage: any = {};
   if (typeof message !== "object" || Array.isArray(message)) {
@@ -128,32 +126,6 @@ export function toFullyQualifiedMessage(message: MetaesMessage): FullyQualifiedM
       };
     }
   }
-}
-
-export function parseMessage(value: string): MetaesMessage {
-  const errors: Error[] = [];
-
-  if (!message.input) {
-    errors.push(new Error("Message should define an `input` field."));
-  }
-  if (typeof message.input === "function") {
-    errors.push(new Error("Message `input` field can't be a function"));
-  }
-  if (!(isScript(message.input) || typeof message.input === "object" || typeof message.input === "string")) {
-    errors.push(new Error("Message input is not valid"));
-  }
-  if (requiresEnvironment) {
-    if (!message.env) {
-      errors.push(new Error("Message should contain at least empty environment"));
-    }
-    if (message.env && typeof message.env !== "object") {
-      errors.push(new Error("Message should contain `env` value of type object."));
-    }
-  }
-  if (errors.length) {
-    throw errors;
-  }
-  return message;
 }
 
 function createRemoteFunction(id: string, referencesMap, context: Context) {
