@@ -426,15 +426,16 @@ export function getSerializingContext(environment: Environment) {
         }
 
         // TODO: should produce various levels or message accuracy
-        c({
-          input: mapRefs(result),
-          refs: [..._finalReferences]
+        const message: MetaesMessage = { input: mapRefs(result) };
+        if (_finalReferences.size) {
+          message.refs = [..._finalReferences]
             .map(value => [_valueToId.get(value), value])
             .reduce((prev, [k, v]) => {
               prev[k] = { type: typeof v };
               return prev;
-            }, {})
-        });
+            }, {});
+        }
+        c(message);
       } catch (e) {
         cerr(e.value || e);
       }
