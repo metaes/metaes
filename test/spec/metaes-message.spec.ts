@@ -1,7 +1,7 @@
 import { assert, expect } from "chai";
-import { describe, it, before } from "mocha";
-import { toFullyQualifiedMessage, getSerializingContext } from "../../lib/remote";
-import { evalAsPromise, evalFnBodyAsPromise } from "../../lib/metaes";
+import { before, describe, it } from "mocha";
+import { evalFnBodyAsPromise } from "../../lib/metaes";
+import { getSerializingContext, toFullyQualifiedMessage, unquote } from "../../lib/remote";
 
 describe.only("Object responses to message", () => {
   let context, self;
@@ -20,7 +20,8 @@ describe.only("Object responses to message", () => {
       setOnlineStatus(_flag) {},
       logout() {}
     };
-    self = { me };
+    const posts = Array.from({ length: 5 }).map((a, i) => ({ title: "Post" + i, comments: [{}, {}] }));
+    self = { me, posts };
     context = getSerializingContext({ values: self });
   });
 
@@ -28,12 +29,17 @@ describe.only("Object responses to message", () => {
     const result = toFullyQualifiedMessage(
       await evalFnBodyAsPromise({
         context,
-        source: me => {
-          [{ me }, me.location, { firstName: me.firstName, location: me.location }];
+        source: (me, posts) => {
+          [
+            { me, posts: posts.map(({ title, comments }) => ({ title, comments })) },
+            me.location,
+            { firstName: me.firstName, location: me.location }
+          ];
         }
       })
     );
     console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(unquote(result), null, 2));
     expect(Object.keys(result.env.refs!)).to.lengthOf(2);
   });
 });

@@ -444,15 +444,31 @@ export function getSerializingContext(environment: Environment) {
   return context;
 }
 
-// JSON.stringify(result, replacer);
-
-// const unquote = (json: any) =>
-//   JSON.parse(JSON.stringify(json), function(_, value) {
-//     if (_idsToValues.has(value)) {
-//       return "buka";
-//     }
-//     return value;
-//   });
+export function unquote(message: FullyQualifiedMetaesMessage) {
+  return (function recursiveMap(obj) {
+    if (Array.isArray(obj)) {
+      return obj.map(item => recursiveMap(item));
+    } else if (typeof obj === "object") {
+      const result = {};
+      for (let k in obj) {
+        result[k] = recursiveMap(obj[k]);
+      }
+      return result;
+    } else if (typeof obj === "string" && message.env.refs && obj[0] === "@" && obj[1] !== "@") {
+      const id = obj.slice(1);
+      switch (message.env.refs[id].type) {
+        case "array":
+          return [];
+        case "function":
+          return { name: "unnamed" };
+        default:
+          return {};
+      }
+    } else {
+      return obj;
+    }
+  })(message.input);
+}
 
 export function getBindingInterpretersFor(otherContext: Context, allowedReferences?: string[]) {
   const remoteObjects = new WeakSet();
