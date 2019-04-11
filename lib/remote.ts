@@ -6,14 +6,14 @@ import { Context, evalAsPromise, evalFnBody, evalFnBodyAsPromise, isScript, Meta
 import * as NodeTypes from "./nodeTypes";
 import {
   Continuation,
-  ErrorContinuation,
-  EvaluationConfig,
-  Source,
   Environment,
   EnvironmentBase,
-  Reference,
+  ErrorContinuation,
+  EvaluationConfig,
+  FullyQualifiedMetaesMessage,
   MetaesMessage,
-  FullyQualifiedMetaesMessage
+  Reference,
+  Source
 } from "./types";
 
 export function patchNodeFetch() {
@@ -394,33 +394,46 @@ export function getSerializingContext(environment: Environment) {
               )
             : await evalAsPromise(innerContext, script, env || { values: {}, prev: environment }, { interpreters });
 
-        function replacer(_, value) {
-          if (_encounteredReferences.has(value) && belongsToRootHeap(value)) {
-            _finalReferences.add(value);
+        function mapRefs(obj) {
+          function replacer(value) {
+            if (_encounteredReferences.has(value) && belongsToRootHeap(value)) {
+              _finalReferences.add(value);
 
-            let id = _valueToId.get(value);
-            if (!id) {
-              id = uuidv4();
-              _valueToId.set(value, id);
-              _idsToValues.set(id, value);
+              let id = _valueToId.get(value);
+              if (!id) {
+                id = uuidv4();
+                _valueToId.set(value, id);
+                _idsToValues.set(id, value);
+              }
+              return "@" + id;
+            } else {
+              return value;
             }
-            return "@" + id;
-          } else {
-            return value;
           }
+          return (function recursiveMap(obj) {
+            if (Array.isArray(obj)) {
+              return obj.map(item => recursiveMap(replacer(item)));
+            } else if (typeof obj === "object") {
+              const result = {};
+              for (let k in obj) {
+                result[k] = recursiveMap(replacer(obj[k]));
+              }
+              return result;
+            } else {
+              return obj;
+            }
+          })(obj);
         }
 
         // TODO: should produce various levels or message accuracy
         c({
-          input: JSON.stringify(result, replacer),
-          env: {
-            refs: [..._finalReferences]
-              .map(value => [_valueToId.get(value), value])
-              .reduce((prev, [k, v]) => {
-                prev[k] = { type: typeof v };
-                return prev;
-              }, {})
-          }
+          input: mapRefs(result),
+          refs: [..._finalReferences]
+            .map(value => [_valueToId.get(value), value])
+            .reduce((prev, [k, v]) => {
+              prev[k] = { type: typeof v };
+              return prev;
+            }, {})
         });
       } catch (e) {
         cerr(e.value || e);

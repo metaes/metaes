@@ -7,7 +7,7 @@ import { createHTTPConnector, environmentToMessage, getParsingContext, getSerial
 import { runWSServer } from "../../lib/server";
 import { Environment } from "../../lib/types";
 
-describe.skip("References acquisition", () => {
+describe("References acquisition", () => {
   let context: Context, unquote, globalEnv, quotedRequest, _finalReferences;
 
   before(() => {
@@ -53,8 +53,7 @@ describe.skip("References acquisition", () => {
         }))
       }
     };
-    let { context: _context } = getSerializingContext(globalEnv);
-    context = _context;
+    context = getSerializingContext(globalEnv);
 
     quotedRequest = async function(input, env?: Environment) {
       const { response, _finalReferences: references, unquote: _unquote } = await evalAsPromise(context, input, env);
