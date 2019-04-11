@@ -64,7 +64,7 @@ describe.skip("References acquisition", () => {
     };
   });
 
-  it.only("should support e2e", async () => {
+  it("should support e2e", async () => {
     const server = await runWSServer(getSerializingContext(globalEnv));
     const rawContext = createHTTPConnector("http://localhost:" + server.address().port);
     const client = getParsingContext(rawContext);

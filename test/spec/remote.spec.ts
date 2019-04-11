@@ -16,11 +16,13 @@ import {
   environmentFromMessage,
   environmentToMessage,
   getBindingInterpretersFor,
-  mergeValues
+  mergeValues,
+  patchNodeFetch
 } from "../../lib/remote";
 import { runWSServer } from "../../lib/server";
 import { Environment } from "../../lib/types";
 
+patchNodeFetch();
 const W3CWebSocket = require("websocket").w3cwebsocket;
 
 describe("Environment operations", () => {
@@ -67,57 +69,55 @@ describe("Environment operations", () => {
   });
 });
 
+function getTestContext() {
+  return new MetaesContext(
+    value => {
+      console.log("[value]");
+      console.log(value);
+    },
+    e => console.log(e),
+    {
+      values: {
+        fs: require("fs"),
+        child_process: require("child_process"),
+        console
+      }
+    }
+  );
+}
+
 describe("Remote", () => {
   let server;
   let testContext;
 
   before(async () => {
-    testContext = new MetaesContext(
-      value => {
-        console.log("[value]");
-        console.log(value);
-      },
-      e => console.log(e),
-      {
-        values: {
-          fs: require("fs"),
-          child_process: require("child_process"),
-          console
-        }
-      }
-    );
+    testContext = getTestContext();
     server = await runWSServer(testContext);
   });
 
   after(() => server.close());
 
-  createTestsFor(
-    "Remote HTTP messaging",
-    () => createHTTPConnector("http://localhost:" + server.address().port),
-    testContext
-  );
-  createTestsFor(
-    "Remote WebSocket messaging",
-    () => createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port),
-    testContext
+  createTestsFor("Remote HTTP messaging", () => createHTTPConnector("http://localhost:" + server.address().port));
+  createTestsFor("Remote WebSocket messaging", () =>
+    createWSConnector(W3CWebSocket)(`ws://localhost:` + server.address().port)
   );
 });
 
-function createTestsFor(describeName: string, getContext: () => Promise<Context> | Context, testContext) {
+function createTestsFor(describeName: string, getContext: () => Promise<Context> | Context) {
   describe(describeName, () => {
     describe("Bound contexts", () => {
-      let context;
-      before(
-        async () =>
-          (context = new MetaesContext(
-            undefined,
-            undefined,
-            { values: {} },
-            {
-              interpreters: getBindingInterpretersFor(await getContext())
-            }
-          ))
-      );
+      let context, testContext;
+      before(async function() {
+        testContext = getTestContext();
+        context = new MetaesContext(
+          undefined,
+          undefined,
+          { values: {} },
+          {
+            interpreters: getBindingInterpretersFor(await getContext())
+          }
+        );
+      });
       after(() => context.close && context.close());
     });
     describe("Basic contexts", () => {
@@ -202,7 +202,7 @@ function createTestsFor(describeName: string, getContext: () => Promise<Context>
     let server, url;
 
     before(async () => {
-      server = await runWSServer(testContext);
+      server = await runWSServer(getTestContext());
       url = `http://localhost:` + server.address().port;
     });
 

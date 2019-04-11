@@ -2,7 +2,7 @@ import { assert } from "chai";
 import { describe, it } from "mocha";
 import { toFullyQualifiedMessage } from "../../lib/remote";
 
-describe.only("Metaes messages", () => {
+describe("Metaes messages", () => {
   function fqMessageEqual(input, output) {
     assert.deepEqual(toFullyQualifiedMessage(input), output);
   }
