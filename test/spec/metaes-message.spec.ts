@@ -20,7 +20,7 @@ describe.only("Object responses to message", () => {
       setOnlineStatus(_flag) {},
       logout() {}
     };
-    const posts = Array.from({ length: 5 }).map((a, i) => ({ title: "Post" + i, comments: [{}, {}] }));
+    const posts = Array.from({ length: 2 }).map((a, i) => ({ title: "Post" + i, comments: [{}, {}] }));
     self = { me, posts };
     context = getSerializingContext({ values: self });
   });
@@ -38,9 +38,27 @@ describe.only("Object responses to message", () => {
         }
       })
     );
-    console.log(JSON.stringify(result, null, 2));
-    console.log(JSON.stringify(unquote(result), null, 2));
-    expect(Object.keys(result.env.refs!)).to.lengthOf(2);
+    assert.deepEqual(unquote(result), [
+      {
+        me: {},
+        posts: [
+          {
+            title: "Post0",
+            comments: {}
+          },
+          {
+            title: "Post1",
+            comments: {}
+          }
+        ]
+      },
+      {},
+      {
+        firstName: "User1",
+        location: {}
+      }
+    ]);
+    expect(Object.keys(result.env.refs!)).to.lengthOf(4);
   });
 });
 
