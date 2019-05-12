@@ -50,10 +50,10 @@ export function noop() {}
 const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 
 export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config = {}) => {
-  script = toScript(script);
-  config = Object.assign({ script }, BaseConfig, config);
-
   try {
+    script = toScript(script);
+    config = Object.assign({ script }, BaseConfig, config);
+
     evaluate(
       script.ast,
       val => c && c(val),
@@ -86,22 +86,30 @@ export class MetaesContext implements Context {
     environment?: Environment | object,
     config?: Partial<EvaluationConfig>
   ) {
-    input = toScript(input, this.cache);
+    try {
+      input = toScript(input, this.cache);
 
-    let env = this.environment;
+      let env = this.environment;
 
-    if (environment) {
-      env = environment.prev ? environment : Object.assign({ prev: this.environment }, environment);
-      // env = { values: "values" in environment ? environment.values : environment, prev: this.environment };
-    }
-    if (!config) {
-      config = Object.assign({}, this.defaultConfig, { script: input });
-    }
-    if (!config.interceptor) {
-      config.interceptor = this.defaultConfig.interceptor || noop;
-    }
+      if (environment) {
+        env = environment.prev ? environment : Object.assign({ prev: this.environment }, environment);
+        // env = { values: "values" in environment ? environment.values : environment, prev: this.environment };
+      }
+      if (!config) {
+        config = Object.assign({}, this.defaultConfig, { script: input });
+      }
+      if (!config.interceptor) {
+        config.interceptor = this.defaultConfig.interceptor || noop;
+      }
 
-    metaesEval(input, c || this.c, cerr || this.cerr, env, config);
+      metaesEval(input, c || this.c, cerr || this.cerr, env, config);
+    } catch (e) {
+      if (cerr) {
+        cerr(e);
+      } else {
+        throw e;
+      }
+    }
   }
 
   evalAsPromise(input: Script | Source, environment?: Environment) {

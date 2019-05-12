@@ -1,4 +1,4 @@
-import { SetValue, GetValue } from "./environment";
+import { GetValue, SetValue } from "./environment";
 import Base from "./interpreter/base";
 import Expressions from "./interpreter/expressions";
 import Statements from "./interpreter/statements";

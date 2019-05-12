@@ -349,7 +349,7 @@ export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, co
               c(left | right);
               break;
             default:
-              cerr(NotImplementedException(e.type + " not implemented " + e.operator));
+              cerr(NotImplementedException(e.type + ` operator "${e.operator}" is not implemented yet.`));
           }
         },
         cerr,
