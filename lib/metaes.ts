@@ -52,7 +52,7 @@ const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config = {}) => {
   try {
     script = toScript(script);
-    config = Object.assign({ script }, BaseConfig, config);
+    config = { script, ...BaseConfig, ...config };
 
     evaluate(
       script.ast,
@@ -92,11 +92,11 @@ export class MetaesContext implements Context {
       let env = this.environment;
 
       if (environment) {
-        env = environment.prev ? environment : Object.assign({ prev: this.environment }, environment);
+        env = environment.prev ? environment : { prev: this.environment, ...environment };
         // env = { values: "values" in environment ? environment.values : environment, prev: this.environment };
       }
       if (!config) {
-        config = Object.assign({}, this.defaultConfig, { script: input });
+        config = { ...this.defaultConfig, script: input };
       }
       if (!config.interceptor) {
         config.interceptor = this.defaultConfig.interceptor || noop;

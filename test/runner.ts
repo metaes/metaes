@@ -15,9 +15,7 @@ const values = {
 };
 
 const evaluate = (input: string) =>
-  new Promise((resolve, reject) =>
-    metaesEval(input, resolve, reject, { values: Object.assign({}, values), prev: { values: global } })
-  );
+  new Promise((resolve, reject) => metaesEval(input, resolve, reject, { values, prev: { values: global } }));
 
 (async () => {
   try {

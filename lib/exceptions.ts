@@ -10,4 +10,3 @@ export const NotImplementedException = (message: string, location?: ASTNode): Me
 });
 
 export const LocatedError = (value: any, location: ASTNode): MetaesException => ({ value, location });
-export const LocatedException = (message: string, location: ASTNode): MetaesException => ({ message, location });

@@ -28,19 +28,14 @@ type ParserOptions = {
 
 function esprimaParse(source: string, options: ParserOptions = {}) {
   try {
-    return esprima.parse(
-      source,
-      Object.assign(
-        {
-          range: true,
-          comment: true,
-          attachComment: true,
-          loc: true,
-          source: true
-        },
-        options
-      )
-    );
+    return esprima.parse(source, {
+      range: true,
+      comment: true,
+      attachComment: true,
+      loc: true,
+      source: true,
+      ...options
+    });
   } catch (e) {
     throw new ParseError(e);
   }

@@ -292,7 +292,7 @@ describe("Callcc", () => {
     }
 
     const context = new MetaesContext(undefined, console.error, {
-      values: Object.assign({ console, pack, setTimeout, assert }, liftedAll({ socket }))
+      values: { console, pack, setTimeout, assert, ...liftedAll({ socket }) }
     });
     await evalFnBodyAsPromise({
       context,

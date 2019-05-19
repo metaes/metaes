@@ -482,13 +482,13 @@ export function getBindingInterpretersFor(otherContext: Context, allowedReferenc
     values: {
       Apply({ e, fn, thisValue, args }, c, cerr, _env, config) {
         if (remoteObjects.has(thisValue)) {
-          const values = Object.assign(
-            { fn },
-            args.reduce((result, next, i) => {
+          const values = {
+            fn,
+            ...args.reduce((result, next, i) => {
               result["arg" + i] = next;
               return result;
             }, {})
-          );
+          };
           const callee = thisValue
             ? {
                 type: "MemberExpression",

@@ -46,7 +46,7 @@ export const evaluateMetaFunction = (
               c(),
         exception => (exception.type === "ReturnStatement" ? c(exception.value) : cerr(exception)),
         env,
-        Object.assign({}, executionTimeConfig, config)
+        { ...executionTimeConfig, ...config }
       ),
     cerr
   );

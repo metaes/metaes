@@ -3,7 +3,7 @@ import { before, describe, it } from "mocha";
 import { evalFnBodyAsPromise } from "../../lib/metaes";
 import { getSerializingContext, toFullyQualifiedMessage, unquote } from "../../lib/remote";
 
-describe.only("Object responses to message", () => {
+describe("Object responses to message", () => {
   let context, self;
 
   before(() => {
@@ -62,7 +62,7 @@ describe.only("Object responses to message", () => {
   });
 });
 
-describe.only("Fully qualified messages", () => {
+describe("Fully qualified messages", () => {
   function fqMessageEqual(input, output) {
     assert.deepEqual(toFullyQualifiedMessage(input), output);
   }
