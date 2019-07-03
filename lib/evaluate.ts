@@ -71,7 +71,8 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
     function execute() {
       done = false;
       while (tasks.length) {
-        (<any>loop)(...tasks.shift());
+        // @ts-ignore
+        loop(...tasks.shift());
       }
       done = true;
     }

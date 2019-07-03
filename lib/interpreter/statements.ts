@@ -1,5 +1,4 @@
 import { evaluate, evaluateArray, visitArray } from "../evaluate";
-import { GetValue } from "../environment";
 import { LocatedError, NotImplementedException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
@@ -271,14 +270,34 @@ export function ForInStatement(e: NodeTypes.ForInStatement, c, cerr, env, config
 }
 
 export function ForStatement(e: NodeTypes.ForStatement, c, cerr, env, config) {
+  const tasks: Function[] = [];
+  let running = false;
+
+  function schedule(fn) {
+    tasks.push(fn);
+    if (!running) {
+      run();
+    }
+  }
+
+  function run() {
+    running = true;
+    while (tasks.length) {
+      tasks.pop()!();
+    }
+    running = false;
+  }
+
   const update = () => (e.update ? evaluate(e.update, test, cerr, env, config) : test());
   const test = () => (e.test ? evaluate(e.test, test => (test ? body() : c()), cerr, env, config) : body());
-  const body = () => evaluate(e.body, update, cerr, env, config);
+  const body = () => schedule(() => evaluate(e.body, update, cerr, { values: {}, prev: env }, config));
   if (e.init) {
     evaluate(e.init, test, cerr, env, config);
   } else {
     test();
   }
+
+  run();
 }
 
 export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config) {
