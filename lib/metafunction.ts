@@ -20,7 +20,7 @@ export const evaluateMetaFunction = (
   let i = 0;
   visitArray(
     e.params,
-    (param, c, cerr) => {
+    function nextMetaFunctionParam(param, c, cerr) {
       switch (param.type) {
         case "Identifier":
           c((env.values[param.name] = args[i++]));
