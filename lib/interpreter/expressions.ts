@@ -1,5 +1,5 @@
 import { callcc } from "../callcc";
-import { getEnvironmentForValue, GetValue } from "../environment";
+import { getEnvironmentForValue } from "../environment";
 import { evaluate, evaluateArray } from "../evaluate";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
