@@ -15,18 +15,19 @@ const values = {
 };
 
 const evaluate = (input: string) =>
-  new Promise((resolve, reject) => metaesEval(input, resolve, reject, { values, prev: { values: global } }));
+  new Promise((resolve, reject) =>
+    metaesEval(input, resolve, reject, { values: { ...values }, prev: { values: global } })
+  );
 
 (async () => {
   try {
     describe("From source files tests", async () => {
       // generate tests on runtime
       before(async () => {
-        const files = (await pify(glob)(__dirname + "/*.spec.ts")).map(async file => ({
+        const files = (await pify(glob)(__dirname + "/runner/*.spec.ts")).map(async file => ({
           name: file,
           contents: (await fs.readFile(file)).toString()
         }));
-
         return (await Promise.all(files)).forEach(({ contents, name }) => {
           const testNames = contents.match(/\/\/ it: [^\n]+\n/g);
           const tests = contents.split(/\/\/ it: .+\n/).filter(line => line.length);
