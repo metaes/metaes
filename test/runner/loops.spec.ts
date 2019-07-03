@@ -24,3 +24,13 @@
   }
   result;
 }
+
+// it: should support standard for loop
+{
+  const result = [];
+  for (let i = 0; i < 3; i++) {
+    // @ts-ignore
+    result.push(i);
+  }
+  result.toString() === [0, 1, 2].toString();
+}
