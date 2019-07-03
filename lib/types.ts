@@ -100,6 +100,7 @@ export interface EnvironmentBase<T = any> {
 
 export interface Environment<T = any> extends EnvironmentBase<T> {
   prev?: Environment<T>;
+  // If true, then user code won't save values in this environment.
   internal?: boolean;
 }
 
