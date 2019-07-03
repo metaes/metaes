@@ -87,7 +87,7 @@ export function CallExpression(
               try {
                 const cnt = (thisValue?) =>
                   evaluate({ type: "Apply", e, fn: callee, thisValue, args }, c, cerr, env, config);
-                GetValue({ name: "this" }, cnt, () => cnt(undefined), env);
+                evaluate({ type: "GetValue", name: "this" }, cnt, () => cnt(undefined), env, config);
               } catch (error) {
                 cerr(toException(error, e.callee));
               }
@@ -394,8 +394,8 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
           );
           break;
         case "Identifier":
-          GetValue(
-            { name: calleeNode.name },
+          evaluate(
+            { type: "GetValue", name: calleeNode.name },
             callee => {
               if (typeof callee !== "function") {
                 cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
@@ -408,7 +408,8 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
               }
             },
             cerr,
-            env
+            env,
+            config
           );
           break;
         default:
@@ -449,12 +450,12 @@ export function LogicalExpression(e: NodeTypes.LogicalExpression, c, cerr, env, 
   );
 }
 
-export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: Environment) {
+export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: Environment, config) {
   switch (e.argument.type) {
     case "Identifier":
       const propName = e.argument.name;
-      GetValue(
-        { name: propName },
+      evaluate(
+        { type: "GetValue", name: propName },
         _ => {
           // discard found value
           // if value is found, there must be an env for that value, don't check for negative case
@@ -492,7 +493,8 @@ export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: En
           }
         },
         cerr,
-        env
+        env,
+        config
       );
       break;
     default:
@@ -556,8 +558,8 @@ export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Envi
   );
 }
 
-export function ThisExpression(_e: NodeTypes.ThisExpression, c, cerr, env: Environment) {
-  GetValue({ name: "this" }, c, cerr, env);
+export function ThisExpression(_e: NodeTypes.ThisExpression, c, cerr, env: Environment, config) {
+  evaluate({ type: "GetValue", name: "this" }, c, cerr, env, config);
 }
 
 export function ConditionalExpression(e: NodeTypes.ConditionalExpression, c, cerr, env, config) {

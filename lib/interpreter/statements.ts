@@ -133,14 +133,15 @@ export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, 
           config
         );
       }
-      GetValue(
-        { name: e.left.name },
+      evaluate(
+        { type: "GetValue", name: e.left.name },
         value =>
           value
             ? evaluate({ type: "SetValue", name: e.left.name, isDeclaration: true, value }, c, cerr, env, config)
             : assignRight(),
         assignRight,
-        env
+        env,
+        config
       );
       break;
     default:
@@ -203,8 +204,8 @@ export function ThrowStatement(e: NodeTypes.ThrowStatement, _c, cerr, env, confi
 }
 
 export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
-  GetValue(
-    { name: EXCEPTION_NAME },
+  evaluate(
+    { type: "GetValue", name: EXCEPTION_NAME },
     (error: MetaesException | Error) =>
       evaluate(
         e.body,
@@ -221,7 +222,8 @@ export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
         config
       ),
     cerr,
-    env
+    env,
+    config
   );
 }
 
@@ -268,8 +270,15 @@ export function ForInStatement(e: NodeTypes.ForInStatement, c, cerr, env, config
   );
 }
 
-export function ForStatement(e: NodeTypes.ForStatement, _c, cerr) {
-  cerr(NotImplementedException(`${e.type} is not implemented yet`));
+export function ForStatement(e: NodeTypes.ForStatement, c, cerr, env, config) {
+  const update = () => (e.update ? evaluate(e.update, test, cerr, env, config) : test());
+  const test = () => (e.test ? evaluate(e.test, test => (test ? body() : c()), cerr, env, config) : body());
+  const body = () => evaluate(e.body, update, cerr, env, config);
+  if (e.init) {
+    evaluate(e.init, test, cerr, env, config);
+  } else {
+    test();
+  }
 }
 
 export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config) {
