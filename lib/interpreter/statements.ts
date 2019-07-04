@@ -281,6 +281,9 @@ export function ForStatement(e: NodeTypes.ForStatement, c, cerr, env, config) {
   }
 
   function run() {
+    if (running) {
+      return;
+    }
     running = true;
     while (tasks.length) {
       tasks.pop()!();

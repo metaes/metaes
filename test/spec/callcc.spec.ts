@@ -282,7 +282,7 @@ describe("Callcc", () => {
 
     function pack(amount) {
       let group: any = [];
-      return lifted((val, c) => {
+      return lifted(([val], c) => {
         group.push(val);
         if (group.length === amount) {
           c([group]);
