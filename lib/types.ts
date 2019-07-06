@@ -2,7 +2,7 @@ import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
   // TODO: ThrowStatement not needed?
-  type?: "Error" | "ReturnStatement" | "NotImplemented" | "ThrowStatement" | "ReferenceError";
+  type?: "Error" | "ReturnStatement" | "NotImplemented" | "ThrowStatement" | "ReferenceError" | string;
   message?: string;
   value?: Error | any;
   location?: ASTNode;
