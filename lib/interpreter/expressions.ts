@@ -27,7 +27,6 @@ export function CallExpression(
               if (typeof callee === "function") {
                 try {
                   if (callee === callcc) {
-                    // Pass continuation to continuation receiver.
                     try {
                       const [receiver, argument] = args;
                       receiver(argument, c, cerr, env, config);
@@ -151,6 +150,7 @@ export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, co
             }
             break;
           case "Literal":
+            // TODO: use GetProperty
             evaluate(e.property, c, cerr, { values: object }, config);
             break;
           default:
