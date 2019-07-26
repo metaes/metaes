@@ -375,37 +375,37 @@ export function EmptyStatement(_e: NodeTypes.EmptyStatement, c) {
 
 // TODO: clean up, fix error
 export function ClassDeclaration(e: NodeTypes.ClassDeclaration, c, cerr, env, config) {
-  evaluate(
-    e.superClass,
-    superClass =>
-      evaluate(
-        e.body,
-        body =>
-          visitArray(
-            body,
-            ({ key, value }, c, cerr) => {
-              if (key === "constructor") {
-                value.prototype = Object.create(superClass.prototype);
-                if (e.id) {
-                  evaluate({ type: "SetValue", name: e.id.name, value, isDeclaration: true }, c, cerr, env, config);
-                } else {
-                  cerr(NotImplementedException("Not implemented case"));
-                }
-              } else {
-                cerr(NotImplementedException("Methods handling not implemented yet."));
-              }
-            },
-            c,
-            cerr
-          ),
-        cerr,
-        env,
-        config
-      ),
-    cerr,
-    env,
-    config
-  );
+  function onSuperClass(superClass) {
+    let klass = function() {};
+    evaluate(
+      e.body,
+      body =>
+        visitArray(
+          body,
+          ({ key, value }, c, cerr) => {
+            if (key === "constructor") {
+              value.prototype = Object.create(superClass.prototype);
+              c((klass = value));
+            } else {
+              cerr(NotImplementedException("Methods handling not implemented yet."));
+            }
+          },
+          () =>
+            e.id
+              ? evaluate({ type: "SetValue", name: e.id.name, value: klass, isDeclaration: true }, c, cerr, env, config)
+              : cerr(NotImplementedException("Not implemented case")),
+          cerr
+        ),
+      cerr,
+      env,
+      config
+    );
+  }
+  if (e.superClass) {
+    evaluate(e.superClass, onSuperClass, cerr, env, config);
+  } else {
+    onSuperClass(null);
+  }
 }
 
 export function ClassBody(e: NodeTypes.ClassBody, c, cerr, env, config) {

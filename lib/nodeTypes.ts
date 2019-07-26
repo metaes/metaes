@@ -258,7 +258,7 @@ export interface MethodDefinition extends NodeBase {
 export interface ClassDeclaration extends NodeBase {
   type: "ClassDeclaration";
   id?: Identifier;
-  superClass: Identifier;
+  superClass: Identifier | null;
   body: ClassBody;
 }
 
