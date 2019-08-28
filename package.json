@@ -17,6 +17,7 @@
   "scripts": {
     "test": "tsc; mocha --recursive test/spec test/runner",
     "test:local": "mocha --recursive test/spec test/runner",
+    "test:interpreter-only": "mocha test/runner.js test/spec/callcc.spec.js ",
     "dist:compile": "tsc -p tsconfig-build.json --declaration",
     "dist:copy": "cp package.json README.md tsconfig.json .npmignore build/lib",
     "dist:dry": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish --dry-run",
@@ -30,25 +31,25 @@
   "license": "MIT",
   "version": "2.5.0",
   "devDependencies": {
-    "@types/chai": "^4.1.2",
-    "@types/node": "^8.0.10",
-    "chai": "^4.1.0",
+    "@types/chai": "^4.2.0",
+    "@types/node": "^8.10.52",
+    "chai": "^4.2.0",
     "fs-extra": "^3.0.1",
-    "glob": "^7.1.2",
-    "lodash": "^4.17.11",
+    "glob": "^7.1.4",
+    "lodash": "^4.17.15",
     "mocha": "^5.2.0",
     "pify": "^3.0.0",
-    "source-map-support": "^0.5.11",
-    "typescript": "^2.9.2"
+    "source-map-support": "^0.5.13",
+    "typescript": "^3.5.3"
   },
   "dependencies": {
-    "body-parser": "^1.18.3",
+    "body-parser": "^1.19.0",
     "cors": "^2.8.5",
-    "esprima": "^4.0.0",
-    "express": "^4.15.3",
-    "helmet": "^3.6.1",
-    "node-fetch": "^2.2.0",
-    "websocket": "^1.0.25",
-    "ws": "^4.0.0"
+    "esprima": "^4.0.1",
+    "express": "^4.17.1",
+    "helmet": "^3.20.0",
+    "node-fetch": "^2.6.0",
+    "websocket": "^1.0.29",
+    "ws": "^4.1.0"
   }
 }

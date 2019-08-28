@@ -373,7 +373,6 @@ export function EmptyStatement(_e: NodeTypes.EmptyStatement, c) {
   c();
 }
 
-// TODO: clean up, fix error
 export function ClassDeclaration(e: NodeTypes.ClassDeclaration, c, cerr, env, config) {
   function onSuperClass(superClass) {
     let klass = function() {};
