@@ -46,7 +46,8 @@ export const evaluateMetaFunction = (
               c(),
         exception => (exception.type === "ReturnStatement" ? c(exception.value) : cerr(exception)),
         env,
-        { ...executionTimeConfig, ...config }
+        // Execution time config takes precedence over function creation time config
+        { ...config, ...executionTimeConfig }
       ),
     cerr
   );
