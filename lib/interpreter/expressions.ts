@@ -28,8 +28,8 @@ export function CallExpression(
                 try {
                   if (callee === callcc) {
                     try {
-                      const [receiver, argument] = args;
-                      receiver(argument, c, cerr, env, config);
+                      const [receiver, _arguments] = args;
+                      receiver(_arguments, c, cerr, env, config);
                     } catch (e) {
                       cerr({ value: e, message: "Error in continuation receiver." });
                     }
