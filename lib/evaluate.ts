@@ -62,7 +62,7 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
     fn(items[0], value => c([value]), cerr);
   } else {
     // Array of loop function arguments to be applied next time
-    // TODO: convert to nextOperation or similar, there is always only one? What about callCC
+    // TODO: convert to nextOperation or similar, there is always only one? What about callcc?
     const tasks: any[] = [];
     // Indicates if tasks execution is done. Initially it is done.
     let done = true;
