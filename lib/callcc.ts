@@ -28,7 +28,10 @@ let script;
 
 export function lifted(fn: Function) {
   if (!script) {
-    script = createScript(`(...args) => callcc(fn, args)`);
+    script = createScript(
+      // @ts-ignore
+      (...args) => callcc(fn, args)
+    );
   }
   let result, error;
   metaesEval(script, r => (result = r), e => (error = e), {
