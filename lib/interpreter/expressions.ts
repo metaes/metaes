@@ -576,7 +576,20 @@ export function TemplateLiteral(e: NodeTypes.TemplateLiteral, c, cerr) {
 }
 
 export function TaggedTemplateExpression(e: NodeTypes.TaggedTemplateExpression, c, cerr, env, config) {
-  evaluate(e.tag, function(tag) {}, cerr, env, config);
+  evaluate(
+    e.tag,
+    tag =>
+      evaluate(
+        e.quasi,
+        quasi => evaluate({ type: "Apply", e, fn: tag, thisValue: undefined, args: [quasi] }, c, cerr, env, config),
+        cerr,
+        env,
+        config
+      ),
+    cerr,
+    env,
+    config
+  );
 }
 
 export default {
@@ -596,5 +609,6 @@ export default {
   UnaryExpression,
   ThisExpression,
   ConditionalExpression,
-  TemplateLiteral
+  TemplateLiteral,
+  TaggedTemplateExpression
 };
