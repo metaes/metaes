@@ -285,6 +285,12 @@ export interface TemplateLiteral extends NodeBase {
   expressions: Expression[];
 }
 
+export interface TaggedTemplateExpression extends NodeBase {
+  type: "TaggedTemplateExpression";
+  tag: Expression;
+  quasi: TemplateLiteral;
+}
+
 interface TemplateElement extends NodeBase {
   type: "TemplateElement";
   value: {
@@ -336,7 +342,8 @@ type Expression =
   | ConditionalExpression
   | MethodDefinition
   | RestElement
-  | TemplateLiteral;
+  | TemplateLiteral
+  | TaggedTemplateExpression;
 
 type Comment = Line;
 

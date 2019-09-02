@@ -575,6 +575,10 @@ export function TemplateLiteral(e: NodeTypes.TemplateLiteral, c, cerr) {
   }
 }
 
+export function TaggedTemplateExpression(e: NodeTypes.TaggedTemplateExpression, c, cerr, env, config) {
+  evaluate(e.tag, function(tag) {}, cerr, env, config);
+}
+
 export default {
   CallExpression,
   MemberExpression,
