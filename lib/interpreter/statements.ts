@@ -68,49 +68,46 @@ export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) 
       } else if (property.computed) {
         cerr(NotImplementedException(`Computed property in ObjectPattern is not supported yet.`, property));
       } else {
-        switch (property.key.type) {
-          case "Identifier":
-            const keyName = property.key.name;
-            if (!env.values) {
-              cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
-            } else {
-              function assignValue(value?) {
-                switch (property.value.type) {
-                  case "Identifier":
-                    evaluate(
-                      { type: "SetValue", name: property.value.name, value, isDeclaration: true },
-                      c,
-                      cerr,
-                      env,
-                      config
-                    );
-                    break;
-                  case "ObjectPattern":
-                    if (value) {
-                      evaluate(property.value, c, cerr, { values: value, prev: env, internal: true }, config);
-                    } else {
-                      cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
-                    }
-                    break;
-                  default:
-                    cerr(
-                      NotImplementedException(`'${property.value.type}' in ObjectPattern value is not supported yet.`)
-                    );
-                    break;
-                }
+        if (property.key.type === "Identifier") {
+          const keyName = property.key.name;
+          if (!env.values) {
+            cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
+          } else {
+            function assignValue(value?) {
+              switch (property.value.type) {
+                case "Identifier":
+                  evaluate(
+                    { type: "SetValue", name: property.value.name, value, isDeclaration: true },
+                    c,
+                    cerr,
+                    env,
+                    config
+                  );
+                  break;
+                case "ObjectPattern":
+                  if (value) {
+                    evaluate(property.value, c, cerr, { values: value, prev: env, internal: true }, config);
+                  } else {
+                    cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
+                  }
+                  break;
+                default:
+                  cerr(
+                    NotImplementedException(`'${property.value.type}' in ObjectPattern value is not supported yet.`)
+                  );
+                  break;
               }
-              evaluate(
-                { type: "GetValue", name: keyName },
-                assignValue,
-                e => (e.type === "ReferenceError" ? assignValue() : cerr(e)),
-                env,
-                config
-              );
             }
-            break;
-          default:
-            cerr(NotImplementedException(`'${property.key.type}' in ObjectPattern property is not supported yet.`));
-            break;
+            evaluate(
+              { type: "GetValue", name: keyName },
+              assignValue,
+              e => (e.type === "ReferenceError" ? assignValue() : cerr(e)),
+              env,
+              config
+            );
+          }
+        } else {
+          cerr(NotImplementedException(`'${property.key.type}' in ObjectPattern property is not supported yet.`));
         }
       }
     },
@@ -120,33 +117,30 @@ export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) 
 }
 
 export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, config) {
-  switch (e.left.type) {
-    case "Identifier":
-      function assignRight() {
-        evaluate(
-          e.right,
-          right =>
-            evaluate({ type: "SetValue", name: e.left.name, value: right, isDeclaration: true }, c, cerr, env, config),
-          cerr,
-          env,
-          config
-        );
-      }
+  if (e.left.type === "Identifier") {
+    function assignRight() {
       evaluate(
-        { type: "GetValue", name: e.left.name },
-        value =>
-          value
-            ? evaluate({ type: "SetValue", name: e.left.name, isDeclaration: true, value }, c, cerr, env, config)
-            : assignRight(),
-        assignRight,
+        e.right,
+        right =>
+          evaluate({ type: "SetValue", name: e.left.name, value: right, isDeclaration: true }, c, cerr, env, config),
+        cerr,
         env,
         config
       );
-      break;
-    default:
-      cerr(
-        NotImplementedException(`${e.left.type} is not supported as AssignmentPattern left-hand side value.`, e.left)
-      );
+    }
+
+    evaluate(
+      { type: "GetValue", name: e.left.name },
+      value =>
+        value
+          ? evaluate({ type: "SetValue", name: e.left.name, isDeclaration: true, value }, c, cerr, env, config)
+          : assignRight(),
+      assignRight,
+      env,
+      config
+    );
+  } else {
+    cerr(NotImplementedException(`${e.left.type} is not supported as AssignmentPattern left-hand side value.`, e.left));
   }
 }
 

@@ -376,42 +376,23 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
 
       switch (calleeNode.type) {
         case "MemberExpression":
-          evaluate(
-            calleeNode,
-            callee => {
-              if (typeof callee !== "function") {
-                cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
-              } else {
-                try {
-                  c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
-                } catch (error) {
-                  cerr(toException(error, e));
-                }
-              }
-            },
-            cerr,
-            env,
-            config
-          );
+          evaluate(calleeNode, onValue, cerr, env, config);
           break;
         case "Identifier":
-          evaluate(
-            { type: "GetValue", name: calleeNode.name },
-            callee => {
-              if (typeof callee !== "function") {
-                cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
-              } else {
-                try {
-                  c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
-                } catch (error) {
-                  cerr(toException(error, calleeNode));
-                }
+          evaluate({ type: "GetValue", name: calleeNode.name }, onValue, cerr, env, config);
+
+          function onValue(callee) {
+            if (typeof callee !== "function") {
+              cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
+            } else {
+              try {
+                c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
+              } catch (error) {
+                cerr(toException(error, calleeNode));
               }
-            },
-            cerr,
-            env,
-            config
-          );
+            }
+          }
+
           break;
         default:
           cerr(NotImplementedException(`This type of callee is not supported yet.`));
@@ -531,19 +512,16 @@ export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Envi
           c(void argument);
           break;
         case "delete":
-          switch (e.argument.type) {
-            case "Identifier":
-              const name = e.argument.name;
-              const variableEnv = getEnvironmentForValue(env, name);
-              try {
-                c(variableEnv!.values[name]);
-              } catch (e) {
-                cerr(e);
-              }
-              break;
-            default:
-              cerr(NotImplementedException(`Delete on operator of type "${e.argument.type}" is not implemented yet.`));
-              break;
+          if (e.argument.type === "Identifier") {
+            const name = e.argument.name;
+            const variableEnv = getEnvironmentForValue(env, name);
+            try {
+              c(variableEnv!.values[name]);
+            } catch (e) {
+              cerr(e);
+            }
+          } else {
+            cerr(NotImplementedException(`Delete on operator of type "${e.argument.type}" is not implemented yet.`));
           }
           break;
         default:
