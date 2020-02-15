@@ -7,6 +7,10 @@ export interface Identifier extends NodeBase {
 export interface Literal extends NodeBase {
   type: "Literal";
   value: string | number | boolean;
+  regex?: {
+    pattern: string;
+    flags: string;
+  };
 }
 
 export interface MemberExpression extends NodeBase {

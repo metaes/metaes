@@ -405,13 +405,7 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
 }
 
 export function SequenceExpression(e: NodeTypes.SequenceExpression, c, cerr, env, config) {
-  evaluateArray(
-    e.expressions,
-    results => (results.length ? c(results ? results[results.length - 1] : null) : c()),
-    cerr,
-    env,
-    config
-  );
+  evaluateArray(e.expressions, results => (results.length ? c(results[results.length - 1]) : c()), cerr, env, config);
 }
 
 export function LogicalExpression(e: NodeTypes.LogicalExpression, c, cerr, env, config) {
