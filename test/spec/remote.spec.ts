@@ -25,7 +25,7 @@ import { Environment } from "../../lib/types";
 patchNodeFetch();
 const W3CWebSocket = require("websocket").w3cwebsocket;
 
-describe("Environment operations", () => {
+describe.skip("Environment operations", () => {
   let context: Context;
   let context2: Context;
 
@@ -86,7 +86,7 @@ function getTestContext() {
   );
 }
 
-describe("Remote", () => {
+describe.skip("Remote", () => {
   let server;
   let testContext;
 
@@ -341,7 +341,7 @@ function createTestsFor(describeName: string, getContext: () => Promise<Context>
   }
 }
 
-describe("Remote references", () => {
+describe.skip("Remote references", () => {
   let serverContext: Context, _eval, server;
   before(async () => {
     const me = {

@@ -7,7 +7,7 @@ import { createHTTPConnector, environmentToMessage, getParsingContext, getSerial
 import { runWSServer } from "../../lib/server";
 import { Environment } from "../../lib/types";
 
-describe("References acquisition", () => {
+describe.skip("References acquisition", () => {
   let context: Context, unquote, globalEnv, quotedRequest, _finalReferences;
 
   before(() => {

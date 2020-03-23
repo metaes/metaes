@@ -14,6 +14,7 @@ export type Script = {
   ast: ASTNode;
   source: Source;
   scriptId: string;
+  isModule?: boolean;
 };
 
 export type Source = string | ASTNode | Function;
@@ -50,7 +51,7 @@ export interface EvaluationConfig {
   schedule?: Schedule;
 }
 
-export type Continuation<T = any> = (value?: T) => void;
+export type Continuation<T = any> = (value: T) => void;
 export type ErrorContinuation = (error: MetaesException) => void;
 
 export type Interpreter<T extends ASTNode> = (
@@ -112,4 +113,4 @@ interface JSON_Array extends Array<string | number | boolean | Date | JSON_Objec
 
 type Input = Script | JSON_T | ASTNode;
 export type FullyQualifiedMetaesMessage = { input: Input; env: Environment };
-export type MetaesMessage = JSON_T | { input: Input } & (Partial<EnvironmentBase> | { env: Environment });
+export type MetaesMessage = JSON_T | ({ input: Input } & (Partial<EnvironmentBase> | { env: Environment }));

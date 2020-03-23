@@ -3,7 +3,7 @@ import { before, describe, it } from "mocha";
 import { evalFnBodyAsPromise } from "../../lib/metaes";
 import { getSerializingContext, toFullyQualifiedMessage, unquote } from "../../lib/remote";
 
-describe("Object responses to message", () => {
+describe.skip("Object responses to message", () => {
   let context, self;
 
   before(() => {

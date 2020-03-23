@@ -2,7 +2,7 @@ import * as esprima from "esprima";
 import { Program } from "./nodeTypes";
 import { Range } from "./types";
 
-export type Parser = (source: string, options?: ParserOptions, cache?: ParseCache) => Program;
+export type Parser = (source: string, options?: ParserOptions, cache?: ParseCache, useModule?: boolean) => Program;
 
 interface EsprimaError {
   message: string;
@@ -26,9 +26,10 @@ type ParserOptions = {
   source?: boolean;
 };
 
-function esprimaParse(source: string, options: ParserOptions = {}) {
+function esprimaParse(source: string, options: ParserOptions = {}, useModule: boolean = false) {
   try {
-    return esprima.parse(source, {
+    const { parse, parseModule } = esprima;
+    return (useModule ? parseModule : parse)(source, {
       range: true,
       comment: true,
       attachComment: true,
@@ -41,16 +42,16 @@ function esprimaParse(source: string, options: ParserOptions = {}) {
   }
 }
 
-export const parse: Parser = (source: string, options: ParserOptions = {}, cache?: ParseCache): Program => {
+export const parse: Parser = (source, options = {}, cache?, useModule = false) => {
   let ast;
   if (cache) {
     if ((ast = cache.get(source))) {
       return ast;
     } else {
-      return cache.set(source, esprimaParse(source, options));
+      return cache.set(source, esprimaParse(source, options, useModule));
     }
   } else {
-    return esprimaParse(source, options);
+    return esprimaParse(source, options, useModule);
   }
 };
 

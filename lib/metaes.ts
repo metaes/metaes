@@ -23,7 +23,7 @@ let scriptIdsCounter = 0;
 
 export const nextScriptId = () => "" + scriptIdsCounter++;
 
-export function createScript(source: Source, cache?: ParseCache): Script {
+export function createScript(source: Source, cache?: ParseCache, useModule: boolean = false): Script {
   const scriptId = nextScriptId();
 
   if (typeof source === "object") {
@@ -31,14 +31,18 @@ export function createScript(source: Source, cache?: ParseCache): Script {
   } else if (typeof source === "function") {
     return { source, ast: parseFunction(source, cache), scriptId };
   } else if (typeof source === "string") {
-    return { source, ast: parse(source, {}, cache), scriptId };
+    const script: Script = { source, ast: parse(source, {}, cache, useModule), scriptId };
+    if (useModule) {
+      script.isModule = useModule;
+    }
+    return script;
   } else {
     throw new Error(`Can't create script from ${source}.`);
   }
 }
 
-export function toScript(input: Source | Script, cache?: ParseCache) {
-  return isScript(input) ? input : createScript(input, cache);
+export function toScript(input: Source | Script, cache?: ParseCache, useModule: boolean = false) {
+  return isScript(input) ? input : createScript(input, cache, useModule);
 }
 
 export function isScript(script: any): script is Script {
@@ -49,9 +53,9 @@ export function noop() {}
 
 const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 
-export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config = {}) => {
+export const metaesEval: Evaluate = (input, c?, cerr?, environment = {}, config = {}) => {
   try {
-    script = toScript(script);
+    const script = toScript(input);
     config = { script, ...BaseConfig, ...config };
 
     evaluate(
@@ -68,6 +72,11 @@ export const metaesEval: Evaluate = (script, c?, cerr?, environment = {}, config
       throw e;
     }
   }
+};
+
+export const metaesEvalModule: Evaluate = (input, c?, cerr?, environment = {}, config = {}) => {
+  const script = toScript(input, undefined, true);
+  metaesEval(script, result => console.log({ result }), cerr, environment, config);
 };
 
 export class MetaesContext implements Context {
