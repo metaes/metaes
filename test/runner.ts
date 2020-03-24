@@ -7,15 +7,18 @@ import * as pify from "pify";
 import { callcc } from "../lib/callcc";
 import { metaesEval, metaesEvalModule } from "../lib/metaes";
 
-const values = {
-  getThisEnv(_, c, _cerr, env) {
-    c(env);
+const globalEnv = {
+  values: {
+    callcc,
+    getEnvValues(_, c, _cerr, env) {
+      c(env.values);
+    }
   },
-  callcc
+  prev: { values: global }
 };
 
 const evaluate = (evalFn, input: string) =>
-  new Promise((resolve, reject) => evalFn(input, resolve, reject, { values: { ...values }, prev: { values: global } }));
+  new Promise((resolve, reject) => evalFn(input, resolve, reject, { values: {}, prev: globalEnv }));
 
 function build(folder: string, fn) {
   // generate tests on runtime

@@ -1,6 +1,7 @@
 import { GetValue, SetValue } from "./environment";
 import Base from "./interpreter/base";
 import Expressions from "./interpreter/expressions";
+import ModuleInterpreters from "./interpreter/modules";
 import Statements from "./interpreter/statements";
 
 export const ECMAScriptInterpreters = {
@@ -8,5 +9,5 @@ export const ECMAScriptInterpreters = {
 };
 
 export const ModuleECMAScriptInterpreters = {
-  values: { ...ECMAScriptInterpreters.values }
+  values: { ...ECMAScriptInterpreters.values, ...ModuleInterpreters }
 };

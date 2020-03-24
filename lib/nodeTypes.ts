@@ -304,6 +304,12 @@ interface TemplateElement extends NodeBase {
   tail: boolean;
 }
 
+export interface ExportNamedDeclaration extends NodeBase {
+  declaration: VariableDeclaration | FunctionDeclaration;
+}
+
+type ModuleNode = ExportNamedDeclaration;
+
 export type FunctionNode = FunctionExpression | FunctionDeclaration | ArrowFunctionExpression;
 
 export type Statement =
@@ -325,7 +331,8 @@ export type Statement =
   | ClassDeclaration
   | ClassBody
   | Super
-  | DebuggerStatement;
+  | DebuggerStatement
+  | ModuleNode;
 
 type Expression =
   | Identifier

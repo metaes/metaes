@@ -1,6 +1,6 @@
 import { toEnvironment } from "./environment";
 import { evaluate } from "./evaluate";
-import { ECMAScriptInterpreters } from "./interpreters";
+import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
 import {
@@ -53,7 +53,7 @@ export function noop() {}
 
 const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 
-export const metaesEval: Evaluate = (input, c?, cerr?, environment = {}, config = {}) => {
+export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
   try {
     const script = toScript(input);
     config = { script, ...BaseConfig, ...config };
@@ -62,7 +62,7 @@ export const metaesEval: Evaluate = (input, c?, cerr?, environment = {}, config 
       script.ast,
       val => c && c(val),
       exception => cerr && cerr(exception),
-      toEnvironment(environment),
+      toEnvironment(env),
       config as EvaluationConfig
     );
   } catch (e) {
@@ -74,9 +74,12 @@ export const metaesEval: Evaluate = (input, c?, cerr?, environment = {}, config 
   }
 };
 
-export const metaesEvalModule: Evaluate = (input, c?, cerr?, environment = {}, config = {}) => {
+export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
   const script = toScript(input, undefined, true);
-  metaesEval(script, result => console.log({ result }), cerr, environment, config);
+  metaesEval(script, c, cerr, env, {
+    ...config,
+    interpreters: ModuleECMAScriptInterpreters
+  });
 };
 
 export class MetaesContext implements Context {
