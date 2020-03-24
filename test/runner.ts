@@ -5,13 +5,21 @@ import { zip } from "lodash";
 import { before, describe, it } from "mocha";
 import * as pify from "pify";
 import { callcc } from "../lib/callcc";
+import { getEnvironmentBy } from "../lib/environment";
+import { ExportEnvironmentSymbol } from "../lib/interpreter/modules";
 import { metaesEval, metaesEvalModule } from "../lib/metaes";
 
 const globalEnv = {
   values: {
+    assert,
     callcc,
-    getEnvValues(_, c, _cerr, env) {
-      c(env.values);
+    getExports(_, c, cerr, env) {
+      const exportsEnv = getEnvironmentBy(env, env => env[ExportEnvironmentSymbol]);
+      if (exportsEnv) {
+        c(exportsEnv.values);
+      } else {
+        cerr(new Error("Couldn't find exports."));
+      }
     }
   },
   prev: { values: global }
@@ -39,8 +47,14 @@ function build(folder: string, fn) {
           }
           const testName = name.replace("// it:", "").trim();
           it(testName, async () => {
-            const result = await evaluate(fn, value);
-            return assert.isTrue(typeof result === "boolean" && result);
+            try {
+              const result = await evaluate(fn, value);
+              if (fn === metaesEval) {
+                assert.isTrue(typeof result === "boolean" && result);
+              }
+            } catch (e) {
+              throw e.value || e;
+            }
           });
         });
       });

@@ -1,18 +1,19 @@
 import { toEnvironment } from "./environment";
 import { evaluate } from "./evaluate";
+import { ExportEnvironmentSymbol, ImportEnvironmentSymbol } from "./interpreter/modules";
 import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
 import {
   ASTNode,
   Continuation,
+  Environment,
   ErrorContinuation,
   Evaluate,
   EvaluationConfig,
   Phase,
   Script,
-  Source,
-  Environment
+  Source
 } from "./types";
 
 export interface Context {
@@ -90,15 +91,19 @@ export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
 
 export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
   const _env = toEnvironment(env);
+  const importsEnv: Environment = { values: {}, prev: _env, [ImportEnvironmentSymbol]: true };
+  const exportsEnv: Environment = { values: {}, prev: importsEnv, [ExportEnvironmentSymbol]: true };
+  const bottomEnv: Environment = { values: {}, prev: exportsEnv };
+
   safeEvaluate(
     function inject() {
       return {
         script: toScript(input, undefined, true),
         config: { ...BaseConfig, ...config, interpreters: ModuleECMAScriptInterpreters },
-        env: _env
+        env: bottomEnv
       };
     },
-    () => c && c(_env.values),
+    () => c && c(exportsEnv.values),
     cerr
   );
 };

@@ -1,4 +1,4 @@
-// it: single named export :skip
+// it: single named export
 export function function1() {}
 
-"function1" in callcc(getEnvValues);
+assert.hasAllKeys(callcc(getExports), ["function1"]);

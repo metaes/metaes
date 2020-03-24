@@ -101,8 +101,12 @@ export interface EnvironmentBase<T = any> {
 
 export interface Environment<T = any> extends EnvironmentBase<T> {
   prev?: Environment<T>;
-  // If true, then user code won't save values in this environment.
+
+  /**
+   * If true, then user code won't save values in this environment.
+   */
   internal?: boolean;
+  [key: string]: any; // allow extensions
 }
 
 type JSON_T = string | number | boolean | Date | JSON_Object | JSON_Array;

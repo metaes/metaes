@@ -4,15 +4,19 @@ export function toEnvironment(environment?: any | EnvironmentBase | Environment)
   return environment ? ("values" in environment ? environment : { values: environment }) : { values: {} };
 }
 
-export function getEnvironmentForValue(env: Environment, name: string): Environment | null {
+export function getEnvironmentBy(env: Environment, condition: (env: Environment) => boolean): Environment | null {
   let _env: Environment | undefined = env;
   while (_env) {
-    if (name in _env.values) {
+    if (condition(_env)) {
       return _env;
     }
     _env = _env.prev;
   }
   return null;
+}
+
+export function getEnvironmentForValue(env: Environment, name: string): Environment | null {
+  return getEnvironmentBy(env, env => name in env.values);
 }
 
 type SetValueT<T> = {
