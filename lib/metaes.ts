@@ -53,17 +53,21 @@ export function noop() {}
 
 const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 
-export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
+export const safeEvaluate: Evaluate = (
+  inject: () => { script: Script; config: EvaluationConfig; env: Environment },
+  c?,
+  cerr?
+) => {
   try {
-    const script = toScript(input);
-    config = { script, ...BaseConfig, ...config };
+    let { script, config, env } = inject();
+    config = { script, ...config };
 
     evaluate(
       script.ast,
       val => c && c(val),
       exception => cerr && cerr(exception),
-      toEnvironment(env),
-      config as EvaluationConfig
+      env,
+      config
     );
   } catch (e) {
     if (cerr) {
@@ -74,12 +78,29 @@ export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
   }
 };
 
+export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
+  safeEvaluate(
+    function inject() {
+      return { script: toScript(input), config: { ...BaseConfig, ...config }, env: toEnvironment(env) };
+    },
+    c,
+    cerr
+  );
+};
+
 export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
-  const script = toScript(input, undefined, true);
-  metaesEval(script, c, cerr, env, {
-    ...config,
-    interpreters: ModuleECMAScriptInterpreters
-  });
+  const _env = toEnvironment(env);
+  safeEvaluate(
+    function inject() {
+      return {
+        script: toScript(input, undefined, true),
+        config: { ...BaseConfig, ...config, interpreters: ModuleECMAScriptInterpreters },
+        env: _env
+      };
+    },
+    () => c && c(_env.values),
+    cerr
+  );
 };
 
 export class MetaesContext implements Context {
