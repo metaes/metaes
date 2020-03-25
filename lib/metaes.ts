@@ -90,17 +90,19 @@ export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
 };
 
 export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
-  const _env = toEnvironment(env);
-  const importsEnv: Environment = { values: {}, prev: _env, [ImportEnvironmentSymbol]: true };
-  const exportsEnv: Environment = { values: {}, prev: importsEnv, [ExportEnvironmentSymbol]: true };
-  const bottomEnv: Environment = { values: {}, prev: exportsEnv };
+  const importsEnv = { values: {}, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };
+  const exportsEnv: Environment = {
+    prev: importsEnv,
+    values: {},
+    [ExportEnvironmentSymbol]: true
+  };
 
   safeEvaluate(
     function inject() {
       return {
         script: toScript(input, undefined, true),
         config: { ...BaseConfig, ...config, interpreters: ModuleECMAScriptInterpreters },
-        env: bottomEnv
+        env: { values: {}, prev: exportsEnv }
       };
     },
     () => c && c(exportsEnv.values),
