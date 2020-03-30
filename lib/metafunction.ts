@@ -2,7 +2,7 @@ import { evaluate, visitArray } from "./evaluate";
 import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
 import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction, Environment } from "./types";
- 
+
 // TODO: move to interpreter style
 export const evaluateMetaFunction = (
   metaFunction: MetaesFunction,
@@ -43,7 +43,7 @@ export const evaluateMetaFunction = (
             ? // use implicit return only if function is arrow function and have expression as a body
               c(value)
             : // ignore what was evaluated in function body, return statement in error continuation should carry the value
-              c(),
+              c(undefined),
         exception => (exception.type === "ReturnStatement" ? c(exception.value) : cerr(exception)),
         env,
         // Execution time config takes precedence over function creation time config
@@ -57,7 +57,13 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
   const fn = function(this: any, ...args) {
     let result;
     let exception;
-    evaluateMetaFunction(metaFunction, r => (result = r), ex => (exception = toException(ex)), this, args);
+    evaluateMetaFunction(
+      metaFunction,
+      r => (result = r),
+      ex => (exception = toException(ex)),
+      this,
+      args
+    );
     if (exception) {
       throw exception;
     }

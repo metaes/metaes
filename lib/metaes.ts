@@ -101,7 +101,7 @@ export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = 
     function inject() {
       return {
         script: toScript(input, undefined, true),
-        config: { ...BaseConfig, ...config, interpreters: ModuleECMAScriptInterpreters },
+        config: { ...BaseConfig, interpreters: ModuleECMAScriptInterpreters, ...config },
         env: { values: {}, prev: exportsEnv }
       };
     },

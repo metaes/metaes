@@ -305,6 +305,7 @@ interface TemplateElement extends NodeBase {
 }
 
 export interface ExportNamedDeclaration extends NodeBase {
+  type: "ExportNamedDeclaration";
   declaration: VariableDeclaration | FunctionDeclaration;
 }
 

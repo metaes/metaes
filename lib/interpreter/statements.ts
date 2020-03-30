@@ -1,3 +1,4 @@
+import { GetValueSync } from "../environment";
 import { evaluate, evaluateArray, visitArray } from "../evaluate";
 import { LocatedError, NotImplementedException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
@@ -30,8 +31,8 @@ export function BlockStatement(e: NodeTypes.BlockStatement | NodeTypes.Program, 
   );
 }
 
-export function Program(e: NodeTypes.Program, c, cerr, env, config) {
-  BlockStatement(e, c, cerr, env, config);
+export function Program(e: NodeTypes.Program, c, cerr, env, config: EvaluationConfig) {
+  GetValueSync("BlockStatement", config.interpreters)(e, c, cerr, env, config);
 }
 
 export function VariableDeclaration(e: NodeTypes.VariableDeclaration, c, cerr, env, config) {
