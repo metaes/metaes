@@ -13,7 +13,6 @@ assert.equal(c[d], 44);
 let a = { b: null };
 let result;
 try {
-  // @ts-ignore
   a.b.c;
 } catch (e) {
   result = e instanceof TypeError;
@@ -25,7 +24,6 @@ let a = { b: null };
 let result;
 let c = "anything";
 try {
-  // @ts-ignore
   a.b[c];
 } catch (e) {
   result = e instanceof TypeError;
