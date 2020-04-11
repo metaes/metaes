@@ -14,7 +14,7 @@ const globalEnv = {
     assert,
     callcc,
     getExports(_, c, cerr, env) {
-      const exportsEnv = getEnvironmentBy(env, env => env[ExportEnvironmentSymbol]);
+      const exportsEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
       if (exportsEnv) {
         c(exportsEnv.values);
       } else {
@@ -31,13 +31,13 @@ const evaluate = (evalFn, input: string) =>
 function build(folder: string, fn) {
   // generate tests on runtime
   before(async () => {
-    const files = (await pify(glob)(__dirname + `/${folder}/*.spec.ts`)).map(async file => ({
+    const files = (await pify(glob)(__dirname + `/${folder}/*.spec.js`)).map(async (file) => ({
       name: file,
       contents: (await fs.readFile(file)).toString()
     }));
     return (await Promise.all(files)).forEach(({ contents, name }) => {
-      const testNames = contents.match(/\/\/ it: [^\n]+\n/g);
-      const tests = contents.split(/\/\/ it: .+\n/).filter(line => line.length);
+      const testNames = contents.match(/\/\/ test: [^\n]+\n/g);
+      const tests = contents.split(/\/\/ test: .+\n/).filter((line) => line.length);
       const suiteName = name.substring(name.lastIndexOf("/") + 1);
 
       describe(suiteName, () => {
@@ -45,13 +45,10 @@ function build(folder: string, fn) {
           if (name.includes(":skip")) {
             return;
           }
-          const testName = name.replace("// it:", "").trim();
+          const testName = name.replace("// test:", "").trim();
           it(testName, async () => {
             try {
-              const result = await evaluate(fn, value);
-              if (fn === metaesEval) {
-                assert.isTrue(typeof result === "boolean" && result);
-              }
+              await evaluate(fn, value);
             } catch (e) {
               throw e.value || e;
             }

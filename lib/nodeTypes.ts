@@ -304,6 +304,11 @@ interface TemplateElement extends NodeBase {
   tail: boolean;
 }
 
+export interface SpreadElement extends NodeBase {
+  type: "SpreadElement";
+  argument: Expression;
+}
+
 export interface ExportNamedDeclaration extends NodeBase {
   type: "ExportNamedDeclaration";
   declaration: VariableDeclaration | FunctionDeclaration;
@@ -355,7 +360,8 @@ type Expression =
   | MethodDefinition
   | RestElement
   | TemplateLiteral
-  | TaggedTemplateExpression;
+  | TaggedTemplateExpression
+  | SpreadElement;
 
 type Comment = Line;
 
