@@ -37,3 +37,13 @@ assert.equal(fn(), 44);
 let array = [];
 array.push(...[1, 2, 3]);
 assert.deepEqual(array, [1, 2, 3]);
+
+// test: throws an error (:skip)
+let e;
+try {
+  [].push(...1);
+} catch (_e) {
+  e = e;
+}
+assert.instanceOf(e, TypeError);
+assert.equal(e.message, "Found non-callable @@iterator");
