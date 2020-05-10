@@ -25,3 +25,10 @@ for (let i = 0; i < 3; i++) {
   result.push(i);
 }
 assert.deepEqual(result, [0, 1, 2]);
+
+// test: supports for of loop
+const result = [];
+for (let i of [1, 2, 3]) {
+  result.push(i);
+}
+assert.deepEqual(result, [1, 2, 3]);
