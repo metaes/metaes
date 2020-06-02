@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { describe, it } from "mocha";
-import { createCache, parse } from "./parse";
+import { createCache, parse } from "../../lib/parse";
 
 describe("Parse", () => {
   it("should use cache", () => {

@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
-import { evalAsPromise, MetaesContext } from "./metaes";
+import { evalAsPromise, MetaesContext } from "../../lib/metaes";
 
 describe("Environment", () => {
   it("should merge two or more environments", async () => {

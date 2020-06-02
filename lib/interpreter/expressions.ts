@@ -1,18 +1,11 @@
-import { evaluate, evaluateArray } from "../applyEval";
-import { Environment, GetValue, getEnvironmentForValue } from "../environment";
+import { callcc } from "../callcc";
+import { getEnvironmentForValue } from "../environment";
+import { evaluate, evaluateArray } from "../evaluate";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
-import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
+import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
-import { callWithCurrentContinuation } from "../callcc";
-import { Continuation, ErrorContinuation, EvaluationConfig } from "../types";
+import { Continuation, Environment, ErrorContinuation, EvaluationConfig } from "../types";
 import { IfStatement } from "./statements";
-
-export function lastArrayItem(array?: any[]) {
-  if (array) {
-    return array[array.length - 1];
-  }
-  return null;
-}
 
 export function CallExpression(
   e: NodeTypes.CallExpression,
@@ -23,25 +16,27 @@ export function CallExpression(
 ) {
   evaluateArray(
     e.arguments,
-    args => {
+    (args) => {
+      args = args.reduce(
+        (total, next) => (next instanceof SpreadElementValue ? total.concat(next.value) : total.concat([next])),
+        []
+      );
       switch (e.callee.type) {
         case "Identifier":
         case "FunctionExpression":
         case "CallExpression":
           evaluate(
             e.callee,
-            callee => {
+            (callee) => {
               if (typeof callee === "function") {
                 try {
-                  if (callee === callWithCurrentContinuation) {
-                    // Pass continuation to continuation receiver.
+                  if (callee === callcc) {
                     try {
-                      args[0](args[1], c, cerr, env, config);
+                      const [receiver, _arguments] = args;
+                      receiver(_arguments, c, cerr, env, config);
                     } catch (e) {
                       cerr({ value: e, message: "Error in continuation receiver." });
                     }
-                  } else if (isMetaFunction(callee)) {
-                    evaluateMetaFunction(getMetaFunction(callee), c, cerr, undefined, args, config);
                   } else {
                     evaluate({ type: "Apply", e, fn: callee, args }, c, cerr, env, config);
                   }
@@ -61,36 +56,42 @@ export function CallExpression(
           const e_callee = e.callee as NodeTypes.MemberExpression;
           evaluate(
             e_callee.object,
-            object => {
-              function run(property) {
-                if (typeof property === "function") {
-                  evaluate({ type: "Apply", e, fn: property, thisObj: object, args }, c, cerr, env, config);
-                } else {
-                  cerr({
-                    value: new TypeError(typeof property + " is not a function")
-                  });
-                }
+            (object) => {
+              function evalApply(property) {
+                evaluate({ type: "Apply", e, fn: property, thisValue: object, args }, c, cerr, env, config);
               }
               if (!e_callee.computed && e_callee.property.type === "Identifier") {
-                run(object[e_callee.property.name]);
+                evaluate(
+                  { type: "GetProperty", object, property: e_callee.property.name },
+                  evalApply,
+                  cerr,
+                  env,
+                  config
+                );
               } else {
-                evaluate(e_callee.property, propertyValue => run(object[propertyValue]), cerr, env, config);
+                evaluate(
+                  e_callee.property,
+                  (propertyValue) =>
+                    evaluate({ type: "GetProperty", object, property: propertyValue }, evalApply, cerr, env, config),
+                  cerr,
+                  env,
+                  config
+                );
               }
             },
             cerr,
             env,
             config
           );
-
           break;
         case "ArrowFunctionExpression":
           evaluate(
             e.callee,
-            callee => {
+            (callee) => {
               try {
-                const cnt = (thisObj?) =>
-                  evaluate({ type: "Apply", e, fn: callee, thisObj, args }, c, cerr, env, config);
-                GetValue({ name: "this" }, cnt, () => cnt(), env);
+                const cnt = (thisValue?) =>
+                  evaluate({ type: "Apply", e, fn: callee, thisValue, args }, c, cerr, env, config);
+                evaluate({ type: "GetValue", name: "this" }, cnt, () => cnt(undefined), env, config);
               } catch (error) {
                 cerr(toException(error, e.callee));
               }
@@ -117,11 +118,11 @@ export function CallExpression(
 export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, config) {
   evaluate(
     e.object,
-    object => {
+    (object) => {
       if (e.computed) {
         evaluate(
           e.property,
-          property => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
+          (property) => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
           cerr,
           env,
           config
@@ -133,7 +134,7 @@ export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, co
               // TODO: dry?
               evaluate(
                 e.property,
-                property => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
+                (property) => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
                 cerr,
                 env,
                 config
@@ -153,6 +154,7 @@ export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, co
             }
             break;
           case "Literal":
+            // TODO: use GetProperty
             evaluate(e.property, c, cerr, { values: object }, config);
             break;
           default:
@@ -191,7 +193,7 @@ export function FunctionExpression(e: NodeTypes.FunctionExpression, c, cerr, env
 export function AssignmentExpression(e: NodeTypes.AssignmentExpression, c, cerr, env, config: EvaluationConfig) {
   evaluate(
     e.right,
-    right => {
+    (right) => {
       const e_left = e.left;
       switch (e_left.type) {
         case "Identifier":
@@ -200,12 +202,12 @@ export function AssignmentExpression(e: NodeTypes.AssignmentExpression, c, cerr,
         case "MemberExpression":
           evaluate(
             e_left.object,
-            object => {
+            (object) => {
               const property = e_left.property;
               if (e_left.computed) {
                 evaluate(
                   e_left.property,
-                  property =>
+                  (property) =>
                     evaluate(
                       { type: "SetProperty", object, property, value: right, operator: e.operator },
                       c,
@@ -245,12 +247,12 @@ export function AssignmentExpression(e: NodeTypes.AssignmentExpression, c, cerr,
 }
 
 export function ObjectExpression(e: NodeTypes.ObjectExpression, c, cerr, env, config) {
-  let object = {};
   evaluateArray(
     e.properties,
-    properties => {
-      for (let property of properties) {
-        object[property.key] = property.value;
+    (properties) => {
+      const object = {};
+      for (let { key, value } of properties) {
+        object[key] = value;
       }
       c(object);
     },
@@ -261,28 +263,32 @@ export function ObjectExpression(e: NodeTypes.ObjectExpression, c, cerr, env, co
 }
 
 export function Property(e: NodeTypes.Property, c, cerr, env, config) {
-  let key;
-  switch (e.key.type) {
-    case "Identifier":
-      key = e.key.name;
-      break;
-    case "Literal":
-      key = e.key.value;
-      break;
-    default:
-      cerr(NotImplementedException("This type or property is not supported yet."));
-      return;
+  if (e.computed) {
+    cerr(NotImplementedException("Computed properties are not supported yet."));
+  } else {
+    let key;
+    switch (e.key.type) {
+      case "Identifier":
+        key = e.key.name;
+        break;
+      case "Literal":
+        key = e.key.value;
+        break;
+      default:
+        cerr(NotImplementedException(`'${e.key["type"]}' property key type is not supported yet.`));
+        return;
+    }
+    evaluate(e.value, (value) => c({ key, value }), cerr, env, config);
   }
-  evaluate(e.value, value => c({ key, value }), cerr, env, config);
 }
 
 export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, config) {
   evaluate(
     e.left,
-    left => {
+    (left) => {
       evaluate(
         e.right,
-        right => {
+        (right) => {
           switch (e.operator) {
             case "+":
               c(left + right);
@@ -348,7 +354,7 @@ export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, co
               c(left | right);
               break;
             default:
-              cerr(NotImplementedException(e.type + " not implemented " + e.operator));
+              cerr(NotImplementedException(e.type + ` operator "${e.operator}" is not implemented yet.`));
           }
         },
         cerr,
@@ -369,46 +375,28 @@ export function ArrayExpression(e: NodeTypes.ArrayExpression, c, cerr, env, conf
 export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) {
   evaluateArray(
     e.arguments,
-    args => {
+    (args) => {
       let calleeNode = e.callee;
 
       switch (calleeNode.type) {
         case "MemberExpression":
-          evaluate(
-            calleeNode,
-            callee => {
-              if (typeof callee !== "function") {
-                cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
-              } else {
-                try {
-                  c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
-                } catch (error) {
-                  cerr(toException(error, e));
-                }
-              }
-            },
-            cerr,
-            env,
-            config
-          );
+          evaluate(calleeNode, onValue, cerr, env, config);
           break;
         case "Identifier":
-          GetValue(
-            { name: calleeNode.name },
-            callee => {
-              if (typeof callee !== "function") {
-                cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
-              } else {
-                try {
-                  c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
-                } catch (error) {
-                  cerr(toException(error, calleeNode));
-                }
+          evaluate({ type: "GetValue", name: calleeNode.name }, onValue, cerr, env, config);
+
+          function onValue(callee) {
+            if (typeof callee !== "function") {
+              cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
+            } else {
+              try {
+                c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
+              } catch (error) {
+                cerr(toException(error, calleeNode));
               }
-            },
-            cerr,
-            env
-          );
+            }
+          }
+
           break;
         default:
           cerr(NotImplementedException(`This type of callee is not supported yet.`));
@@ -421,13 +409,13 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
 }
 
 export function SequenceExpression(e: NodeTypes.SequenceExpression, c, cerr, env, config) {
-  evaluateArray(e.expressions, results => (results.length ? c(lastArrayItem(results)) : c()), cerr, env, config);
+  evaluateArray(e.expressions, (results) => (results.length ? c(results[results.length - 1]) : c()), cerr, env, config);
 }
 
 export function LogicalExpression(e: NodeTypes.LogicalExpression, c, cerr, env, config) {
   evaluate(
     e.left,
-    left => {
+    (left) => {
       if (!left && e.operator === "&&") {
         c(left);
       } else if (left && e.operator === "||") {
@@ -442,15 +430,16 @@ export function LogicalExpression(e: NodeTypes.LogicalExpression, c, cerr, env, 
   );
 }
 
-export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: Environment) {
+export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: Environment, config) {
   switch (e.argument.type) {
     case "Identifier":
       const propName = e.argument.name;
-      GetValue(
-        { name: propName },
-        _ => {
+      evaluate(
+        { type: "GetValue", name: propName },
+        (_) => {
           // discard found value
           // if value is found, there must be an env for that value, don't check for negative case
+          // TODO: integrate with `getEnvironmentForValue`
           let foundEnv: Environment = env;
           while (!(propName in foundEnv.values)) {
             foundEnv = foundEnv.prev!;
@@ -484,18 +473,23 @@ export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: En
           }
         },
         cerr,
-        env
+        env,
+        config
       );
       break;
     default:
-      cerr(NotImplementedException(`Support of argument of type ${e.argument.type} not implemented yet.`));
+      cerr(
+        NotImplementedException(
+          `Support of argument of type '${e.argument.type}' in UpdateExpression is not implemented yet.`
+        )
+      );
   }
 }
 
 export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Environment, config) {
   evaluate(
     e.argument,
-    argument => {
+    (argument) => {
       switch (e.operator) {
         case "typeof":
           c(typeof argument);
@@ -516,26 +510,23 @@ export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Envi
           c(void argument);
           break;
         case "delete":
-          switch (e.argument.type) {
-            case "Identifier":
-              const name = e.argument.name;
-              const variableEnv = getEnvironmentForValue(env, name);
-              try {
-                c(variableEnv!.values[name]);
-              } catch (e) {
-                cerr(e);
-              }
-              break;
-            default:
-              cerr(NotImplementedException(`Delete on operator of type "${e.argument.type}" is not implemented yet.`));
-              break;
+          if (e.argument.type === "Identifier") {
+            const name = e.argument.name;
+            const variableEnv = getEnvironmentForValue(env, name);
+            try {
+              c(variableEnv!.values[name]);
+            } catch (e) {
+              cerr(e);
+            }
+          } else {
+            cerr(NotImplementedException(`Delete on operator of type "${e.argument.type}" is not implemented yet.`));
           }
           break;
         default:
           cerr(NotImplementedException(`Support for "${e.operator}" operator is not implemented yet`));
       }
     },
-    error =>
+    (error) =>
       e.operator === "typeof" && e.argument.type === "Identifier" && error.value instanceof ReferenceError
         ? c("undefined")
         : cerr(error),
@@ -544,8 +535,8 @@ export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Envi
   );
 }
 
-export function ThisExpression(_e: NodeTypes.ThisExpression, c, cerr, env: Environment) {
-  GetValue({ name: "this" }, c, cerr, env);
+export function ThisExpression(_e: NodeTypes.ThisExpression, c, cerr, env: Environment, config) {
+  evaluate({ type: "GetValue", name: "this" }, c, cerr, env, config);
 }
 
 export function ConditionalExpression(e: NodeTypes.ConditionalExpression, c, cerr, env, config) {
@@ -558,6 +549,31 @@ export function TemplateLiteral(e: NodeTypes.TemplateLiteral, c, cerr) {
   } else {
     cerr(NotImplementedException(`Only single-quasis and expression-free template literals are supported for now.`));
   }
+}
+
+export function TaggedTemplateExpression(e: NodeTypes.TaggedTemplateExpression, c, cerr, env, config) {
+  evaluate(
+    e.tag,
+    (tag) =>
+      evaluate(
+        e.quasi,
+        (quasi) => evaluate({ type: "Apply", e, fn: tag, thisValue: undefined, args: [quasi] }, c, cerr, env, config),
+        cerr,
+        env,
+        config
+      ),
+    cerr,
+    env,
+    config
+  );
+}
+
+class SpreadElementValue {
+  constructor(public value: any) {}
+}
+
+export function SpreadElement(e: NodeTypes.SpreadElement, c, cerr, env, config) {
+  evaluate(e.argument, (value) => c(new SpreadElementValue(value)), cerr, env, config);
 }
 
 export default {
@@ -577,5 +593,7 @@ export default {
   UnaryExpression,
   ThisExpression,
   ConditionalExpression,
-  TemplateLiteral
+  TemplateLiteral,
+  TaggedTemplateExpression,
+  SpreadElement
 };

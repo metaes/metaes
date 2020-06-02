@@ -1,5 +1,5 @@
-import { evaluate, evaluateArray, visitArray } from "../applyEval";
-import { GetValue } from "../environment";
+import { GetValueSync } from "../environment";
+import { evaluate, evaluateArray, visitArray } from "../evaluate";
 import { LocatedError, NotImplementedException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
@@ -31,8 +31,8 @@ export function BlockStatement(e: NodeTypes.BlockStatement | NodeTypes.Program, 
   );
 }
 
-export function Program(e: NodeTypes.Program, c, cerr, env, config) {
-  BlockStatement(e, c, cerr, env, config);
+export function Program(e: NodeTypes.Program, c, cerr, env, config: EvaluationConfig) {
+  GetValueSync("BlockStatement", config.interpreters)(e, c, cerr, env, config);
 }
 
 export function VariableDeclaration(e: NodeTypes.VariableDeclaration, c, cerr, env, config) {
@@ -45,78 +45,104 @@ export function VariableDeclaration(e: NodeTypes.VariableDeclaration, c, cerr, e
 }
 
 export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env, config) {
-  function id(initValue) {
+  function assign(rightValue) {
     switch (e.id.type) {
       case "Identifier":
-        evaluate({ type: "SetValue", name: e.id.name, value: initValue, isDeclaration: true }, c, cerr, env, config);
+        evaluate({ type: "SetValue", name: e.id.name, value: rightValue, isDeclaration: true }, c, cerr, env, config);
         break;
       case "ObjectPattern":
-        visitArray(
-          e.id.properties,
-          (property, c, cerr) => {
-            if (property.key.type === "Identifier") {
-              if (property.value) {
-                // For example: let {x} = obj;
-                // Don't want to try evaluate {x:x} as expanded property, so skip property evaluation.
-                if (property.shorthand && property.value.type === "Identifier") {
-                  const name = property.key.name;
-                  evaluate(
-                    { type: "SetValue", name, value: initValue[name], isDeclaration: true },
-                    c,
-                    cerr,
-                    env,
-                    config
-                  );
-                } else {
-                  const name = property.key.name;
-                  const setValue = value =>
-                    evaluate({ type: "SetValue", name, value, isDeclaration: true }, c, cerr, env, config);
-                  initValue[name] ? setValue(initValue[name]) : evaluate(property.value, setValue, cerr, env, config);
-                }
-              } else {
-                evaluate(property, c, cerr, env, config);
-              }
-            } else {
-              cerr(
-                NotImplementedException(
-                  `Property key of '${property.key.type}' type is not supported yet.`,
-                  property.key
-                )
-              );
-            }
-          },
-          c,
-          cerr
-        );
+        evaluate(e.id, c, cerr, { values: rightValue, prev: env, internal: true }, config);
         break;
       default:
         cerr(NotImplementedException(`Init '${(<any>e.id).type}' is not supported yet.`, e));
     }
   }
-  e.init ? evaluate(e.init, id, cerr, env, config) : id(undefined);
+  e.init ? evaluate(e.init, assign, cerr, env, config) : assign(undefined);
+}
+
+export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) {
+  visitArray(
+    e.properties,
+    (property, c, cerr) => {
+      if (property.value.type === "AssignmentPattern") {
+        evaluate(property, c, cerr, env, config);
+      } else if (property.computed) {
+        cerr(NotImplementedException(`Computed property in ObjectPattern is not supported yet.`, property));
+      } else {
+        if (property.key.type === "Identifier") {
+          const keyName = property.key.name;
+          if (!env.values) {
+            cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
+          } else {
+            function assignValue(value?) {
+              switch (property.value.type) {
+                case "Identifier":
+                  evaluate(
+                    { type: "SetValue", name: property.value.name, value, isDeclaration: true },
+                    c,
+                    cerr,
+                    env,
+                    config
+                  );
+                  break;
+                case "ObjectPattern":
+                  if (value) {
+                    evaluate(property.value, c, cerr, { values: value, prev: env, internal: true }, config);
+                  } else {
+                    cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
+                  }
+                  break;
+                default:
+                  cerr(
+                    NotImplementedException(`'${property.value.type}' in ObjectPattern value is not supported yet.`)
+                  );
+                  break;
+              }
+            }
+            evaluate(
+              { type: "GetValue", name: keyName },
+              assignValue,
+              e => (e.type === "ReferenceError" ? assignValue() : cerr(e)),
+              env,
+              config
+            );
+          }
+        } else {
+          cerr(NotImplementedException(`'${property.key.type}' in ObjectPattern property is not supported yet.`));
+        }
+      }
+    },
+    c,
+    cerr
+  );
 }
 
 export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, config) {
-  evaluate(
-    e.right,
-    right => {
-      switch (e.left.type) {
-        case "Identifier":
-          evaluate({ type: "SetValue", name: e.left.name, value: right, isDeclaration: true }, c, cerr, env, config);
-          break;
-        default:
-          cerr(
-            NotImplementedException(
-              `${e.left.type} is not supported as AssignmentPattern left-hand side value.`,
-              e.left
-            )
-          );
-      }
-    },
-    cerr,
-    env,
-    config
-  );
+  if (e.left.type === "Identifier") {
+    function assignRight() {
+      evaluate(
+        e.right,
+        right =>
+          evaluate({ type: "SetValue", name: e.left.name, value: right, isDeclaration: true }, c, cerr, env, config),
+        cerr,
+        env,
+        config
+      );
+    }
+
+    evaluate(
+      { type: "GetValue", name: e.left.name },
+      value =>
+        value
+          ? evaluate({ type: "SetValue", name: e.left.name, isDeclaration: true, value }, c, cerr, env, config)
+          : assignRight(),
+      assignRight,
+      env,
+      config
+    );
+  } else {
+    cerr(NotImplementedException(`${e.left.type} is not supported as AssignmentPattern left-hand side value.`, e.left));
+  }
 }
 
 export function IfStatement(e: NodeTypes.IfStatement | NodeTypes.ConditionalExpression, c, cerr, env, config) {
@@ -156,7 +182,7 @@ export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: Ev
         cerr,
         {
           values: {
-            [EXCEPTION_NAME]: exception.value
+            [EXCEPTION_NAME]: exception.value || exception
           },
           prev: env
         },
@@ -172,8 +198,8 @@ export function ThrowStatement(e: NodeTypes.ThrowStatement, _c, cerr, env, confi
 }
 
 export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
-  GetValue(
-    { name: EXCEPTION_NAME },
+  evaluate(
+    { type: "GetValue", name: EXCEPTION_NAME },
     (error: MetaesException | Error) =>
       evaluate(
         e.body,
@@ -190,7 +216,8 @@ export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
         config
       ),
     cerr,
-    env
+    env,
+    config
   );
 }
 
@@ -237,8 +264,38 @@ export function ForInStatement(e: NodeTypes.ForInStatement, c, cerr, env, config
   );
 }
 
-export function ForStatement(e: NodeTypes.ForStatement, _c, cerr, env, config) {
-  evaluate(e.init, _init => cerr(NotImplementedException(`${e.type} is not implemented yet`)), cerr, env, config);
+export function ForStatement(e: NodeTypes.ForStatement, c, cerr, env, config) {
+  const tasks: Function[] = [];
+  let running = false;
+
+  function schedule(fn) {
+    tasks.push(fn);
+    if (!running) {
+      run();
+    }
+  }
+
+  function run() {
+    if (running) {
+      return;
+    }
+    running = true;
+    while (tasks.length) {
+      tasks.pop()!();
+    }
+    running = false;
+  }
+
+  const update = () => (e.update ? evaluate(e.update, test, cerr, env, config) : test());
+  const test = () => (e.test ? evaluate(e.test, test => (test ? body() : c()), cerr, env, config) : body());
+  const body = () => schedule(() => evaluate(e.body, update, cerr, { values: {}, prev: env }, config));
+  if (e.init) {
+    evaluate(e.init, test, cerr, env, config);
+  } else {
+    test();
+  }
+
+  run();
 }
 
 export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config) {
@@ -311,39 +368,38 @@ export function EmptyStatement(_e: NodeTypes.EmptyStatement, c) {
   c();
 }
 
-// TODO: clean up, fix error
 export function ClassDeclaration(e: NodeTypes.ClassDeclaration, c, cerr, env, config) {
-  evaluate(
-    e.superClass,
-    superClass =>
-      evaluate(
-        e.body,
-        body =>
-          visitArray(
-            body,
-            ({ key, value }, c, cerr) => {
-              if (key === "constructor") {
-                value.prototype = Object.create(superClass.prototype);
-                if (e.id) {
-                  evaluate({ type: "SetValue", name: e.id.name, value, isDeclaration: true }, c, cerr, env, config);
-                } else {
-                  cerr(NotImplementedException("Not implemented case"));
-                }
-              } else {
-                cerr(NotImplementedException("Methods handling not implemented yet."));
-              }
-            },
-            c,
-            cerr
-          ),
-        cerr,
-        env,
-        config
-      ),
-    cerr,
-    env,
-    config
-  );
+  function onSuperClass(superClass) {
+    let klass = function() {};
+    evaluate(
+      e.body,
+      body =>
+        visitArray(
+          body,
+          ({ key, value }, c, cerr) => {
+            if (key === "constructor") {
+              value.prototype = Object.create(superClass.prototype);
+              c((klass = value));
+            } else {
+              cerr(NotImplementedException("Methods handling not implemented yet."));
+            }
+          },
+          () =>
+            e.id
+              ? evaluate({ type: "SetValue", name: e.id.name, value: klass, isDeclaration: true }, c, cerr, env, config)
+              : cerr(NotImplementedException("Not implemented case")),
+          cerr
+        ),
+      cerr,
+      env,
+      config
+    );
+  }
+  if (e.superClass) {
+    evaluate(e.superClass, onSuperClass, cerr, env, config);
+  } else {
+    onSuperClass(null);
+  }
 }
 
 export function ClassBody(e: NodeTypes.ClassBody, c, cerr, env, config) {
@@ -373,6 +429,7 @@ export default {
   Program,
   VariableDeclarator,
   VariableDeclaration,
+  ObjectPattern,
   AssignmentPattern,
   IfStatement,
   ExpressionStatement,

@@ -1,9 +1,9 @@
-import { evaluate } from "./applyEval";
-import { Environment } from "./environment";
+import { evaluate, visitArray } from "./evaluate";
 import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
-import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
+import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction, Environment } from "./types";
 
+// TODO: move to interpreter style
 export const evaluateMetaFunction = (
   metaFunction: MetaesFunction,
   c: Continuation,
@@ -13,58 +13,57 @@ export const evaluateMetaFunction = (
   executionTimeConfig?: EvaluationConfig
 ) => {
   const { e, closure, config } = metaFunction;
-  try {
-    const env = {
-      prev: closure,
-      values: { this: thisObject, arguments: args }
-    };
-    for (let i = 0; i < e.params.length; i++) {
-      let param = e.params[i];
+  const env = {
+    prev: closure,
+    values: { this: thisObject, arguments: args }
+  };
+  let i = 0;
+  visitArray(
+    e.params,
+    function nextMetaFunctionParam(param, c, cerr) {
       switch (param.type) {
         case "Identifier":
-          env.values[param.name] = args[i];
+          c((env.values[param.name] = args[i++]));
           break;
         case "RestElement":
-          env.values[param.argument.name] = args.slice(i);
+          c((env.values[param.argument.name] = args.slice(i++)));
+          break;
+        case "ObjectPattern":
+          evaluate(param, c, cerr, { values: args[i++], prev: env, internal: true }, config);
           break;
         default:
-          throw NotImplementedException(`Not supported type (${param["type"]}) of function param.`, param);
+          cerr(NotImplementedException(`"${param["type"]}" is not supported type of function param.`, param));
       }
-    }
-
-    evaluate(
-      e.body,
-      value => {
-        // use implicit return only if function is arrow function and have expression as a body
-        if (e.type === "ArrowFunctionExpression" && e.body.type !== "BlockStatement") {
-          c(value);
-        } else {
-          // ignore what was evaluated in function body, return statement in error continuation should carry the value
-          c();
-        }
-      },
-      exception => {
-        switch (exception.type) {
-          case "ReturnStatement":
-            c(exception.value);
-            break;
-          default:
-            cerr(exception);
-        }
-      },
-      env,
-      Object.assign({}, executionTimeConfig, config)
-    );
-  } catch (e) {
-    cerr(e);
-  }
+    },
+    () =>
+      evaluate(
+        e.body,
+        value =>
+          e.type === "ArrowFunctionExpression" && e.body.type !== "BlockStatement"
+            ? // use implicit return only if function is arrow function and have expression as a body
+              c(value)
+            : // ignore what was evaluated in function body, return statement in error continuation should carry the value
+              c(undefined),
+        exception => (exception.type === "ReturnStatement" ? c(exception.value) : cerr(exception)),
+        env,
+        // Execution time config takes precedence over function creation time config
+        { ...config, ...executionTimeConfig }
+      ),
+    cerr
+  );
 };
 
 export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
   const fn = function(this: any, ...args) {
     let result;
     let exception;
-    evaluateMetaFunction(metaFunction, r => (result = r), ex => (exception = toException(ex)), this, args);
+    evaluateMetaFunction(
+      metaFunction,
+      r => (result = r),
+      ex => (exception = toException(ex)),
+      this,
+      args
+    );
     if (exception) {
       throw exception;
     }
@@ -82,16 +81,16 @@ export const createMetaFunction = (e: FunctionNode, closure: Environment, config
     config
   });
 
-const META_KEY = "__meta__";
+const MetaesSymbol = (typeof Symbol === "function" ? Symbol : _ => _)("__metaes__");
 
 export function markAsMetaFunction(fn: Function, meta: MetaesFunction) {
-  (<any>fn)[META_KEY] = meta;
+  fn[MetaesSymbol] = meta;
 }
 
-export function isMetaFunction(fn: Function) {
-  return (<any>fn)[META_KEY];
+export function isMetaFunction(fn?: Function) {
+  return fn && !!fn[MetaesSymbol];
 }
 
 export function getMetaFunction(fn: Function) {
-  return (<any>fn)[META_KEY];
+  return fn[MetaesSymbol];
 }

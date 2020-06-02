@@ -1,14 +1,16 @@
-import { evaluate } from "../applyEval";
-import { Environment } from "../environment";
+import { evaluate } from "../evaluate";
 import { NotImplementedException } from "../exceptions";
+import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
+import { Environment } from "../types";
 
 export function Identifier(e: NodeTypes.Identifier, c, cerr, env: Environment, config) {
   evaluate(
     { type: "GetValue", name: e.name },
     c,
     exception => {
-      (exception.location = e), cerr(exception);
+      exception.location = e;
+      cerr(exception);
     },
     env,
     config
@@ -19,16 +21,24 @@ export function Literal(e: NodeTypes.Literal, c) {
   c(e.value);
 }
 
-export function Apply({ fn, thisObj, args }: NodeTypes.Apply, c, cerr) {
+export function Apply({ fn, thisValue, args }: NodeTypes.Apply, c, cerr, _env, config) {
   try {
-    c(fn.apply(thisObj, args));
+    if (isMetaFunction(fn)) {
+      evaluateMetaFunction(getMetaFunction(fn), c, cerr, thisValue, args, config);
+    } else {
+      c(fn.apply(thisValue, args));
+    }
   } catch (e) {
     cerr(e);
   }
 }
 
-export function GetProperty({ object, property }: NodeTypes.GetProperty, c) {
-  c(object[property]);
+export function GetProperty({ object, property }: NodeTypes.GetProperty, c, cerr, _env, _config) {
+  try {
+    c(object[property]);
+  } catch (e) {
+    cerr(e);
+  }
 }
 
 // TODO: when not using `=` should also incorporate GetValue

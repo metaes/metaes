@@ -1,8 +1,8 @@
 import { assert } from "chai";
 import { before, beforeEach, describe, it } from "mocha";
-import { GetProperty, SetProperty, Apply } from "./interpreter/base";
-import { ECMAScriptInterpreters } from "./interpreters";
-import { MetaesContext, evalFunctionBodyAsPromise } from "./metaes";
+import { GetProperty, SetProperty, Apply } from "../../lib/interpreter/base";
+import { ECMAScriptInterpreters } from "../../lib/interpreters";
+import { MetaesContext, evalFnBodyAsPromise } from "../../lib/metaes";
 
 describe("Interpreters", () => {
   let context: MetaesContext;
@@ -29,7 +29,7 @@ describe("Interpreters", () => {
   });
 
   it("should support custom GetValue", async () => {
-    assert.deepEqual(await evalFunctionBodyAsPromise({ context, source: me => [me.firstName, me.lastName] }), [1, 2]);
+    assert.deepEqual(await evalFnBodyAsPromise({ context, source: me => [me.firstName, me.lastName] }), [1, 2]);
   });
 });
 
@@ -84,14 +84,14 @@ describe("Example Proxy implementation", async () => {
   });
 
   it("should support standard get operations", async () => {
-    assert.deepEqual(await evalFunctionBodyAsPromise({ context, source: self => [self.value.a, self.value.b] }), [
+    assert.deepEqual(await evalFnBodyAsPromise({ context, source: self => [self.value.a, self.value.b] }), [
       1,
       2
     ]);
   });
 
   it("should support custom get operations", async () => {
-    assert.deepEqual(await evalFunctionBodyAsPromise({ context, source: self => [self.proxied.a, self.proxied.b] }), [
+    assert.deepEqual(await evalFnBodyAsPromise({ context, source: self => [self.proxied.a, self.proxied.b] }), [
       "1mln",
       "2mln"
     ]);
@@ -99,7 +99,7 @@ describe("Example Proxy implementation", async () => {
 
   it("should support custom set operations", async () => {
     try {
-      await context.evalFunctionBody(self => {
+      await context.evalFnBody(self => {
         self.proxied.a = "a new value";
       });
     } catch (e) {
@@ -169,9 +169,9 @@ describe("Example remote context for database access", () => {
           SetProperty.apply(null, arguments);
         }
       },
-      Apply({ thisObj }) {
-        if (thisObj instanceof MetaArray) {
-          thisObj.Apply.apply(thisObj, arguments);
+      Apply({ thisValue }) {
+        if (thisValue instanceof MetaArray) {
+          thisValue.Apply.apply(thisValue, arguments);
         } else {
           Apply.apply(null, arguments);
         }
@@ -191,7 +191,7 @@ describe("Example remote context for database access", () => {
 
   it("should support custom push method call", async () => {
     assert.deepEqual(
-      await evalFunctionBodyAsPromise({
+      await evalFnBodyAsPromise({
         context,
         source: self => {
           self.users.push({ name: "new user" });
@@ -204,7 +204,7 @@ describe("Example remote context for database access", () => {
 
   it("should support custom slice method call", async () => {
     assert.deepEqual(
-      await evalFunctionBodyAsPromise({
+      await evalFnBodyAsPromise({
         context,
         source: self => {
           self.users.push({ name: "new user1" }, { name: "new user2" }, { name: "new user3" }, { name: "new user4" });
@@ -216,12 +216,12 @@ describe("Example remote context for database access", () => {
   });
 
   it("should support custom array length", async () => {
-    assert.equal(await evalFunctionBodyAsPromise({ context, source: self => self.users.length }), 10);
+    assert.equal(await evalFnBodyAsPromise({ context, source: self => self.users.length }), 10);
   });
 
   it("should support assigning to and getting from number property", async () => {
     assert.equal(
-      await evalFunctionBodyAsPromise({
+      await evalFnBodyAsPromise({
         context,
         source: self => {
           self.users[0] = 1;

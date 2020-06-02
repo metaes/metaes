@@ -1,31 +1,22 @@
-import { Continuation, ErrorContinuation } from "./types";
-
-export interface Reference {
-  id?: string;
-}
-
-export interface EnvironmentBase<T = any> {
-  values: { [key: string]: T };
-  references?: { [key: string]: Reference };
-}
-
-export interface Environment<T = any> extends EnvironmentBase<T> {
-  prev?: Environment<T>;
-}
+import { Continuation, ErrorContinuation, EnvironmentBase, Environment } from "./types";
 
 export function toEnvironment(environment?: any | EnvironmentBase | Environment): Environment {
   return environment ? ("values" in environment ? environment : { values: environment }) : { values: {} };
 }
 
-export function getEnvironmentForValue(env: Environment, name: string): Environment | null {
+export function getEnvironmentBy(env: Environment, condition: (env: Environment) => boolean): Environment | null {
   let _env: Environment | undefined = env;
   while (_env) {
-    if (name in _env.values) {
+    if (condition(_env)) {
       return _env;
     }
     _env = _env.prev;
   }
   return null;
+}
+
+export function getEnvironmentForValue(env: Environment, name: string): Environment | null {
+  return getEnvironmentBy(env, env => name in env.values);
 }
 
 type SetValueT<T> = {
@@ -40,10 +31,17 @@ export function SetValue<T>(
   cerr: ErrorContinuation,
   env: Environment<T>
 ) {
+  let writableEnv: Environment | undefined = env;
+  while (writableEnv && writableEnv.internal) {
+    writableEnv = writableEnv.prev;
+  }
+  if (!writableEnv) {
+    return cerr(new Error(`Can't write to '${name}' value.`));
+  }
   if (isDeclaration) {
-    c((env.values[name] = value));
+    c((writableEnv.values[name] = value));
   } else {
-    const _env = getEnvironmentForValue(env, name);
+    const _env = getEnvironmentForValue(writableEnv, name);
     if (_env) {
       c((_env.values[name] = value));
     } else {
@@ -60,10 +58,8 @@ export function GetValue<T>(
 ) {
   let _env: Environment | undefined = env;
   do {
-    if (name in _env.values) {
-      c(_env.values[name]);
-      // return required here to avoid calling `cerr` at the end
-      return;
+    if (Object.hasOwnProperty.call(_env.values, name)) {
+      return c(_env.values[name]);
     }
   } while ((_env = _env.prev));
 
@@ -71,4 +67,15 @@ export function GetValue<T>(
     type: "ReferenceError",
     value: new ReferenceError(`"${name}" is not defined.`)
   });
+}
+
+export function GetValueSync<T>(name: string, env: Environment<T>): T | null {
+  let _env: Environment | undefined = env;
+  while (_env && _env.values) {
+    if (Object.hasOwnProperty.call(_env.values, name)) {
+      return _env.values[name];
+    }
+    _env = _env.prev;
+  }
+  return null;
 }

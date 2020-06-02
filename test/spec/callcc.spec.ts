@@ -1,28 +1,29 @@
 import { assert, expect } from "chai";
 import { describe, it } from "mocha";
-import { evalFunctionBodyAsPromise, MetaesContext, metaesEval, evalFunctionAsPromise } from "./metaes";
-import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "./metafunction";
-import { callWithCurrentContinuation } from "./callcc";
+import { callcc, lifted, liftedAll } from "../../lib/callcc";
+import { Apply } from "../../lib/interpreter/base";
+import { evalFnAsPromise, evalFnBodyAsPromise, MetaesContext, metaesEval } from "../../lib/metaes";
+import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../../lib/metafunction";
 
 describe("Callcc", () => {
   it("should return current env", () => {
     function receiver(_, _c, _cerr, env) {
       assert.equal(env.values.answer, 42);
-      assert.equal(env.values.callWithCurrentContinuation, callWithCurrentContinuation);
+      assert.equal(env.values.callcc, callcc);
     }
     metaesEval(
-      "var answer=42; callWithCurrentContinuation(receiver)",
+      "var answer=42; callcc(receiver)",
       console.log,
       e => {
         throw e;
       },
-      { callWithCurrentContinuation, receiver }
+      { callcc, receiver }
     );
   });
 
   it("should call with current continuation with additional arguments", async () => {
     const context = new MetaesContext(undefined, undefined, {
-      values: { callWithCurrentContinuation, receiver }
+      values: { callcc, receiver }
     });
 
     let env;
@@ -33,9 +34,9 @@ describe("Callcc", () => {
       setTimeout(cc, 0, 21);
     }
 
-    const result = await evalFunctionBodyAsPromise({
+    const result = await evalFnBodyAsPromise({
       context,
-      source: callWithCurrentContinuation => 2 * callWithCurrentContinuation(receiver)
+      source: callcc => 2 * callcc(receiver)
     });
     assert.equal(result, 42);
     assert.containsAllKeys(env, ["values"]);
@@ -44,14 +45,14 @@ describe("Callcc", () => {
   it("should continue after call/cc multiple times if user decides to", async () => {
     const result = [];
     const context = new MetaesContext(undefined, undefined, {
-      values: { callcc: callWithCurrentContinuation, receiver, result }
+      values: { callcc, receiver, result }
     });
     let cc;
     function receiver(_, _cc) {
       cc = _cc;
       cc([1, 2, 3]);
     }
-    await evalFunctionBodyAsPromise({
+    await evalFnBodyAsPromise({
       context,
       source: (callcc, result, receiver) => {
         for (let x of callcc(receiver)) {
@@ -68,14 +69,14 @@ describe("Callcc", () => {
       Should execut first time using passed in value`, async () => {
     const result = [];
     const context = new MetaesContext(undefined, undefined, {
-      values: { callcc: callWithCurrentContinuation, receiver, result }
+      values: { callcc, receiver, result }
     });
     let cc;
     function receiver(value, _cc, _cerr) {
       cc = _cc;
       cc(value);
     }
-    await evalFunctionBodyAsPromise({
+    await evalFnBodyAsPromise({
       context,
       source: (callcc, result, receiver) => {
         const bind = value => callcc(receiver, value);
@@ -92,14 +93,15 @@ describe("Callcc", () => {
 
   it("should accept metaes function as call/cc receiver", async () => {
     const context = new MetaesContext(undefined, undefined, {
-      values: { callcc: callWithCurrentContinuation, console }
+      values: { callcc, console }
     });
 
-    const i = await evalFunctionAsPromise({
+    const i = await evalFnAsPromise({
       context,
       source: callcc => {
         let evilGoTo;
         let i = 0;
+
         callcc(function(_, cc) {
           evilGoTo = cc;
           evilGoTo();
@@ -110,22 +112,21 @@ describe("Callcc", () => {
         }
         return i;
       },
-      args: [callWithCurrentContinuation]
+      args: [callcc]
     });
-
     assert.equal(i, 10);
   });
 
   it("should throw from call/cc receiver", async () => {
     const context = new MetaesContext(undefined, undefined, {
-      values: { callcc: callWithCurrentContinuation, console }
+      values: { callcc, console }
     });
 
     function receiver(_, _cc, cerr) {
       cerr({ value: new Error("Continuation error") });
     }
 
-    const error = await evalFunctionAsPromise({
+    const error = await evalFnAsPromise({
       context,
       source: (callcc, receiver) => {
         try {
@@ -134,23 +135,22 @@ describe("Callcc", () => {
           return e;
         }
       },
-      args: [callWithCurrentContinuation, receiver]
+      args: [callcc, receiver]
     });
     expect(error.message).equal("Continuation error");
   });
 
   it("should support custom yield expression", async () => {
     const context = new MetaesContext(undefined, undefined, {
-      values: { callcc: callWithCurrentContinuation, console, isMetaFunction, getMetaFunction, evaluateMetaFunction }
+      values: { callcc, console, isMetaFunction, Apply }
     });
 
-    const result = await evalFunctionBodyAsPromise({
+    const result = await evalFnBodyAsPromise({
       context,
-      source: (callcc, isMetaFunction, evaluateMetaFunction, getMetaFunction) => {
+      source: (callcc, isMetaFunction, Apply) => {
         function receiver(value, cc, ccerr) {
           ccerr({ type: "NextIteration", value: { value, cc } });
         }
-
         function getIterator(fn) {
           if (!isMetaFunction(fn)) {
             throw "Creating iterator from native function not supported yet";
@@ -160,8 +160,8 @@ describe("Callcc", () => {
           let done = false;
           let error;
           function start() {
-            evaluateMetaFunction(
-              getMetaFunction(fn),
+            Apply(
+              { fn, args: [] },
               () => {
                 done = true;
               },
@@ -172,9 +172,7 @@ describe("Callcc", () => {
                 } else {
                   error = e.value;
                 }
-              },
-              null,
-              []
+              }
             );
           }
 
@@ -218,7 +216,6 @@ describe("Callcc", () => {
         results;
       }
     });
-
     expect(result).deep.eq([
       { value: 1, done: false },
       { value: 2, done: false },
@@ -232,7 +229,7 @@ describe("Callcc", () => {
     const context = new MetaesContext(undefined, undefined, {
       values: {
         awaitReceiver_,
-        callcc: callWithCurrentContinuation,
+        callcc,
         console,
         isMetaFunction,
         getMetaFunction,
@@ -251,7 +248,7 @@ describe("Callcc", () => {
     const serverData = { "fake-server-data": ["hello", "world"] };
     const errorMessage = "Can't load data";
 
-    const result = await evalFunctionBodyAsPromise(
+    const result = await evalFnBodyAsPromise(
       {
         context,
         source: (awaitReceiver_, callcc, loadData, loadFailingData) => {
@@ -274,5 +271,37 @@ describe("Callcc", () => {
       }
     );
     expect(result).deep.eq([errorMessage, 1, 5, serverData]);
+  });
+
+  it("should lift functions", async () => {
+    function socket(int, c) {
+      for (let i = 0; i < 6; i++) {
+        c(int + ":" + i);
+      }
+    }
+
+    function pack(amount) {
+      let group: any = [];
+      return lifted(([val], c) => {
+        group.push(val);
+        if (group.length === amount) {
+          c([group]);
+          group = [];
+        }
+      });
+    }
+
+    const context = new MetaesContext(undefined, console.error, {
+      values: { console, pack, setTimeout, assert, ...liftedAll({ socket }) }
+    });
+    await evalFnBodyAsPromise({
+      context,
+      source: assert => {
+        const pack3 = pack(3);
+        const pack2 = pack(2);
+        // @ts-ignore
+        assert.deepEqual(pack2(pack3(socket(80))), [[[["80:0", "80:1", "80:2"]], [["80:3", "80:4", "80:5"]]]]);
+      }
+    });
   });
 });

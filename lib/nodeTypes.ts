@@ -1,4 +1,4 @@
-import { NodeBase } from "./nodes/nodes";
+import { NodeBase } from "./types";
 
 export interface Identifier extends NodeBase {
   type: "Identifier";
@@ -7,6 +7,10 @@ export interface Identifier extends NodeBase {
 export interface Literal extends NodeBase {
   type: "Literal";
   value: string | number | boolean;
+  regex?: {
+    pattern: string;
+    flags: string;
+  };
 }
 
 export interface MemberExpression extends NodeBase {
@@ -123,7 +127,7 @@ export interface IfStatement extends ConditionalBase {
 export interface Property extends NodeBase {
   type: "Property";
   key: Identifier | Literal;
-  value: Expression;
+  value: Expression | ObjectPattern | AssignmentPattern;
   computed: boolean;
   shorthand: boolean;
   method: boolean;
@@ -228,7 +232,7 @@ export interface RestElement extends NodeBase {
 }
 
 interface FunctionParams {
-  params: (Identifier | RestElement)[];
+  params: (Identifier | RestElement | ObjectPattern)[];
 }
 
 export interface FunctionExpression extends NodeBase, FunctionParams {
@@ -258,7 +262,7 @@ export interface MethodDefinition extends NodeBase {
 export interface ClassDeclaration extends NodeBase {
   type: "ClassDeclaration";
   id?: Identifier;
-  superClass: Identifier;
+  superClass: Identifier | null;
   body: ClassBody;
 }
 
@@ -285,6 +289,12 @@ export interface TemplateLiteral extends NodeBase {
   expressions: Expression[];
 }
 
+export interface TaggedTemplateExpression extends NodeBase {
+  type: "TaggedTemplateExpression";
+  tag: Expression;
+  quasi: TemplateLiteral;
+}
+
 interface TemplateElement extends NodeBase {
   type: "TemplateElement";
   value: {
@@ -293,6 +303,18 @@ interface TemplateElement extends NodeBase {
   };
   tail: boolean;
 }
+
+export interface SpreadElement extends NodeBase {
+  type: "SpreadElement";
+  argument: Expression;
+}
+
+export interface ExportNamedDeclaration extends NodeBase {
+  type: "ExportNamedDeclaration";
+  declaration: VariableDeclaration | FunctionDeclaration;
+}
+
+type ModuleNode = ExportNamedDeclaration;
 
 export type FunctionNode = FunctionExpression | FunctionDeclaration | ArrowFunctionExpression;
 
@@ -315,7 +337,8 @@ export type Statement =
   | ClassDeclaration
   | ClassBody
   | Super
-  | DebuggerStatement;
+  | DebuggerStatement
+  | ModuleNode;
 
 type Expression =
   | Identifier
@@ -336,7 +359,9 @@ type Expression =
   | ConditionalExpression
   | MethodDefinition
   | RestElement
-  | TemplateLiteral;
+  | TemplateLiteral
+  | TaggedTemplateExpression
+  | SpreadElement;
 
 type Comment = Line;
 
@@ -347,8 +372,8 @@ export interface Line extends NodeBase {
 export interface Apply extends NodeBase {
   type: "Apply";
   e: CallExpression;
-  fn: Function | any;
-  thisObj: any;
+  fn: Function;
+  thisValue: any;
   args: any[];
 }
 

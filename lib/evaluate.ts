@@ -1,8 +1,11 @@
-import { Environment, GetValue } from "./environment";
+import { GetValueSync } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
 import { callInterceptor } from "./metaes";
-import { ASTNode } from "./nodes/nodes";
-import { Continuation, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
+import { ASTNode, Continuation, Environment, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
+
+export function defaultScheduler(fn) {
+  fn();
+}
 
 export function evaluate(
   e: ASTNode,
@@ -11,39 +14,36 @@ export function evaluate(
   env: Environment,
   config: EvaluationConfig
 ) {
-  callInterceptor("enter", config, e, env);
-  GetValue(
-    { name: e.type },
-    (interpreter: Interpreter<ASTNode>) => {
-      try {
-        interpreter(
-          e,
-          value => {
+  const interpreter: Interpreter<any> = GetValueSync(e.type, config.interpreters);
+  const schedule = config.schedule || defaultScheduler;
+  if (interpreter) {
+    callInterceptor("enter", config, e, env);
+    schedule(function run() {
+      interpreter(
+        e,
+        function(value) {
+          schedule(function exit() {
             callInterceptor("exit", config, e, env, value);
             c(value);
-          },
-          exception => {
-            exception = toException(exception);
-            if (!exception.location) {
-              exception.location = e;
-            }
-            callInterceptor("exit", config, e, env, exception);
-            cerr(exception);
-          },
-          env,
-          config
-        );
-      } catch (error) {
-        throw error;
-      }
-    },
-    () => {
-      const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
-      cerr(exception);
-      callInterceptor("exit", config, e, env, exception);
-    },
-    config.interpreters
-  );
+          });
+        },
+        function exception(exception) {
+          exception = toException(exception);
+          if (!exception.location) {
+            exception.location = e;
+          }
+          callInterceptor("exit", config, e, env, exception);
+          cerr(exception);
+        },
+        env,
+        config
+      );
+    });
+  } else {
+    const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
+    callInterceptor("exit", config, e, env, exception);
+    cerr(exception);
+  }
 }
 
 type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;
@@ -62,7 +62,7 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
     fn(items[0], value => c([value]), cerr);
   } else {
     // Array of loop function arguments to be applied next time
-    // TODO: convert to nextOperation or similar, there is always only one? What about callCC
+    // TODO: convert to nextOperation or similar, there is always only one? What about callcc?
     const tasks: any[] = [];
     // Indicates if tasks execution is done. Initially it is done.
     let done = true;
@@ -71,7 +71,8 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
     function execute() {
       done = false;
       while (tasks.length) {
-        (<any>loop)(...tasks.shift());
+        // @ts-ignore
+        loop(...tasks.shift());
       }
       done = true;
     }
@@ -82,7 +83,7 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
       if (index < items.length) {
         fn(
           items[index],
-          value => {
+          function onNextItem(value) {
             // If true, it means currently may be happening for example a reevaluation of items
             // from certain index using call/cc. Copy accumulated previously results and ignore their tail
             // after given index as this reevalution may happen in the middle of an array.
