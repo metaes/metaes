@@ -9,7 +9,7 @@ describe("Base interpreters", () => {
       function foo(...args) {
         acceptedArgs = args;
       }
-      metaesEval({ type: "Apply", fn: foo, args: [1, 2] }, console.log, console.error);
+      metaesEval({ type: "Apply", fn: foo, args: [1, 2] }, null, console.error);
       assert.deepEqual(acceptedArgs, [1, 2]);
     });
 
@@ -20,7 +20,7 @@ describe("Base interpreters", () => {
           acceptedArgs = args;
         }
       };
-      metaesEval({ type: "Apply", fn: object.method, thisValue: object, args: [1, 2] }, console.log, console.error);
+      metaesEval({ type: "Apply", fn: object.method, thisValue: object, args: [1, 2] }, null, console.error);
       assert.deepEqual(acceptedArgs, [1, 2]);
     });
   });

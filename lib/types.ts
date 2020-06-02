@@ -116,5 +116,5 @@ type JSON_Object = {
 interface JSON_Array extends Array<string | number | boolean | Date | JSON_Object | JSON_Array> {}
 
 type Input = Script | JSON_T | ASTNode;
-export type FullyQualifiedMetaesMessage = { input: Input; env: Environment };
+
 export type MetaesMessage = JSON_T | ({ input: Input } & (Partial<EnvironmentBase> | { env: Environment }));

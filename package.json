@@ -29,7 +29,7 @@
   },
   "main": "metaes",
   "license": "MIT",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "devDependencies": {
     "@types/chai": "^4.2.0",
     "@types/node": "^8.10.52",
@@ -40,16 +40,9 @@
     "mocha": "^5.2.0",
     "pify": "^3.0.0",
     "source-map-support": "^0.5.13",
-    "typescript": "^3.5.3"
+    "typescript": "^3.9.3"
   },
   "dependencies": {
-    "body-parser": "^1.19.0",
-    "cors": "^2.8.5",
-    "esprima": "^4.0.1",
-    "express": "^4.17.1",
-    "helmet": "^3.20.0",
-    "node-fetch": "^2.6.0",
-    "websocket": "^1.0.29",
-    "ws": "^4.1.0"
+    "esprima": "^4.0.1"
   }
 }

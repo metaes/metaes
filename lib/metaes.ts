@@ -61,12 +61,13 @@ export const safeEvaluate: Evaluate = (
 ) => {
   try {
     let { script, config, env } = inject();
+    // @ts-ignore
     config = { script, ...config };
 
     evaluate(
       script.ast,
-      val => c && c(val),
-      exception => cerr && cerr(exception),
+      (val) => c && c(val),
+      (exception) => cerr && cerr(exception),
       env,
       config
     );
@@ -123,7 +124,7 @@ export class MetaesContext implements Context {
     input: Script | Source,
     c?: Continuation,
     cerr?: ErrorContinuation,
-    environment?: Environment | object,
+    environment?: Environment,
     config?: Partial<EvaluationConfig>
   ) {
     try {
@@ -218,7 +219,7 @@ export function evalFn<T extends any[]>(
 ) {
   context.evaluate(
     source,
-    fn => {
+    (fn) => {
       try {
         const result = fn.apply(null, args);
         if (c) {
