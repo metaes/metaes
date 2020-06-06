@@ -1,12 +1,6 @@
 {
   "name": "metaes",
   "description": "JavaScript (ECMAScript) in JavaScript interpreter for better tools.",
-  "keywords": [
-    "interpreter",
-    "language",
-    "javascript",
-    "ecmascript"
-  ],
   "bugs": {
     "url": "https://github.com/metaes/metaes/issues"
   },
@@ -18,8 +12,8 @@
     "test": "tsc; mocha --recursive test/spec test/runner",
     "test:local": "mocha --recursive test/spec test/runner",
     "test:interpreter-only": "mocha test/runner.js test/spec/callcc.spec.js ",
-    "dist:compile": "tsc -p tsconfig-build.json --declaration",
-    "dist:copy": "cp package.json README.md tsconfig.json .npmignore build/lib",
+    "dist:compile": "tsc --declaration --outDir build",
+    "dist:copy": "cp package.json README.md .npmignore build/lib",
     "dist:dry": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish --dry-run",
     "dist": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish"
   },
