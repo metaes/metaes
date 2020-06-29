@@ -1,13 +1,9 @@
 {
   "compileOnSave": true,
   "compilerOptions": {
-    "lib": ["es6", "dom", "es2016.array.include"],
     "baseUrl": ".",
-    "paths": {
-      "esprima": ["node_modules/esprima/dist/esprima"]
-    },
     "module": "commonjs",
-    "target": "es2017",
+    "target": "es2019",
     "sourceMap": true,
     "strictNullChecks": true,
     "noUnusedLocals": true,
@@ -17,5 +13,8 @@
     "noFallthroughCasesInSwitch": true,
     "declaration": false
   },
-  "include": ["lib/**/*.ts", "test/**/*.ts"]
+  "include": [
+    "lib/**/*.ts",
+    "test/**/*.ts"
+  ]
 }
