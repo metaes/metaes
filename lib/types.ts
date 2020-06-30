@@ -10,11 +10,14 @@ export type MetaesException = {
 
 export type Range = [number, number];
 
+export type ScriptType = "script" | "module";
+
 export type Script = {
   ast: ASTNode;
   source: Source;
   scriptId: string;
-  isModule?: boolean;
+  url?: string;
+  type?: ScriptType;
 };
 
 export type Source = string | ASTNode | Function;

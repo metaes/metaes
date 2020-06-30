@@ -28,6 +28,7 @@ function withStyle(text: string, style: (string) => string) {
 
 export function showException(script: Script, { location, value }: MetaesException, useStyles = true) {
   const styled = useStyles ? withStyle : (value) => value;
+  const source = typeof script.source === "function" ? script.source.toString() : script.source;
 
   if (location) {
     const url = script.url;
@@ -36,7 +37,7 @@ export function showException(script: Script, { location, value }: MetaesExcepti
 
     return (
       sourceLocation +
-      script.source
+      source
         .split("\n")
         .flatMap((line, i) => {
           const lineOutput = `  ${i + 21}|  ${line}`;
