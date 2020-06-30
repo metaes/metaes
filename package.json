@@ -15,7 +15,7 @@
     "email": "krupa.bartosz@gmail.com"
   },
   "scripts": {
-    "test": "tsc; mocha --parallel --recursive test/spec test/runner",
+    "test": "tsc; mocha --recursive test/spec test/runner",
     "test:local": "mocha --recursive test/spec test/runner",
     "test:interpreter-only": "mocha test/runner.js test/spec/callcc.spec.js ",
     "dist:compile": "tsc -p tsconfig-build.json --declaration",
