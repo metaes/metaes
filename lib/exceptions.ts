@@ -26,28 +26,26 @@ function withStyle(text: string, style: (string) => string) {
   return style(text);
 }
 
-export function showException(script: Script, { location, value }: MetaesException, useStyles = true) {
+export function presentException(script: Script, { location, value, message }: MetaesException, useStyles = true) {
   const styled = useStyles ? withStyle : (value) => value;
   const source = typeof script.source === "function" ? script.source.toString() : script.source;
+  const url = script.url ?? "anonymous";
 
   if (location) {
-    const url = script.url;
-    const startLine = location.loc?.start.line;
-    const sourceLocation = `${url}:${location.loc?.start.line}:${location.loc?.start.column} - ${value}\n`;
-
+    const startLine = location.loc?.start.line!;
+    const startColumn = location.loc?.start.column!;
+    const nodeLength = location.range ? location.range[1] - location.range[0] : 1;
+    const sourceLocation = `${url}:${location.loc?.start.line}:${location.loc?.start.column} - ${value || message}\n\n`;
+    const lines = source.split("\n");
+    const line = lines[startLine - 1];
+    const lineOutput = `  ${startLine}|  ${line}`;
+    const lineNumberSize = startLine.toString().length;
+    const paddingSum = 5;
     return (
       sourceLocation +
-      source
-        .split("\n")
-        .flatMap((line, i) => {
-          const lineOutput = `  ${i + 21}|  ${line}`;
-          if (i + 1 === startLine) {
-            return [styled(lineOutput, highlight), `             ${styled("~~~", error)}`];
-          } else {
-            return styled(lineOutput, dim);
-          }
-        })
-        .join("\n")
+      styled(lineOutput, highlight) +
+      "\n" +
+      `${" ".repeat(paddingSum + lineNumberSize + startColumn)}${styled("~".repeat(nodeLength), error)}`
     );
   } else {
     return value;

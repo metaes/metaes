@@ -8,7 +8,7 @@ export function Identifier(e: NodeTypes.Identifier, c, cerr, env: Environment, c
   evaluate(
     { type: "GetValue", name: e.name },
     c,
-    exception => {
+    (exception) => {
       exception.location = e;
       cerr(exception);
     },

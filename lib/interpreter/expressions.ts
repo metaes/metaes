@@ -54,15 +54,29 @@ export function CallExpression(
           break;
         case "MemberExpression":
           const e_callee = e.callee as NodeTypes.MemberExpression;
+          const { loc, range } = e_callee;
+
           evaluate(
             e_callee.object,
             (object) => {
               function evalApply(property) {
-                evaluate({ type: "Apply", e, fn: property, thisValue: object, args }, c, cerr, env, config);
+                if (typeof property === "function") {
+                  evaluate(
+                    { type: "Apply", e, fn: property, thisValue: object, args, loc, range },
+                    c,
+                    cerr,
+                    env,
+                    config
+                  );
+                } else {
+                  const source = config.script.source;
+                  const callee = typeof source === "string" ? source.substring(...e_callee.range!) : "callee";
+                  cerr(LocatedError(new TypeError(callee + " is not a function"), e_callee));
+                }
               }
               if (!e_callee.computed && e_callee.property.type === "Identifier") {
                 evaluate(
-                  { type: "GetProperty", object, property: e_callee.property.name },
+                  { type: "GetProperty", object, property: e_callee.property.name, loc, range },
                   evalApply,
                   cerr,
                   env,
@@ -72,7 +86,13 @@ export function CallExpression(
                 evaluate(
                   e_callee.property,
                   (propertyValue) =>
-                    evaluate({ type: "GetProperty", object, property: propertyValue }, evalApply, cerr, env, config),
+                    evaluate(
+                      { type: "GetProperty", object, property: propertyValue, loc, range },
+                      evalApply,
+                      cerr,
+                      env,
+                      config
+                    ),
                   cerr,
                   env,
                   config
@@ -354,7 +374,7 @@ export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, co
               c(left | right);
               break;
             default:
-              cerr(NotImplementedException(e.type + ` operator "${e.operator}" is not implemented yet.`));
+              cerr(NotImplementedException(e.type + ` operator "${e.operator}" is not implemented yet.`, e));
           }
         },
         cerr,
@@ -383,7 +403,9 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
           evaluate(calleeNode, onValue, cerr, env, config);
           break;
         case "Identifier":
-          evaluate({ type: "GetValue", name: calleeNode.name }, onValue, cerr, env, config);
+          const { range, loc } = calleeNode;
+
+          evaluate({ type: "GetValue", name: calleeNode.name, range, loc }, onValue, cerr, env, config);
 
           function onValue(callee) {
             if (typeof callee !== "function") {

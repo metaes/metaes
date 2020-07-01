@@ -4,10 +4,10 @@ import { evalFnBodyAsPromise, MetaesContext, metaesEval, noop } from "../../lib/
 
 describe("Exceptions", () => {
   it("should throw on AwaitExpression use", () =>
-    new Promise(resolve => {
+    new Promise((resolve) => {
       metaesEval(
         `(async ()=>await 2)()`,
-        x => {
+        (x) => {
           console.log({ x });
         },
         resolve
@@ -16,7 +16,7 @@ describe("Exceptions", () => {
 
   it("should throw ReferenceError", () =>
     new Promise((resolve, _reject) => {
-      metaesEval(`a`, noop, x => {
+      metaesEval(`a`, noop, (x) => {
         assert.equal(x.type, "ReferenceError");
         resolve();
       });
@@ -30,7 +30,7 @@ describe("Exceptions", () => {
       try {
         await evalFnBodyAsPromise({
           context: new MetaesContext(),
-          source: function() {
+          source: function () {
             throw 1;
           }
         });
@@ -44,7 +44,7 @@ describe("Exceptions", () => {
       try {
         await evalFnBodyAsPromise({
           context: new MetaesContext(),
-          source: function() {
+          source: function () {
             (() => {
               throw 1;
             })();
@@ -59,7 +59,7 @@ describe("Exceptions", () => {
       assert.equal(
         await evalFnBodyAsPromise({
           context: new MetaesContext(),
-          source: function() {
+          source: function () {
             try {
               (async () => {
                 throw 1;
@@ -75,22 +75,21 @@ describe("Exceptions", () => {
     });
 
     it("should catch any error in try statement", async () => {
-      // declare variable to stop TypeScript warnings
-      let a;
-
-      assert.isTrue(
-        (await evalFnBodyAsPromise({
+      assert.instanceOf(
+        await evalFnBodyAsPromise({
           context: new MetaesContext(),
-          source: function() {
+          source: function () {
             let error;
             try {
-              a; //
+              // @ts-ignore
+              a;
             } catch (e) {
               error = e;
             }
             error;
           }
-        })) instanceof ReferenceError
+        }),
+        ReferenceError
       );
     });
   });
