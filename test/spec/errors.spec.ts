@@ -14,12 +14,12 @@ anonymous:1:0 - ReferenceError: "x" is not defined.
   },
   "binary expression on line 2": {
     source: `
-    2 + err / 4`,
+2 + err / 4`,
     expected: `
-anonymous:2:8 - ReferenceError: "err" is not defined.
+anonymous:2:4 - ReferenceError: "err" is not defined.
 
-  2|      2 + err / 4
-              ~~~`
+  2|  2 + err / 4
+          ~~~`
   },
   "throw statement with new expression": {
     source: `throw new Something`,
@@ -74,8 +74,12 @@ describe.only("Exceptions printing", function () {
       let exception;
       metaesEvalModule(script, console.log, (_ex) => (exception = _ex));
       const result = presentException(script, exception, false);
-      console.log(result);
-      assert.equal(result, expected.trim());
+      try {
+        assert.equal(result, expected.trim());
+      } catch (e) {
+        console.log(result);
+        throw e;
+      }
     }
     testName.includes("[only]") ? it.only(testName.replace("[only]", ""), body) : it(testName, body);
   });
