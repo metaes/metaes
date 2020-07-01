@@ -11,28 +11,44 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
   evaluate(
     e.declaration,
     (value) => {
-      if (e.declaration.type === "FunctionDeclaration") {
-        const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
-        if (exportEnv) {
+      const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
+      if (!exportEnv) {
+        cerr(
+          LocatedError(
+            `Couldn't export declaration, no environment with '${ExportEnvironmentSymbol}' property found.`,
+            e.declaration
+          )
+        );
+        return;
+      }
+      switch (e.declaration.type) {
+        case "FunctionDeclaration":
           evaluate(
             { type: "SetValue", name: e.declaration.id.name, value, isDeclaration: true },
             c,
             cerr,
-            exportEnv,
+            exportEnv!,
             config
           );
-        } else {
+          break;
+
+        case "VariableDeclaration": {
+          evaluate(
+            { type: "SetValue", name: e.declaration.declarations[0].id.name, value, isDeclaration: true },
+            c,
+            cerr,
+            exportEnv!,
+            config
+          );
+          break;
+        }
+        default:
           cerr(
-            LocatedError(
-              `Couldn't export declaration, no environment with '${ExportEnvironmentSymbol}' property found.`,
+            NotImplementedException(
+              `'${e.declaration["type"]}' declaration type export is not supported.`,
               e.declaration
             )
           );
-        }
-      } else {
-        cerr(
-          NotImplementedException(`'${e.declaration.type}' declaration type export is not supported.`, e.declaration)
-        );
       }
     },
     cerr,
