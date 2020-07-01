@@ -66,7 +66,7 @@ anonymous:1:6 - Init 'ArrayPattern' is not supported yet.
 // TODO: multiline errors
 // TODO: very long line with (minified file)
 
-describe.only("Exceptions printing", function () {
+describe("Exceptions printing", function () {
   Object.entries(tests).forEach(([testName, { source, expected }]) => {
     function body() {
       const script = createScript(source);

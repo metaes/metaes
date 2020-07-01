@@ -1,5 +1,5 @@
-import { getEnvironmentBy } from "../environment";
-import { evaluate } from "../evaluate";
+import { getEnvironmentBy, GetValue, SetValue } from "../environment";
+import { evaluate, visitArray } from "../evaluate";
 import { LocatedError, NotImplementedException } from "../exceptions";
 import * as NodeTypes from "../nodeTypes";
 import { Environment } from "../types";
@@ -10,9 +10,9 @@ export const ExportEnvironmentSymbol = "[[isExportModule]]";
 export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, cerr, env: Environment, config) {
   evaluate(
     e.declaration,
-    value => {
+    (value) => {
       if (e.declaration.type === "FunctionDeclaration") {
-        const exportEnv = getEnvironmentBy(env, env => env[ExportEnvironmentSymbol]);
+        const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
         if (exportEnv) {
           evaluate(
             { type: "SetValue", name: e.declaration.id.name, value, isDeclaration: true },
@@ -41,6 +41,31 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
   );
 }
 
+export function ImportDeclaration(e: NodeTypes.ImportDeclaration, c, cerr, env, config) {
+  GetValue(
+    { name: "import" },
+    async (importFn) => {
+      try {
+        const importedModule = await importFn(e.source.value);
+        visitArray(
+          e.specifiers,
+          (specifier, c, cerr) => {
+            const name = specifier.local.name;
+            SetValue({ name, value: importedModule[name], isDeclaration: true }, c, cerr, env);
+          },
+          c,
+          cerr
+        );
+      } catch (e) {
+        cerr(e);
+      }
+    },
+    cerr,
+    env
+  );
+}
+
 export default {
-  ExportNamedDeclaration
+  ExportNamedDeclaration,
+  ImportDeclaration
 };

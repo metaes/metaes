@@ -14,6 +14,7 @@ export const LocatedError = (value: any, location: ASTNode): MetaesException => 
 function highlight(text: string) {
   return `\x1b[1m${text}\x1b[0m`;
 }
+
 function dim(text: string) {
   return `\x1b[2m${text}\x1b[0m`;
 }

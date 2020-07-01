@@ -314,7 +314,19 @@ export interface ExportNamedDeclaration extends NodeBase {
   declaration: VariableDeclaration | FunctionDeclaration;
 }
 
-type ModuleNode = ExportNamedDeclaration;
+export interface ImportDeclaration extends NodeBase {
+  type: "ImportDeclaration";
+  specifiers: ImportSpecifier[];
+  source: Literal;
+}
+
+interface ImportSpecifier extends NodeBase {
+  type: "ImportSpecifier";
+  local: Identifier;
+  imported: Identifier;
+}
+
+type ModuleNode = ExportNamedDeclaration | ImportDeclaration;
 
 export type FunctionNode = FunctionExpression | FunctionDeclaration | ArrowFunctionExpression;
 
