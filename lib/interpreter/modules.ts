@@ -59,7 +59,7 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
 
 export function ImportDeclaration(e: NodeTypes.ImportDeclaration, c, cerr, env, config) {
   GetValue(
-    { name: "import" },
+    { name: "[[ImportModule]]" },
     async (importFn) => {
       try {
         const importedModule = await importFn(e.source.value);

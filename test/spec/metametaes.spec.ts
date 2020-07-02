@@ -7,9 +7,7 @@ import * as path from "path";
 
 const loadedModules = {};
 
-function localizedImportTSModule(base) {
-  return (url) => importTSModule(path.join(path.parse(base).dir, url + ".ts"));
-}
+const localizedImportTSModule = (base) => (url) => importTSModule(path.join(path.parse(base).dir, url + ".ts"));
 
 async function importTSModule(url) {
   console.log("import", url);
@@ -36,7 +34,7 @@ async function importTSModule(url) {
       },
       {
         values: {
-          import: localizedImportTSModule(url)
+          "[[ImportModule]]": localizedImportTSModule(url)
         }
       }
     );
