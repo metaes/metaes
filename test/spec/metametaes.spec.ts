@@ -30,7 +30,7 @@ async function importTSModule(url) {
     const source = transpileModule(readFileSync(url).toString(), {
       compilerOptions: { target: ScriptTarget.ES2017, module: ModuleKind.ESNext }
     }).outputText;
-
+    // console.log(source);
     const script = createScript(source, undefined, "module");
     script.url = url;
 
@@ -77,7 +77,7 @@ async function importTSModule(url) {
   }));
 }
 
-describe.only("Meta MetaES", function () {
+describe.skip("Meta MetaES", function () {
   it("test", async function () {
     try {
       console.log("imported", await importTSModule("lib/metaes.ts"));

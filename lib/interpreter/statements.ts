@@ -7,11 +7,11 @@ import { EvaluationConfig, MetaesException } from "../types";
 
 function hoistDeclarations(e: NodeTypes.Statement[], c, cerr, env, config) {
   visitArray(
-    e.filter(e => e.type === "FunctionDeclaration") as NodeTypes.FunctionDeclaration[],
+    e.filter((e) => e.type === "FunctionDeclaration") as NodeTypes.FunctionDeclaration[],
     (e, c, cerr) =>
       evaluate(
         e,
-        value => evaluate({ type: "SetValue", name: e.id.name, value, isDeclaration: true }, c, cerr, env, config),
+        (value) => evaluate({ type: "SetValue", name: e.id.name, value, isDeclaration: true }, c, cerr, env, config),
         cerr,
         env,
         config
@@ -24,7 +24,7 @@ function hoistDeclarations(e: NodeTypes.Statement[], c, cerr, env, config) {
 export function BlockStatement(e: NodeTypes.BlockStatement | NodeTypes.Program, c, cerr, env, config) {
   hoistDeclarations(
     e.body,
-    () => evaluateArray(e.body, blockValues => c(blockValues[blockValues.length - 1]), cerr, env, config),
+    () => evaluateArray(e.body, (blockValues) => c(blockValues[blockValues.length - 1]), cerr, env, config),
     cerr,
     env,
     config
@@ -102,7 +102,7 @@ export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) 
             evaluate(
               { type: "GetValue", name: keyName },
               assignValue,
-              e => (e.type === "ReferenceError" ? assignValue() : cerr(e)),
+              (e) => (e.type === "ReferenceError" ? assignValue() : cerr(e)),
               env,
               config
             );
@@ -122,7 +122,7 @@ export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, 
     function assignRight() {
       evaluate(
         e.right,
-        right =>
+        (right) =>
           evaluate({ type: "SetValue", name: e.left.name, value: right, isDeclaration: true }, c, cerr, env, config),
         cerr,
         env,
@@ -132,7 +132,7 @@ export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, 
 
     evaluate(
       { type: "GetValue", name: e.left.name },
-      value =>
+      (value) =>
         value
           ? evaluate({ type: "SetValue", name: e.left.name, isDeclaration: true, value }, c, cerr, env, config)
           : assignRight(),
@@ -148,7 +148,7 @@ export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, 
 export function IfStatement(e: NodeTypes.IfStatement | NodeTypes.ConditionalExpression, c, cerr, env, config) {
   evaluate(
     e.test,
-    test => {
+    (test) => {
       if (test) {
         evaluate(e.consequent, c, cerr, env, config);
       } else if (e.alternate) {
@@ -175,7 +175,7 @@ export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: Ev
   evaluate(
     e.block,
     c,
-    exception =>
+    (exception) =>
       evaluate(
         e.handler,
         () => (e.finalizer ? evaluate(e.finalizer, c, cerr, env, config) : c()),
@@ -194,7 +194,7 @@ export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: Ev
 }
 
 export function ThrowStatement(e: NodeTypes.ThrowStatement, _c, cerr, env, config) {
-  evaluate(e.argument, value => cerr({ type: "ThrowStatement", value, location: e }), cerr, env, config);
+  evaluate(e.argument, (value) => cerr({ type: "ThrowStatement", value, location: e }), cerr, env, config);
 }
 
 export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
@@ -223,7 +223,7 @@ export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
 
 export function ReturnStatement(e: NodeTypes.ReturnStatement, _c, cerr, env, config) {
   e.argument
-    ? evaluate(e.argument, value => cerr({ type: "ReturnStatement", value }), cerr, env, config)
+    ? evaluate(e.argument, (value) => cerr({ type: "ReturnStatement", value }), cerr, env, config)
     : cerr({ type: "ReturnStatement" });
 }
 
@@ -238,7 +238,7 @@ export function FunctionDeclaration(e: NodeTypes.FunctionDeclaration, c, cerr, e
 export function ForInStatement(e: NodeTypes.ForInStatement, c, cerr, env, config) {
   evaluate(
     e.right,
-    right => {
+    (right) => {
       const leftNode = e.left;
       if (leftNode.type === "Identifier") {
         visitArray(
@@ -287,7 +287,7 @@ export function ForStatement(e: NodeTypes.ForStatement, c, cerr, env, config) {
   }
 
   const update = () => (e.update ? evaluate(e.update, test, cerr, env, config) : test());
-  const test = () => (e.test ? evaluate(e.test, test => (test ? body() : c()), cerr, env, config) : body());
+  const test = () => (e.test ? evaluate(e.test, (test) => (test ? body() : c()), cerr, env, config) : body());
   const body = () => schedule(() => evaluate(e.body, update, cerr, { values: {}, prev: env }, config));
   if (e.init) {
     evaluate(e.init, test, cerr, env, config);
@@ -301,7 +301,7 @@ export function ForStatement(e: NodeTypes.ForStatement, c, cerr, env, config) {
 export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config) {
   evaluate(
     e.right,
-    right => {
+    (right) => {
       if (!Array.isArray(right)) {
         cerr(NotImplementedException("Only arrays as right-hand side of for-of loop are supported for now.", e.right));
       } else {
@@ -309,7 +309,7 @@ export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config
           // create iterator in new env
           evaluate(
             e.left,
-            _ =>
+            (_) =>
               // TODO: iterate over declarations in e.left
               visitArray(
                 right,
@@ -360,7 +360,7 @@ export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config
 
 export function WhileStatement(e: NodeTypes.WhileStatement, c, cerr, env, config) {
   (function loop() {
-    evaluate(e.test, test => (test ? evaluate(e.body, loop, cerr, env, config) : c()), cerr, env, config);
+    evaluate(e.test, (test) => (test ? evaluate(e.body, loop, cerr, env, config) : c()), cerr, env, config);
   })();
 }
 
@@ -370,15 +370,15 @@ export function EmptyStatement(_e: NodeTypes.EmptyStatement, c) {
 
 export function ClassDeclaration(e: NodeTypes.ClassDeclaration, c, cerr, env, config) {
   function onSuperClass(superClass) {
-    let klass = function() {};
+    let klass = function () {};
     evaluate(
       e.body,
-      body =>
+      (body) =>
         visitArray(
           body,
           ({ key, value }, c, cerr) => {
             if (key === "constructor") {
-              value.prototype = Object.create(superClass.prototype);
+              value.prototype = superClass ? Object.create(superClass.prototype) : Object;
               c((klass = value));
             } else {
               cerr(NotImplementedException("Methods handling not implemented yet."));
@@ -409,10 +409,10 @@ export function ClassBody(e: NodeTypes.ClassBody, c, cerr, env, config) {
 export function MethodDefinition(e: NodeTypes.MethodDefinition, c, cerr, env, config) {
   evaluate(
     e.value,
-    value =>
+    (value) =>
       e.kind === "constructor"
         ? c({ key: e.key.name, value })
-        : cerr(NotImplementedException("Object methods not implemented yet.")),
+        : cerr(NotImplementedException("Object methods are not implemented yet.")),
     cerr,
     env,
     config

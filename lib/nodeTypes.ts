@@ -311,7 +311,7 @@ export interface SpreadElement extends NodeBase {
 
 export interface ExportNamedDeclaration extends NodeBase {
   type: "ExportNamedDeclaration";
-  declaration: VariableDeclaration | FunctionDeclaration;
+  declaration: VariableDeclaration | FunctionDeclaration | ClassDeclaration;
 }
 
 export interface ExportDefaultDeclaration extends NodeBase {

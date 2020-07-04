@@ -40,6 +40,10 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
           name = e.declaration.id.name;
           break;
 
+        case "ClassDeclaration":
+          name = e.declaration.id.name;
+          break;
+
         case "VariableDeclaration": {
           switch (e.declaration.declarations[0].id.type) {
             case "Identifier":
