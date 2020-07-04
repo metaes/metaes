@@ -28,7 +28,19 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
           break;
 
         case "VariableDeclaration": {
-          name = e.declaration.declarations[0].id.name;
+          switch (e.declaration.declarations[0].id.type) {
+            case "Identifier":
+              name = e.declaration.declarations[0].id.name;
+              break;
+            default:
+              return cerr(
+                NotImplementedException(
+                  `'${e.declaration.declarations[0].id.type}' declaration id type is not supported.`,
+                  e.declaration
+                )
+              );
+          }
+          
           break;
         }
         default:
