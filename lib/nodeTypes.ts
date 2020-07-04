@@ -314,6 +314,11 @@ export interface ExportNamedDeclaration extends NodeBase {
   declaration: VariableDeclaration | FunctionDeclaration;
 }
 
+export interface ExportDefaultDeclaration extends NodeBase {
+  type: "ExportDefaultDeclaration";
+  declaration: Expression;
+}
+
 export interface ImportDeclaration extends NodeBase {
   type: "ImportDeclaration";
   specifiers: ImportSpecifier[];

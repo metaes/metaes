@@ -1,8 +1,30 @@
-import { getEnvironmentBy, GetValue, SetValue } from "../environment";
+import { GetValue, SetValue } from "../environment";
 import { evaluate, visitArray } from "../evaluate";
-import { LocatedError, NotImplementedException } from "../exceptions";
+import { NotImplementedException } from "../exceptions";
 import * as NodeTypes from "../nodeTypes";
 import { Environment } from "../types";
+
+export function Identifier(e: NodeTypes.Identifier, c, cerr, env: Environment, config) {
+  evaluate(
+    { type: "GetValue", name: e.name },
+    (value) =>
+      value instanceof ImportBinding
+        ? evaluate(
+            { type: "GetValue", name: "[[GetBindingValue]]" },
+            (getBindingValue) => getBindingValue(value, c, cerr, env, config),
+            cerr,
+            env,
+            config
+          )
+        : c(value),
+    (exception) => {
+      exception.location = e;
+      cerr(exception);
+    },
+    env,
+    config
+  );
+}
 
 export const ImportEnvironmentSymbol = "[[isImportModule]]";
 export const ExportEnvironmentSymbol = "[[isExportModule]]";
@@ -11,15 +33,6 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
   evaluate(
     e.declaration,
     (value) => {
-      const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
-      if (!exportEnv) {
-        return cerr(
-          LocatedError(
-            `Couldn't export declaration, no environment with '${ExportEnvironmentSymbol}' property found.`,
-            e.declaration
-          )
-        );
-      }
       let name: string;
 
       switch (e.declaration.type) {
@@ -40,7 +53,7 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
                 )
               );
           }
-          
+
           break;
         }
         default:
@@ -51,7 +64,12 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
             )
           );
       }
-      evaluate({ type: "SetValue", name, value, isDeclaration: true }, c, cerr, exportEnv!, config);
+      GetValue(
+        { name: "[[ExportBinding]]" },
+        (exportBinding) => exportBinding({ name, value, e: e.declaration }, c, cerr, env, config),
+        cerr,
+        env
+      );
     },
     cerr,
     env,
@@ -59,31 +77,41 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
   );
 }
 
-export function ImportDeclaration(e: NodeTypes.ImportDeclaration, c, cerr, env, config) {
-  GetValue(
-    { name: "[[ImportModule]]" },
-    async (importFn) => {
-      try {
-        const importedModule = await importFn(e.source.value);
-        visitArray(
-          e.specifiers,
-          (specifier, c, cerr) => {
-            const name = specifier.local.name;
-            SetValue({ name, value: importedModule[name], isDeclaration: true }, c, cerr, env);
-          },
-          c,
-          cerr
-        );
-      } catch (e) {
-        cerr(e);
-      }
-    },
+export function ExportDefaultDeclaration(e: NodeTypes.ExportDefaultDeclaration, c, cerr, env, config) {
+  evaluate(
+    e.declaration,
+    (value) =>
+      GetValue(
+        { name: "[[ExportBinding]]" },
+        (exportBinding) => exportBinding({ name: "default", value, e: e.declaration }, c, cerr, env, config),
+        cerr,
+        env
+      ),
     cerr,
-    env
+    env,
+    config
+  );
+}
+
+export class ImportBinding {
+  constructor(public name: string, public modulePath: string) {}
+}
+
+export function ImportDeclaration(e: NodeTypes.ImportDeclaration, c, cerr, env, config) {
+  visitArray(
+    e.specifiers,
+    (specifier, c, cerr) => {
+      const name = specifier.local.name;
+      SetValue({ name, value: new ImportBinding(name, e.source.value), isDeclaration: true }, c, cerr, env);
+    },
+    c,
+    cerr
   );
 }
 
 export default {
   ExportNamedDeclaration,
-  ImportDeclaration
+  ExportDefaultDeclaration,
+  ImportDeclaration,
+  Identifier
 };
