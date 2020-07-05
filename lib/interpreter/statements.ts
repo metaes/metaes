@@ -194,7 +194,7 @@ export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: Ev
 }
 
 export function ThrowStatement(e: NodeTypes.ThrowStatement, _c, cerr, env, config) {
-  evaluate(e.argument, (value) => cerr({ type: "ThrowStatement", value, location: e }), cerr, env, config);
+  evaluate(e.argument, (value) => cerr({ type: "Error", value, location: e }), cerr, env, config);
 }
 
 export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {

@@ -21,7 +21,7 @@ export function evaluate(
     schedule(function run() {
       interpreter(
         e,
-        function(value) {
+        function (value) {
           schedule(function exit() {
             callInterceptor("exit", config, e, env, value);
             c(value);
@@ -31,6 +31,9 @@ export function evaluate(
           exception = toException(exception);
           if (!exception.location) {
             exception.location = e;
+          }
+          if (!exception.script) {
+            exception.script = config.script;
           }
           callInterceptor("exit", config, e, env, exception);
           cerr(exception);
@@ -59,7 +62,7 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
   if (items.length === 0) {
     c([]);
   } else if (items.length === 1) {
-    fn(items[0], value => c([value]), cerr);
+    fn(items[0], (value) => c([value]), cerr);
   } else {
     // Array of loop function arguments to be applied next time
     // TODO: convert to nextOperation or similar, there is always only one? What about callcc?

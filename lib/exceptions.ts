@@ -1,4 +1,4 @@
-import { ASTNode, MetaesException, Script } from "./types";
+import { ASTNode, MetaesException } from "./types";
 
 export const toException = (value: Error | MetaesException, location?: ASTNode): MetaesException =>
   value instanceof Error ? { type: "Error", value, location } : value;
@@ -27,7 +27,7 @@ function withStyle(text: string, style: (string) => string) {
   return style(text);
 }
 
-export function presentException(script: Script, { location, value, message }: MetaesException, useStyles = true) {
+export function presentException({ location, value, message, script }: MetaesException, useStyles = true) {
   const styled = useStyles ? withStyle : (value) => value;
   const source = typeof script.source === "function" ? script.source.toString() : script.source;
   const url = script.url ?? "anonymous";
@@ -42,6 +42,12 @@ export function presentException(script: Script, { location, value, message }: M
     const lineOutput = `  ${startLine}|  ${line}`;
     const lineNumberSize = startLine.toString().length;
     const paddingSum = 5;
+    console.log(
+      source
+        .split("\n")
+        .map((line, i) => `${i + 1}| ${line}`)
+        .join("\n")
+    );
     return (
       sourceLocation +
       styled(lineOutput, highlight) +

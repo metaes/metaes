@@ -33,7 +33,7 @@ export const evaluateMetaFunction = (
           break;
         case "AssignmentPattern":
           const arg = args[i++];
-          
+
           arg === undefined
             ? evaluate(param.right, (value) => c((env.values[param.left.name] = value)), cerr, env, config)
             : c((env.values[param.left.name] = arg));
@@ -56,10 +56,7 @@ export const evaluateMetaFunction = (
         // Execution time config takes precedence over function creation time config
         { ...config, ...executionTimeConfig }
       ),
-    (e) => {
-      console.log(presentException(metaFunction.config.script, e));
-      cerr(e);
-    }
+    cerr
   );
 };
 

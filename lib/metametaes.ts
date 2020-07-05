@@ -3,7 +3,7 @@ import * as path from "path";
 import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 import { getEnvironmentBy, GetValue } from "./environment";
 import { evaluate } from "./evaluate";
-import { LocatedError } from "./exceptions";
+import { LocatedError, presentException } from "./exceptions";
 import { ExportEnvironmentSymbol, ImportBinding } from "./interpreter/modules";
 import { createScript, metaesEvalModule } from "./metaes";
 
@@ -40,7 +40,7 @@ export async function importTSModule(url) {
         resolve((loadedModules[url] = mod));
       },
       (exception) => {
-        console.log(presentedException(script, exception));
+        console.log(presentException(exception));
         reject(exception.value || exception.message || exception);
       },
       {
@@ -71,7 +71,8 @@ export async function importTSModule(url) {
           },
           "[[ImportModule]]": localizedImportTSModule(url)
         }
-      }
+      },
+      { script }
     );
   }));
 }

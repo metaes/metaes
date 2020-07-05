@@ -73,7 +73,7 @@ describe("Exceptions printing", function () {
 
       let exception;
       metaesEvalModule(script, console.log, (_ex) => (exception = _ex));
-      const result = presentException(script, exception, false);
+      const result = presentException(exception, false);
       try {
         assert.equal(result, expected.trim());
       } catch (e) {

@@ -36,7 +36,7 @@ describe("Exceptions", () => {
         });
         throw new Error("Didn't throw");
       } catch (e) {
-        assert.equal(e.type, "ThrowStatement");
+        assert.equal(e.type, "Error");
       }
     });
 
@@ -51,7 +51,7 @@ describe("Exceptions", () => {
           }
         });
       } catch (e) {
-        assert.equal(e.type, "ThrowStatement");
+        assert.equal(e.type, "Error");
       }
     });
 

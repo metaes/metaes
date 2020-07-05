@@ -1,11 +1,11 @@
 import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
-  // TODO: ThrowStatement not needed?
-  type?: "Error" | "ReturnStatement" | "NotImplemented" | "ThrowStatement" | "ReferenceError" | string;
+  type?: "Error" | "ReturnStatement" | "NotImplemented" | "ReferenceError" | string;
   message?: string;
   value?: Error | any;
   location?: ASTNode;
+  script: Script;
 };
 
 export type Range = [number, number];
