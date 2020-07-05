@@ -1,7 +1,7 @@
 import { evaluate, visitArray } from "./evaluate";
-import { NotImplementedException, toException, presentException } from "./exceptions";
+import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
-import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction, Environment } from "./types";
+import { Continuation, Environment, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
 
 // TODO: move to interpreter style
 export const evaluateMetaFunction = (
@@ -17,6 +17,7 @@ export const evaluateMetaFunction = (
     prev: closure,
     values: { this: thisObject, arguments: args }
   };
+
   let i = 0;
   visitArray(
     e.params,
@@ -51,10 +52,18 @@ export const evaluateMetaFunction = (
               c(value)
             : // ignore what was evaluated in function body, return statement in error continuation should carry the value
               c(undefined),
-        (exception) => (exception.type === "ReturnStatement" ? c(exception.value) : cerr(exception)),
+        (exception) => {
+          if (exception.type === "ReturnStatement") {
+            c(exception.value);
+          } else {
+            if (!exception.script) {
+              exception.script = config.script;
+            }
+            cerr(exception);
+          }
+        },
         env,
-        // Execution time config takes precedence over function creation time config
-        { ...config, ...executionTimeConfig }
+        { ...config, schedule: executionTimeConfig?.schedule || config.schedule }
       ),
     cerr
   );

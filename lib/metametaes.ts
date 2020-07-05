@@ -46,6 +46,7 @@ export async function importTSModule(url) {
       {
         values: {
           Object,
+          console,
           "[[GetBindingValue]]": async function (value: ImportBinding, c, cerr, env, config) {
             GetValue(
               { name: "[[ImportModule]]" },

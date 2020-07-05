@@ -6,9 +6,9 @@ import { importTSModule } from "../../lib/metametaes";
 async function f() {
   try {
     const metaes = await importTSModule("lib/metaes.ts");
-    // console.log({ metaes });
     const script = createScript("2+2");
-    metaes.metaesEval[0](script, console.log, (exception) => {
+    metaes.metaesEval(script, console.log, (exception) => {
+      console.log(exception);
       console.log(presentedException(exception));
     });
   } catch (error) {

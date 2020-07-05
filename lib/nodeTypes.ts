@@ -321,8 +321,18 @@ export interface ExportDefaultDeclaration extends NodeBase {
 
 export interface ImportDeclaration extends NodeBase {
   type: "ImportDeclaration";
-  specifiers: ImportSpecifier[];
+  specifiers: (ImportSpecifier | ImportNamespaceSpecifier | ImportDefaultSpecifier)[];
   source: Literal;
+}
+
+interface ImportDefaultSpecifier extends NodeBase {
+  type: "ImportDefaultSpecifier";
+  local: Identifier;
+}
+
+interface ImportNamespaceSpecifier extends NodeBase {
+  type: "ImportNamespaceSpecifier";
+  local: Identifier;
 }
 
 interface ImportSpecifier extends NodeBase {

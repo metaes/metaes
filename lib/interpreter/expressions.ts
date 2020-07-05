@@ -565,11 +565,18 @@ export function ConditionalExpression(e: NodeTypes.ConditionalExpression, c, cer
   IfStatement(e, c, cerr, env, config);
 }
 
-export function TemplateLiteral(e: NodeTypes.TemplateLiteral, c, cerr) {
+export function TemplateLiteral(e: NodeTypes.TemplateLiteral, c, cerr, env, config) {
   if (e.quasis.length === 1 && e.expressions.length === 0) {
     c(e.quasis[0].value.raw);
   } else {
-    cerr(NotImplementedException(`Only single-quasis and expression-free template literals are supported for now.`));
+    evaluateArray(
+      e.expressions,
+      (expressions) =>
+        c(expressions.map((expr, i) => e.quasis[i].value.raw + expr) + e.quasis[e.quasis.length - 1].value.raw),
+      cerr,
+      env,
+      config
+    );
   }
 }
 

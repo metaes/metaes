@@ -42,12 +42,12 @@ export function presentException({ location, value, message, script }: MetaesExc
     const lineOutput = `  ${startLine}|  ${line}`;
     const lineNumberSize = startLine.toString().length;
     const paddingSum = 5;
-    console.log(
-      source
-        .split("\n")
-        .map((line, i) => `${i + 1}| ${line}`)
-        .join("\n")
-    );
+    // console.log(
+    //   source
+    //     .split("\n")
+    //     .map((line, i) => `${i + 1}| ${line}`)
+    //     .join("\n")
+    // );
     return (
       sourceLocation +
       styled(lineOutput, highlight) +

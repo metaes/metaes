@@ -6,8 +6,9 @@ import { before, describe, it } from "mocha";
 import * as pify from "pify";
 import { callcc } from "../lib/callcc";
 import { getEnvironmentBy } from "../lib/environment";
+import { presentException } from "../lib/exceptions";
 import { ExportEnvironmentSymbol } from "../lib/interpreter/modules";
-import { metaesEval, metaesEvalModule } from "../lib/metaes";
+import { metaesEval, metaesEvalModule, createScript } from "../lib/metaes";
 
 const globalEnv = {
   values: {
@@ -25,10 +26,14 @@ const globalEnv = {
   prev: { values: global }
 };
 
-const evaluate = (evalFn, input: string) =>
-  new Promise((resolve, reject) => evalFn(input, resolve, reject, { values: {}, prev: globalEnv }));
+const evaluate = (evalFn, input: string, name) =>
+  new Promise((resolve, reject) => {
+    const script = createScript(input);
+    script.url = name;
+    evalFn(script, resolve, reject, { values: {}, prev: globalEnv });
+  });
 
-function build(folder: string, fn) {
+function build(folder: string, evalFn) {
   // generate tests on runtime
   before(async () => {
     const files = (await pify(glob)(__dirname + `/${folder}/*.spec.js`)).map(async (file) => ({
@@ -36,6 +41,7 @@ function build(folder: string, fn) {
       contents: (await fs.readFile(file)).toString()
     }));
     return (await Promise.all(files)).forEach(({ contents, name }) => {
+      const fileName = name;
       const testNames = contents.match(/\/\/ test: [^\n]+\n/g);
       const tests = contents.split(/\/\/ test: .+\n/).filter((line) => line.length);
       const suiteName = name.substring(name.lastIndexOf("/") + 1);
@@ -48,9 +54,11 @@ function build(folder: string, fn) {
           const testName = name.replace("// test:", "").trim();
           it(testName, async () => {
             try {
-              await evaluate(fn, value);
+              await evaluate(evalFn, value, fileName);
             } catch (e) {
-              throw e.value || e;
+              const message = presentException(e);
+              console.log(message);
+              throw new Error(message);
             }
           });
         });

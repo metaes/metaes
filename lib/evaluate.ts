@@ -44,6 +44,7 @@ export function evaluate(
     });
   } else {
     const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
+    debugger;
     callInterceptor("exit", config, e, env, exception);
     cerr(exception);
   }

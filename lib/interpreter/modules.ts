@@ -33,21 +33,21 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
   evaluate(
     e.declaration,
     (value) => {
+      let toExport;
       let name: string;
 
       switch (e.declaration.type) {
         case "FunctionDeclaration":
-          name = e.declaration.id.name;
-          break;
-
         case "ClassDeclaration":
           name = e.declaration.id.name;
+          toExport = value;
           break;
 
         case "VariableDeclaration": {
           switch (e.declaration.declarations[0].id.type) {
             case "Identifier":
               name = e.declaration.declarations[0].id.name;
+              toExport = value[0];
               break;
             default:
               return cerr(
@@ -57,7 +57,6 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
                 )
               );
           }
-
           break;
         }
         default:
@@ -70,7 +69,7 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
       }
       GetValue(
         { name: "[[ExportBinding]]" },
-        (exportBinding) => exportBinding({ name, value, e: e.declaration }, c, cerr, env, config),
+        (exportBinding) => exportBinding({ name, value: toExport, e: e.declaration }, c, cerr, env, config),
         cerr,
         env
       );
@@ -106,7 +105,21 @@ export function ImportDeclaration(e: NodeTypes.ImportDeclaration, c, cerr, env, 
     e.specifiers,
     (specifier, c, cerr) => {
       const name = specifier.local.name;
-      SetValue({ name, value: new ImportBinding(name, e.source.value), isDeclaration: true }, c, cerr, env);
+
+      switch (specifier.type) {
+        case "ImportNamespaceSpecifier":
+          SetValue({ name, value: new ImportBinding("default", e.source.value), isDeclaration: true }, c, cerr, env);
+          break;
+        case "ImportSpecifier":
+          SetValue({ name, value: new ImportBinding(name, e.source.value), isDeclaration: true }, c, cerr, env);
+          break;
+        case "ImportDefaultSpecifier":
+          SetValue({ name, value: new ImportBinding("default", e.source.value), isDeclaration: true }, c, cerr, env);
+          break;
+        default:
+          cerr(NotImplementedException(`${specifier.type!} import specifier is not supported yet.`));
+          break;
+      }
     },
     c,
     cerr
