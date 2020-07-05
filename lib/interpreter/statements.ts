@@ -227,6 +227,10 @@ export function ReturnStatement(e: NodeTypes.ReturnStatement, _c, cerr, env, con
     : cerr({ type: "ReturnStatement" });
 }
 
+export function BreakStatement(_e, _c, cerr) {
+  cerr({ type: "BreakStatement" });
+}
+
 export function FunctionDeclaration(e: NodeTypes.FunctionDeclaration, c, cerr, env, config) {
   try {
     c(createMetaFunction(e, env, config));
@@ -415,6 +419,31 @@ export function DebuggerStatement(_e: NodeTypes.DebuggerStatement, c) {
   c();
 }
 
+export function SwitchStatement(e: NodeTypes.SwitchStatement, c, cerr, env, config) {
+  evaluate(
+    e.discriminant,
+    (discriminant) => {
+      visitArray(
+        e.cases,
+        function (caseNode, c, cerr) {
+          evaluate(
+            caseNode.test,
+            (test) => (discriminant === test ? evaluateArray(caseNode.consequent, c, cerr, env, config) : c(null)),
+            cerr,
+            env,
+            config
+          );
+        },
+        c,
+        (e) => (e.type === "BreakStatement" ? c() : cerr(e))
+      );
+    },
+    cerr,
+    env,
+    config
+  );
+}
+
 export default {
   BlockStatement,
   Program,
@@ -428,6 +457,7 @@ export default {
   ThrowStatement,
   CatchClause,
   ReturnStatement,
+  BreakStatement,
   FunctionDeclaration,
   ForInStatement,
   ForStatement,
@@ -437,5 +467,6 @@ export default {
   ClassDeclaration,
   ClassBody,
   MethodDefinition,
-  DebuggerStatement
+  DebuggerStatement,
+  SwitchStatement
 };

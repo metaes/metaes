@@ -1,7 +1,7 @@
 import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
-  type?: "Error" | "ReturnStatement" | "NotImplemented" | "ReferenceError" | string;
+  type?: "Error" | "ReturnStatement" | "NotImplemented" | "ReferenceError" | "BreakStatement";
   message?: string;
   value?: Error | any;
   location?: ASTNode;

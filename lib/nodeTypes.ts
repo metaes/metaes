@@ -341,6 +341,18 @@ interface ImportSpecifier extends NodeBase {
   imported: Identifier;
 }
 
+export interface SwitchStatement extends NodeBase {
+  type: "SwitchStatement";
+  discriminant: Expression;
+  cases: SwitchCase[];
+}
+
+interface SwitchCase extends NodeBase {
+  type: "SwitchCase";
+  test: Expression;
+  consequent: Statement[];
+}
+
 type ModuleNode = ExportNamedDeclaration | ImportDeclaration;
 
 export type FunctionNode = FunctionExpression | FunctionDeclaration | ArrowFunctionExpression;
@@ -365,7 +377,8 @@ export type Statement =
   | ClassBody
   | Super
   | DebuggerStatement
-  | ModuleNode;
+  | ModuleNode
+  | SwitchStatement;
 
 type Expression =
   | Identifier

@@ -56,6 +56,7 @@ function build(folder: string, evalFn) {
             try {
               await evaluate(evalFn, value, fileName);
             } catch (e) {
+              console.log(e);
               const message = presentException(e);
               console.log(message);
               throw new Error(message);

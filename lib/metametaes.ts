@@ -13,15 +13,11 @@ const loadingModules = {};
 const localizedImportTSModule = (base) => (url) => importTSModule(path.join(path.parse(base).dir, url + ".ts"));
 
 export async function importTSModule(url) {
-  console.log("import", url);
-
   if (loadedModules[url]) {
-    console.log("[[Loaded]]", url);
     return Promise.resolve(loadedModules[url]);
   }
 
   if (loadingModules[url]) {
-    console.log("[[Loading]]", url);
     return loadingModules[url];
   }
 
