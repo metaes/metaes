@@ -232,7 +232,7 @@ export interface RestElement extends NodeBase {
 }
 
 interface FunctionParams {
-  params: (Identifier | RestElement | ObjectPattern)[];
+  params: (Identifier | RestElement | ObjectPattern | AssignmentPattern)[];
 }
 
 export interface FunctionExpression extends NodeBase, FunctionParams {

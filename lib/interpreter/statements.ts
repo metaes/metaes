@@ -381,7 +381,7 @@ export function ClassDeclaration(e: NodeTypes.ClassDeclaration, c, cerr, env, co
               value.prototype = superClass ? Object.create(superClass.prototype) : Object;
               c((klass = value));
             } else {
-              cerr(NotImplementedException("Methods handling not implemented yet."));
+              c((klass.prototype[key] = value));
             }
           },
           () =>
@@ -407,16 +407,7 @@ export function ClassBody(e: NodeTypes.ClassBody, c, cerr, env, config) {
 }
 
 export function MethodDefinition(e: NodeTypes.MethodDefinition, c, cerr, env, config) {
-  evaluate(
-    e.value,
-    (value) =>
-      e.kind === "constructor"
-        ? c({ key: e.key.name, value })
-        : cerr(NotImplementedException("Object methods are not implemented yet.")),
-    cerr,
-    env,
-    config
-  );
+  evaluate(e.value, (value) => c({ key: e.key.name, value }), cerr, env, config);
 }
 
 export function DebuggerStatement(_e: NodeTypes.DebuggerStatement, c) {
