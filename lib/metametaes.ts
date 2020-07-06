@@ -6,6 +6,7 @@ import { evaluate } from "./evaluate";
 import { LocatedError, presentException } from "./exceptions";
 import { ExportEnvironmentSymbol, ImportBinding } from "./interpreter/modules";
 import { createScript, metaesEvalModule } from "./metaes";
+import { Evaluate } from "./types";
 
 const loadedModules = {};
 const loadingModules = {};
@@ -74,3 +75,5 @@ export async function importTSModule(url) {
     );
   }));
 }
+
+export const getMetaMetaESEval = async () => (await importTSModule("lib/metaes.ts")).metaesEval as Evaluate;

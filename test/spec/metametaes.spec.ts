@@ -2,15 +2,15 @@ import { assert } from "chai";
 import { describe, it } from "mocha";
 import { presentException } from "../../lib/exceptions";
 import { createScript } from "../../lib/metaes";
-import { importTSModule } from "../../lib/metametaes";
+import { getMetaMetaESEval } from "../../lib/metametaes";
 
 describe("Meta MetaES", function () {
   it("evaluates binary expression with literals", async function () {
     try {
-      const metaes = await importTSModule("lib/metaes.ts");
+      const metaesEval = await getMetaMetaESEval();
       const script = createScript("5+5*5");
       return new Promise(function (resolve, reject) {
-        metaes.metaesEval(
+        metaesEval(
           script,
           (result) => {
             try {
