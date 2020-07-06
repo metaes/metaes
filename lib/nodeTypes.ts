@@ -117,18 +117,16 @@ export interface ThisExpression extends NodeBase {
   type: "ThisExpression";
 }
 
-interface ConditionalBase extends NodeBase {
-  test: Expression;
+export interface ConditionalExpression extends NodeBase {
+  type: "ConditionalExpression";
   alternate: Expression;
   consequent: Expression;
 }
 
-export interface ConditionalExpression extends ConditionalBase {
-  type: "ConditionalExpression";
-}
-
-export interface IfStatement extends ConditionalBase {
+export interface IfStatement extends NodeBase {
   type: "IfStatement";
+  alternate: Expression | ExpressionStatement;
+  consequent: Expression | ExpressionStatement;
 }
 
 export interface Property extends NodeBase {
@@ -360,6 +358,12 @@ interface SwitchCase extends NodeBase {
   consequent: Statement[];
 }
 
+export interface DoWhileStatement extends NodeBase {
+  type: "DoWhileStatement";
+  test: Expression;
+  body: ExpressionStatement | Expression;
+}
+
 type ModuleNode = ExportNamedDeclaration | ImportDeclaration;
 
 export type FunctionNode = FunctionExpression | FunctionDeclaration | ArrowFunctionExpression;
@@ -385,7 +389,8 @@ export type Statement =
   | Super
   | DebuggerStatement
   | ModuleNode
-  | SwitchStatement;
+  | SwitchStatement
+  | DoWhileStatement;
 
 type Expression =
   | Identifier

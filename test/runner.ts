@@ -9,7 +9,6 @@ import { getEnvironmentBy } from "../lib/environment";
 import { presentException } from "../lib/exceptions";
 import { ExportEnvironmentSymbol } from "../lib/interpreter/modules";
 import { createScript, metaesEval, metaesEvalModule } from "../lib/metaes";
-import { getMetaMetaESEval } from "../lib/metametaes";
 
 const globalEnv = {
   values: {

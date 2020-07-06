@@ -19,7 +19,8 @@ describe("Meta MetaES", function () {
   before(async function () {
     metaesEval = await getMetaMetaESEval();
   });
+
   it("evaluates binary expression with literals", async function () {
-    assert.equal(await evaluateHelperWithPrint(metaesEval, "5+5*5"), 30);
+    assert.equal(await evaluateHelperWithPrint(metaesEval, "5+5*a"), 30);
   });
 });

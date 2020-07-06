@@ -368,6 +368,16 @@ export function WhileStatement(e: NodeTypes.WhileStatement, c, cerr, env, config
   })();
 }
 
+export function DoWhileStatement(e: NodeTypes.DoWhileStatement, c, cerr, env, config) {
+  function body() {
+    evaluate(e.body, test, cerr, env, config);
+  }
+  function test() {
+    evaluate(e.test, (value) => (value ? evaluate(e.body, test, cerr, env, config) : c()), cerr, env, config);
+  }
+  body();
+}
+
 export function EmptyStatement(_e: NodeTypes.EmptyStatement, c) {
   c();
 }
@@ -468,5 +478,6 @@ export default {
   ClassBody,
   MethodDefinition,
   DebuggerStatement,
-  SwitchStatement
+  SwitchStatement,
+  DoWhileStatement
 };

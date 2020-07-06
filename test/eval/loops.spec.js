@@ -32,3 +32,11 @@ for (let i of [1, 2, 3]) {
   result.push(i);
 }
 assert.deepEqual(result, [1, 2, 3]);
+
+// test: supports do-while
+let test = 10;
+let counter = 0;
+do {
+  counter++;
+} while (test--);
+assert.equal(counter, 11);
