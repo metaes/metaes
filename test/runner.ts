@@ -8,7 +8,8 @@ import { callcc } from "../lib/callcc";
 import { getEnvironmentBy } from "../lib/environment";
 import { presentException } from "../lib/exceptions";
 import { ExportEnvironmentSymbol } from "../lib/interpreter/modules";
-import { metaesEval, metaesEvalModule, createScript } from "../lib/metaes";
+import { createScript, metaesEval, metaesEvalModule } from "../lib/metaes";
+import { getMetaMetaESEval } from "../lib/metametaes";
 
 const globalEnv = {
   values: {
@@ -26,7 +27,7 @@ const globalEnv = {
   prev: { values: global }
 };
 
-const evaluate = (evalFn, input: string, name) =>
+export const evaluateHelper = (evalFn, input: string, name = "anonymous") =>
   new Promise((resolve, reject) => {
     const script = createScript(input);
     script.url = name;
@@ -54,7 +55,7 @@ function build(folder: string, evalFn) {
           const testName = name.replace("// test:", "").trim();
           it(testName, async () => {
             try {
-              await evaluate(evalFn, value, fileName);
+              await evaluateHelper(evalFn, value, fileName);
             } catch (e) {
               console.log(e);
               const message = presentException(e);
@@ -74,6 +75,9 @@ function build(folder: string, evalFn) {
   try {
     describe("metaesEval", () => build("eval", metaesEval));
     describe("metaesEvalModule", () => build("eval_module", metaesEvalModule));
+
+    // const metametaesEval = await getMetaMetaESEval();
+    // describe("metaesEval", () => build("eval", metametaesEval));
   } catch (e) {
     console.log("Source files test error", e);
   }

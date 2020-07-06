@@ -1,33 +1,25 @@
 import { assert } from "chai";
-import { describe, it } from "mocha";
+import { Evaluate } from "lib/types";
+import { before, describe, it } from "mocha";
 import { presentException } from "../../lib/exceptions";
-import { createScript } from "../../lib/metaes";
 import { getMetaMetaESEval } from "../../lib/metametaes";
+import { evaluateHelper } from "../runner";
 
+async function evaluateHelperWithPrint(evalFn, input, name?) {
+  try {
+    return await evaluateHelper(evalFn, input, name);
+  } catch (e) {
+    console.log(presentException(e));
+    throw e;
+  }
+}
 describe("Meta MetaES", function () {
+  let metaesEval: Evaluate;
+
+  before(async function () {
+    metaesEval = await getMetaMetaESEval();
+  });
   it("evaluates binary expression with literals", async function () {
-    try {
-      const metaesEval = await getMetaMetaESEval();
-      const script = createScript("5+5*5");
-      return new Promise(function (resolve, reject) {
-        metaesEval(
-          script,
-          (result) => {
-            try {
-              assert.equal(result, 30);
-              resolve();
-            } catch (e) {
-              reject(e);
-            }
-          },
-          (e) => {
-            console.log(presentException(e));
-            reject(e);
-          }
-        );
-      });
-    } catch (error) {
-      console.log(error);
-    }
+    assert.equal(await evaluateHelperWithPrint(metaesEval, "5+5*5"), 30);
   });
 });
