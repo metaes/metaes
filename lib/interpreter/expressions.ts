@@ -24,6 +24,7 @@ export function CallExpression(
       switch (e.callee.type) {
         case "Identifier":
         case "FunctionExpression":
+        case "ConditionalExpression":
         case "CallExpression":
           evaluate(
             e.callee,

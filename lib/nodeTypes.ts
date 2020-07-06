@@ -26,7 +26,14 @@ export interface Super extends NodeBase {
 
 export interface CallExpression extends NodeBase {
   type: "CallExpression";
-  callee: Identifier | MemberExpression | CallExpression | FunctionExpression | Super | ArrowFunctionExpression;
+  callee:
+    | Identifier
+    | MemberExpression
+    | CallExpression
+    | FunctionExpression
+    | Super
+    | ArrowFunctionExpression
+    | ConditionalExpression;
   arguments: Expression[];
 }
 

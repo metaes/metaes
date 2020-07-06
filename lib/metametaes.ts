@@ -27,7 +27,7 @@ export async function importTSModule(url) {
     }).outputText;
     // console.log(source);
     const script = createScript(source, undefined, "module");
-    script.url = url;
+    script.url = `transpiled://${url}`;
 
     metaesEvalModule(
       script,
@@ -43,6 +43,7 @@ export async function importTSModule(url) {
         values: {
           Object,
           console,
+          Error,
           "[[GetBindingValue]]": async function (value: ImportBinding, c, cerr, env, config) {
             GetValue(
               { name: "[[ImportModule]]" },
