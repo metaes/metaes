@@ -1,5 +1,5 @@
 import { evaluate, visitArray } from "./evaluate";
-import { NotImplementedException, toException } from "./exceptions";
+import { NotImplementedException, presentException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
 import { Continuation, Environment, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
 
@@ -56,6 +56,8 @@ export const evaluateMetaFunction = (
           if (exception.type === "ReturnStatement") {
             c(exception.value);
           } else {
+            // console.log(presentException(exception));
+            // debugger;
             if (!exception.script) {
               exception.script = config.script;
             }

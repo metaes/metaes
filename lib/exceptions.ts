@@ -1,7 +1,11 @@
-import { ASTNode, MetaesException } from "./types";
+import { ASTNode, MetaesException, Script } from "./types";
 
-export const toException = (value: Error | MetaesException, location?: ASTNode): MetaesException =>
-  value instanceof Error ? { type: "Error", value, location } : value;
+function isException(value: any): value is MetaesException {
+  return value && typeof value === "object" && !(value instanceof Error);
+}
+
+export const toException = (value: any | MetaesException, location?: ASTNode, script?: Script): MetaesException =>
+  isException(value) ? value : { type: "Error", value, location, script };
 
 export const NotImplementedException = (message: string, location?: ASTNode): MetaesException => ({
   type: "NotImplemented",

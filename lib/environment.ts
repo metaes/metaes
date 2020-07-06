@@ -16,7 +16,7 @@ export function getEnvironmentBy(env: Environment, condition: (env: Environment)
 }
 
 export function getEnvironmentForValue(env: Environment, name: string): Environment | null {
-  return getEnvironmentBy(env, env => name in env.values);
+  return getEnvironmentBy(env, (env) => name in env.values);
 }
 
 type SetValueT<T> = {

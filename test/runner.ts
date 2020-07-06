@@ -8,7 +8,8 @@ import { callcc } from "../lib/callcc";
 import { getEnvironmentBy } from "../lib/environment";
 import { presentException } from "../lib/exceptions";
 import { ExportEnvironmentSymbol } from "../lib/interpreter/modules";
-import { createScript, metaesEval, metaesEvalModule } from "../lib/metaes";
+import { metaesEval, metaesEvalModule } from "../lib/metaes";
+import { evaluateHelper } from "./spec/testUtils";
 
 const globalEnv = {
   values: {
@@ -25,13 +26,6 @@ const globalEnv = {
   },
   prev: { values: global }
 };
-
-export const evaluateHelper = (evalFn, input: string, name = "anonymous") =>
-  new Promise((resolve, reject) => {
-    const script = createScript(input);
-    script.url = name;
-    evalFn(script, resolve, reject, { values: {}, prev: globalEnv });
-  });
 
 function build(folder: string, evalFn) {
   // generate tests on runtime
@@ -54,7 +48,7 @@ function build(folder: string, evalFn) {
           const testName = name.replace("// test:", "").trim();
           it(testName, async () => {
             try {
-              await evaluateHelper(evalFn, value, fileName);
+              await evaluateHelper(evalFn, value, fileName, { values: {}, prev: globalEnv });
             } catch (e) {
               console.log(e);
               const message = presentException(e);

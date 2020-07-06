@@ -3,16 +3,17 @@ import { Evaluate } from "lib/types";
 import { before, describe, it } from "mocha";
 import { presentException } from "../../lib/exceptions";
 import { getMetaMetaESEval } from "../../lib/metametaes";
-import { evaluateHelper } from "../runner";
+import { evaluateHelper } from "./testUtils";
 
 async function evaluateHelperWithPrint(evalFn, input, name?) {
   try {
-    return await evaluateHelper(evalFn, input, name);
+    return await evaluateHelper(evalFn, input, name, { values: {} });
   } catch (e) {
     console.log(presentException(e));
     throw e;
   }
 }
+
 describe("Meta MetaES", function () {
   let metaesEval: Evaluate;
 
@@ -21,6 +22,10 @@ describe("Meta MetaES", function () {
   });
 
   it("evaluates binary expression with literals", async function () {
-    assert.equal(await evaluateHelperWithPrint(metaesEval, "5+5*a"), 30);
+    assert.equal(await evaluateHelperWithPrint(metaesEval, "5+5*5"), 30);
   });
+
+  // it("evaluates binary expression with identifier", async function () {
+  //   assert.equal(await evaluateHelperWithPrint(metaesEval, "5+5*a"), 30);
+  // });
 });

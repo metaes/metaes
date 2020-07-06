@@ -42,9 +42,9 @@ let result;
 try {
   let { [key]: foo } = { z: "bar" };
 } catch (e) {
-  result = e.type === "NotImplemented";
+  result = e;
 }
-assert.isTrue(result);
+assert.instanceOf(ReferenceError);
 
 // test: does not throw
 let {

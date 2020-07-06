@@ -4,7 +4,6 @@ const output = [];
 for (let o of input) {
   output.push(o);
 }
-
 assert.deepEqual(input, output);
 
 // test: correctly throws from loop

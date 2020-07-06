@@ -167,9 +167,7 @@ export function ExpressionStatement(e: NodeTypes.ExpressionStatement, c, cerr, e
   evaluate(e.expression, c, cerr, env, config);
 }
 
-// Use name which is illegal JavaScript identifier.
-// It will disallow collision with user names.
-const EXCEPTION_NAME = "/exception";
+const ExceptionName = "[[Exception]]";
 
 export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: EvaluationConfig) {
   evaluate(
@@ -182,7 +180,7 @@ export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: Ev
         cerr,
         {
           values: {
-            [EXCEPTION_NAME]: exception.value || exception
+            [ExceptionName]: exception
           },
           prev: env
         },
@@ -194,22 +192,20 @@ export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: Ev
 }
 
 export function ThrowStatement(e: NodeTypes.ThrowStatement, _c, cerr, env, config) {
-  evaluate(e.argument, (value) => cerr({ type: "Error", value, location: e }), cerr, env, config);
+  evaluate(e.argument, (value) => cerr(value), cerr, env, config);
 }
 
 export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
   evaluate(
-    { type: "GetValue", name: EXCEPTION_NAME },
-    (error: MetaesException | Error) =>
+    { type: "GetValue", name: ExceptionName },
+    (error: MetaesException) =>
       evaluate(
         e.body,
         c,
         cerr,
         {
           values: {
-            // TODO: add more tests
-            // In case error is an exception, just use its value
-            [e.param.name]: error ? Object.hasOwnProperty.call(error, "value") || error : error
+            [e.param.name]: error.value
           },
           prev: env
         },
