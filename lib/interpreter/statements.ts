@@ -1,6 +1,6 @@
 import { GetValueSync } from "../environment";
 import { evaluate, evaluateArray, visitArray } from "../evaluate";
-import { LocatedError, NotImplementedException } from "../exceptions";
+import { LocatedError, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { EvaluationConfig, MetaesException } from "../types";
@@ -36,12 +36,7 @@ export function Program(e: NodeTypes.Program, c, cerr, env, config: EvaluationCo
 }
 
 export function VariableDeclaration(e: NodeTypes.VariableDeclaration, c, cerr, env, config) {
-  visitArray(
-    e.declarations,
-    (declarator: NodeTypes.VariableDeclarator, c, cerr) => evaluate(declarator, c, cerr, env, config),
-    c,
-    cerr
-  );
+  visitArray(e.declarations, (declarator, c, cerr) => evaluate(declarator, c, cerr, env, config), c, cerr);
 }
 
 export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env, config) {
@@ -72,7 +67,7 @@ export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) 
         if (property.key.type === "Identifier") {
           const keyName = property.key.name;
           if (!env.values) {
-            cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
+            cerr(toException(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`)));
           } else {
             function assignValue(value?) {
               switch (property.value.type) {
@@ -89,7 +84,9 @@ export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) 
                   if (value) {
                     evaluate(property.value, c, cerr, { values: value, prev: env, internal: true }, config);
                   } else {
-                    cerr(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`));
+                    cerr(
+                      toException(new TypeError(`Cannot destructure property \`${keyName}\` of 'undefined' or 'null'.`))
+                    );
                   }
                   break;
                 default:
@@ -205,7 +202,7 @@ export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
         cerr,
         {
           values: {
-            [e.param.name]: error.value
+            [e.param.name]: error.value || error
           },
           prev: env
         },

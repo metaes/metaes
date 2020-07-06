@@ -28,9 +28,9 @@ let result;
 try {
   const { x } = undefined;
 } catch (e) {
-  result = e instanceof TypeError;
+  result = e;
 }
-assert.isTrue(result);
+assert.instanceOf(result, TypeError);
 
 // test: assigns undefined
 let { x } = {};
@@ -44,7 +44,7 @@ try {
 } catch (e) {
   result = e;
 }
-assert.instanceOf(ReferenceError);
+assert.equal(result.type, "NotImplemented");
 
 // test: does not throw
 let {

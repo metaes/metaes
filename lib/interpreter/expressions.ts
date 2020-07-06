@@ -140,7 +140,7 @@ export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, co
   evaluate(
     e.object,
     (object) => {
-      if (e.computed) {
+      function getProperty() {
         evaluate(
           e.property,
           (property) => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
@@ -148,18 +148,14 @@ export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, co
           env,
           config
         );
+      }
+      if (e.computed) {
+        getProperty();
       } else {
         switch (e.property.type) {
           case "Identifier":
             if (e.computed) {
-              // TODO: dry?
-              evaluate(
-                e.property,
-                (property) => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
-                cerr,
-                env,
-                config
-              );
+              getProperty();
             } else {
               switch (e.property.type) {
                 case "Identifier":

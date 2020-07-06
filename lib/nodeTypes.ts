@@ -119,12 +119,14 @@ export interface ThisExpression extends NodeBase {
 
 export interface ConditionalExpression extends NodeBase {
   type: "ConditionalExpression";
+  test: Expression;
   alternate: Expression;
   consequent: Expression;
 }
 
 export interface IfStatement extends NodeBase {
   type: "IfStatement";
+  test: Expression;
   alternate: Expression | ExpressionStatement;
   consequent: Expression | ExpressionStatement;
 }
