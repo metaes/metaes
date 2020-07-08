@@ -6,72 +6,76 @@ import { evaluate } from "./evaluate";
 import { LocatedError, presentException } from "./exceptions";
 import { ExportEnvironmentSymbol, ImportBinding } from "./interpreter/modules";
 import { createScript, metaesEvalModule } from "./metaes";
-import { Evaluate } from "./types";
+import { Evaluate, Environment } from "./types";
 
-const loadedModules = {};
-const loadingModules = {};
+function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
+  const loadedModules = {};
+  const loadingModules = {};
 
-const localizedImportTSModule = (base) => (url) => importTSModule(path.join(path.parse(base).dir, url + ".ts"));
+  const localizedImportTSModule = (base) => (url) => importTSModule(path.join(path.parse(base).dir, url + ".ts"));
 
-export async function importTSModule(url) {
-  if (loadedModules[url]) {
-    return Promise.resolve(loadedModules[url]);
-  }
+  async function importTSModule(url) {
+    if (loadedModules[url]) {
+      return Promise.resolve(loadedModules[url]);
+    }
 
-  if (loadingModules[url]) {
-    return loadingModules[url];
-  }
+    if (loadingModules[url]) {
+      return loadingModules[url];
+    }
 
-  return (loadingModules[url] = new Promise((resolve, reject) => {
-    const source = transpileModule(readFileSync(url).toString(), {
-      compilerOptions: { target: ScriptTarget.ES2017, module: ModuleKind.ESNext }
-    }).outputText;
-    // console.log(source);
-    const script = createScript(source, undefined, "module");
-    script.url = `transpiled://${url}`;
+    return (loadingModules[url] = new Promise((resolve, reject) => {
+      const source = transpileModule(readFileSync(url).toString(), {
+        compilerOptions: { target: ScriptTarget.ES2017, module: ModuleKind.ESNext }
+      }).outputText;
+      const script = createScript(source, undefined, "module");
+      script.url = `transpiled://${url}`;
 
-    metaesEvalModule(
-      script,
-      function (mod) {
-        delete loadingModules[url];
-        resolve((loadedModules[url] = mod));
-      },
-      (exception) => {
-        console.log(presentException(exception));
-        reject(exception.value || exception.message || exception);
-      },
-      {
-        values: {
-          Object,
-          "[[GetBindingValue]]": async function (value: ImportBinding, c, cerr, env, config) {
-            GetValue(
-              { name: "[[ImportModule]]" },
-              async (importTSModule) => {
-                const mod = await importTSModule(value.modulePath);
-                c(mod[value.name]);
-              },
-              cerr,
-              env
-            );
-          },
-          "[[ExportBinding]]": function ({ name, value, e }, c, cerr, env, config) {
-            const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
-            if (!exportEnv) {
-              return cerr(
-                LocatedError(
-                  `Couldn't export declaration, no environment with '${ExportEnvironmentSymbol}' property found.`,
-                  e.declaration
-                )
+      metaesEvalModule(
+        script,
+        function (mod) {
+          delete loadingModules[url];
+          resolve((loadedModules[url] = mod));
+        },
+        (exception) => {
+          console.log(presentException(exception));
+          reject(exception.value || exception.message || exception);
+        },
+        {
+          prev: globalEnv,
+          values: {
+            "[[GetBindingValue]]": async function (value: ImportBinding, c, cerr, env, config) {
+              GetValue(
+                { name: "[[ImportModule]]" },
+                async (importTSModule) => {
+                  const mod = await importTSModule(value.modulePath);
+                  c(mod[value.name]);
+                },
+                cerr,
+                env
               );
-            }
-            evaluate({ type: "SetValue", name, value, isDeclaration: true }, c, cerr, exportEnv, config);
-          },
-          "[[ImportModule]]": localizedImportTSModule(url)
-        }
-      },
-      { script }
-    );
-  }));
+            },
+            "[[ExportBinding]]": function ({ name, value, e }, c, cerr, env, config) {
+              const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
+              if (!exportEnv) {
+                return cerr(
+                  LocatedError(
+                    `Couldn't export declaration, no environment with '${ExportEnvironmentSymbol}' property found.`,
+                    e.declaration
+                  )
+                );
+              }
+              evaluate({ type: "SetValue", name, value, isDeclaration: true }, c, cerr, exportEnv, config);
+            },
+            "[[ImportModule]]": localizedImportTSModule(url)
+          }
+        },
+        { script, isMetaMeta: true }
+      );
+    }));
+  }
+
+  return importTSModule;
 }
 
-export const getMetaMetaESEval = async () => (await importTSModule("lib/metaes.ts")).metaesEval as Evaluate;
+export const getMetaMetaESEval = async (globalEnv: Environment = { values: {} }) =>
+  (await createTSModulesImporter(globalEnv)("lib/metaes.ts")).metaesEval as Evaluate;

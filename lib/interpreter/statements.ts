@@ -202,7 +202,7 @@ export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
         cerr,
         {
           values: {
-            [e.param.name]: error.value || error
+            [e.param.name]: config.isMetaMeta ? error : error.value
           },
           prev: env
         },
