@@ -164,7 +164,7 @@ export function ExpressionStatement(e: NodeTypes.ExpressionStatement, c, cerr, e
   evaluate(e.expression, c, cerr, env, config);
 }
 
-const ExceptionName = "[[Exception]]";
+export const ExceptionName = "[[Exception]]";
 
 export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: EvaluationConfig) {
   evaluate(
@@ -192,7 +192,7 @@ export function ThrowStatement(e: NodeTypes.ThrowStatement, _c, cerr, env, confi
   evaluate(e.argument, (value) => cerr(value), cerr, env, config);
 }
 
-export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
+export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config: EvaluationConfig) {
   evaluate(
     { type: "GetValue", name: ExceptionName },
     (error: MetaesException) =>
@@ -202,7 +202,7 @@ export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config) {
         cerr,
         {
           values: {
-            [e.param.name]: config.isMetaMeta ? error : error.value
+            [e.param.name]: error.value || error
           },
           prev: env
         },

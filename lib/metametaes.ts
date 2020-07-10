@@ -5,8 +5,11 @@ import { getEnvironmentBy, GetValue } from "./environment";
 import { evaluate } from "./evaluate";
 import { LocatedError, presentException } from "./exceptions";
 import { ExportEnvironmentSymbol, ImportBinding } from "./interpreter/modules";
+import { ExceptionName } from "./interpreter/statements";
+import { ModuleECMAScriptInterpreters } from "./interpreters";
 import { createScript, metaesEvalModule } from "./metaes";
-import { Evaluate, Environment } from "./types";
+import * as NodeTypes from "./nodeTypes";
+import { Environment, Evaluate, EvaluationConfig, MetaesException } from "./types";
 
 function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
   const loadedModules = {};
@@ -69,7 +72,35 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
             "[[ImportModule]]": localizedImportTSModule(url)
           }
         },
-        { script, isMetaMeta: true }
+        {
+          script,
+          interpreters: {
+            prev: ModuleECMAScriptInterpreters,
+            values: {
+              CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config: EvaluationConfig) {
+                evaluate(
+                  { type: "GetValue", name: ExceptionName },
+                  (error: MetaesException) =>
+                    evaluate(
+                      e.body,
+                      c,
+                      cerr,
+                      {
+                        values: {
+                          [e.param.name]: error
+                        },
+                        prev: env
+                      },
+                      config
+                    ),
+                  cerr,
+                  env,
+                  config
+                );
+              }
+            }
+          }
+        }
       );
     }));
   }
