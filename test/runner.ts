@@ -9,6 +9,7 @@ import { getEnvironmentBy } from "../lib/environment";
 import { presentException } from "../lib/exceptions";
 import { ExportEnvironmentSymbol } from "../lib/interpreter/modules";
 import { metaesEval, metaesEvalModule } from "../lib/metaes";
+import { getMetaMetaESEval } from "../lib/metametaes";
 import { evaluateHelper } from "./spec/testUtils";
 
 const globalEnv = {
@@ -69,8 +70,8 @@ function build(folder: string, evalFn) {
     describe("metaesEval", () => build("eval", metaesEval));
     describe("metaesEvalModule", () => build("eval_module", metaesEvalModule));
 
-    // const metametaesEval = await getMetaMetaESEval();
-    // describe("metaesEval", () => build("eval", metametaesEval));
+    const metametaesEval = await getMetaMetaESEval({ values: { ReferenceError, Error, Set, Object } });
+    describe("metaesEval", () => build("eval", metametaesEval));
   } catch (e) {
     console.log("Source files test error", e);
   }
