@@ -394,12 +394,16 @@ export function ClassDeclaration(e: NodeTypes.ClassDeclaration, c, cerr, env, co
       (body) =>
         visitArray(
           body,
-          ({ key, value }, c, cerr) => {
-            if (key === "constructor") {
-              value.prototype = superClass ? Object.create(superClass.prototype) : Object;
-              c((klass = value));
-            } else {
-              c((klass.prototype[key] = value));
+          ({ key, value }, c) => {
+            try {
+              if (key === "constructor") {
+                value.prototype = superClass ? Object.create(superClass.prototype) : Object;
+                c((klass = value));
+              } else {
+                c((klass.prototype[key] = value));
+              }
+            } catch (e) {
+              cerr(toException(e, e.body));
             }
           },
           () =>
@@ -434,19 +438,32 @@ export function DebuggerStatement(_e: NodeTypes.DebuggerStatement, c) {
 }
 
 export function SwitchStatement(e: NodeTypes.SwitchStatement, c, cerr, env, config) {
+  let fallthrough = false;
   evaluate(
     e.discriminant,
     (discriminant) => {
       visitArray(
         e.cases,
         function (caseNode, c, cerr) {
-          evaluate(
-            caseNode.test,
-            (test) => (discriminant === test ? evaluateArray(caseNode.consequent, c, cerr, env, config) : c(null)),
-            cerr,
-            env,
-            config
-          );
+          const evalConsequent = () => evaluateArray(caseNode.consequent, c, cerr, env, config);
+          if (caseNode.test) {
+            evaluate(
+              caseNode.test,
+              (test) => {
+                if (fallthrough || discriminant === test) {
+                  fallthrough = true;
+                  evalConsequent();
+                } else {
+                  c(null);
+                }
+              },
+              cerr,
+              env,
+              config
+            );
+          } else {
+            evalConsequent();
+          }
         },
         c,
         (e) => (e.type === "BreakStatement" ? c() : cerr(e))

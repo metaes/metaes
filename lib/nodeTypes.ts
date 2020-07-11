@@ -105,7 +105,7 @@ export interface ArrayExpression extends NodeBase {
 export interface NewExpression extends NodeBase {
   type: "NewExpression";
   arguments: Identifier[];
-  callee: MemberExpression | Identifier;
+  callee: MemberExpression | Identifier | CallExpression;
 }
 
 export interface SequenceExpression extends NodeBase {

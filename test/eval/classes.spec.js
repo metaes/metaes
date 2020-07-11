@@ -8,6 +8,9 @@ class Container {
     this.value = value;
   }
 }
+
+assert.typeOf(Container, "function");
+assert.typeOf(new Container("test"), "object");
 assert.equal(new Container("test").value, "test");
 
 // test: class method

@@ -125,7 +125,7 @@ export function CallExpression(
         default:
           cerr({
             type: "NotImplemented",
-            message: `This kind of callee node ('${e.callee.type}') is not supported yet.`,
+            message: `'${e.callee.type}' callee node is not supported yet.`,
             location: e.callee
           });
       }
@@ -409,16 +409,15 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
 
       switch (calleeNode.type) {
         case "MemberExpression":
+        case "CallExpression":
           evaluate(calleeNode, onValue, cerr, env, config);
           break;
         case "Identifier":
           const { range, loc } = calleeNode;
-
           evaluate({ type: "GetValue", name: calleeNode.name, range, loc }, onValue, cerr, env, config);
-
           break;
         default:
-          cerr(NotImplementedException(`This type of callee is not supported yet.`));
+          cerr(NotImplementedException(`${calleeNode["type"]} type of callee is not supported yet.`));
       }
     },
     cerr,
