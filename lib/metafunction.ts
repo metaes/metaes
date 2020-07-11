@@ -1,5 +1,5 @@
 import { evaluate, visitArray } from "./evaluate";
-import { NotImplementedException, presentException, toException } from "./exceptions";
+import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
 import { Continuation, Environment, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
 
