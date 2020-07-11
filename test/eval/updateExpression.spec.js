@@ -17,3 +17,8 @@ assert.equal(c, 1);
 let c = 1;
 --c;
 assert.equal(c, 0);
+
+// test: updates member expression
+const a = { b: 0 };
+a.b++;
+assert.equal(a.b, 1);

@@ -56,8 +56,6 @@ export const evaluateMetaFunction = (
           if (exception.type === "ReturnStatement") {
             c(exception.value);
           } else {
-            // console.log(presentException(exception));
-            // debugger;
             if (!exception.script) {
               exception.script = config.script;
             }

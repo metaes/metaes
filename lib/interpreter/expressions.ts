@@ -281,7 +281,7 @@ export function ObjectExpression(e: NodeTypes.ObjectExpression, c, cerr, env, co
 
 export function Property(e: NodeTypes.Property, c, cerr, env, config) {
   if (e.computed) {
-    cerr(NotImplementedException("Computed properties are not supported yet."));
+    evaluate(e.key, (key) => evaluate(e.value, (value) => c({ key, value }), cerr, env, config), cerr, env, config);
   } else {
     let key;
     switch (e.key.type) {
@@ -395,6 +395,18 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
     (args) => {
       let calleeNode = e.callee;
 
+      function onValue(callee) {
+        if (typeof callee !== "function") {
+          cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
+        } else {
+          try {
+            c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
+          } catch (error) {
+            cerr(toException(error, calleeNode));
+          }
+        }
+      }
+
       switch (calleeNode.type) {
         case "MemberExpression":
           evaluate(calleeNode, onValue, cerr, env, config);
@@ -403,18 +415,6 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
           const { range, loc } = calleeNode;
 
           evaluate({ type: "GetValue", name: calleeNode.name, range, loc }, onValue, cerr, env, config);
-
-          function onValue(callee) {
-            if (typeof callee !== "function") {
-              cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
-            } else {
-              try {
-                c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
-              } catch (error) {
-                cerr(toException(error, calleeNode));
-              }
-            }
-          }
 
           break;
         default:
@@ -450,51 +450,50 @@ export function LogicalExpression(e: NodeTypes.LogicalExpression, c, cerr, env, 
 }
 
 export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: Environment, config) {
+  function performUpdate(container, identifierName) {
+    try {
+      if (e.prefix) {
+        switch (e.operator) {
+          case "++":
+            c(++container[identifierName]);
+            break;
+          case "--":
+            c(--container[identifierName]);
+            break;
+          default:
+            throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
+        }
+      } else {
+        switch (e.operator) {
+          case "++":
+            c(container[identifierName]++);
+            break;
+          case "--":
+            c(container[identifierName]--);
+            break;
+          default:
+            throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
+        }
+      }
+    } catch (e) {
+      cerr(e);
+    }
+  }
+  let identifierName;
   switch (e.argument.type) {
     case "Identifier":
-      const propName = e.argument.name;
-      evaluate(
-        { type: "GetValue", name: propName },
-        (_) => {
-          // discard found value
-          // if value is found, there must be an env for that value, don't check for negative case
-          // TODO: integrate with `getEnvironmentForValue`
-          let foundEnv: Environment = env;
-          while (!(propName in foundEnv.values)) {
-            foundEnv = foundEnv.prev!;
-          }
-          try {
-            if (e.prefix) {
-              switch (e.operator) {
-                case "++":
-                  c(++foundEnv.values[propName]);
-                  break;
-                case "--":
-                  c(--foundEnv.values[propName]);
-                  break;
-                default:
-                  throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
-              }
-            } else {
-              switch (e.operator) {
-                case "++":
-                  c(foundEnv.values[propName]++);
-                  break;
-                case "--":
-                  c(foundEnv.values[propName]--);
-                  break;
-                default:
-                  throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
-              }
-            }
-          } catch (e) {
-            cerr(e);
-          }
-        },
-        cerr,
-        env,
-        config
-      );
+      identifierName = e.argument.name;
+      const variableEnv = getEnvironmentForValue(env, identifierName)!;
+      const container = variableEnv.values;
+      performUpdate(container, identifierName);
+      break;
+    case "MemberExpression":
+      if (e.argument.property.type === "Identifier") {
+        identifierName = e.argument.property.name;
+        evaluate(e.argument.object, (object) => performUpdate(object, identifierName), cerr, env, config);
+      } else {
+        cerr(NotImplementedException("Only identifiers are supported.", e.argument));
+      }
       break;
     default:
       cerr(

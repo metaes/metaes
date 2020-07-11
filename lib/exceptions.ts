@@ -4,16 +4,16 @@ function isException(value: any): value is MetaesException {
   return value && typeof value === "object" && !(value instanceof Error);
 }
 
-export const toException = (value: any | MetaesException, location?: ASTNode, script?: Script): MetaesException =>
+export const toException = (value: any | MetaesException, location?: ASTNode, script?: Script) =>
   isException(value) ? value : { type: "Error", value, location, script };
 
-export const NotImplementedException = (message: string, location?: ASTNode): MetaesException => ({
+export const NotImplementedException = (message: string, location?: ASTNode) => ({
   type: "NotImplemented",
   message,
   location
 });
 
-export const LocatedError = (value: any, location: ASTNode): MetaesException => ({ value, location });
+export const LocatedError = (value: any, location: ASTNode) => ({ value, location });
 
 function highlight(text: string) {
   return `\x1b[1m${text}\x1b[0m`;
@@ -43,7 +43,8 @@ export function presentException({ location, value, message, script }: MetaesExc
     const sourceLocation = `${url}:${location.loc?.start.line}:${location.loc?.start.column} - ${value || message}\n\n`;
     const lines = source.split("\n");
     const line = lines[startLine - 1];
-    const lineOutput = `  ${startLine}|  ${line}`;
+    const lineNumber = styled(startLine + "|", dim);
+    const lineValue = styled(line, highlight);
     const lineNumberSize = startLine.toString().length;
     const paddingSum = 5;
     // console.log(
@@ -52,9 +53,10 @@ export function presentException({ location, value, message, script }: MetaesExc
     //     .map((line, i) => `${i + 1}| ${line}`)
     //     .join("\n")
     // );
+    console.log(JSON.stringify(value || message).substring(0, 1000));
     return (
       sourceLocation +
-      styled(lineOutput, highlight) +
+      `  ${lineNumber}  ${lineValue}` +
       "\n" +
       `${" ".repeat(paddingSum + lineNumberSize + startColumn)}${styled("~".repeat(nodeLength), error)}`
     );

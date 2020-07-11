@@ -28,7 +28,7 @@ const globalEnv = {
   prev: { values: global }
 };
 
-function build(folder: string, evalFn) {
+function build(folder: string, evalFn, logError = true) {
   // generate tests on runtime
   before(async () => {
     const files = (await pify(glob)(__dirname + `/${folder}/*.spec.js`)).map(async (file) => ({
@@ -51,7 +51,9 @@ function build(folder: string, evalFn) {
             try {
               await evaluateHelper(evalFn, value, fileName, { values: {}, prev: globalEnv });
             } catch (e) {
-              console.log(e);
+              if (logError) {
+                console.log(e);
+              }
               const message = presentException(e);
               console.log(message);
               throw new Error(message);
@@ -70,8 +72,10 @@ function build(folder: string, evalFn) {
     describe("metaesEval", () => build("eval", metaesEval));
     describe("metaesEvalModule", () => build("eval_module", metaesEvalModule));
 
-    const metametaesEval = await getMetaMetaESEval({ values: { ReferenceError, Error, Set, Object } });
-    describe("metaesEval", () => build("eval", metametaesEval));
+    const metametaesEval = await getMetaMetaESEval({
+      values: { ReferenceError, Error, Set, Object, undefined, Array, TypeError }
+    });
+    describe("metaesEval", () => build("eval", metametaesEval, false));
   } catch (e) {
     console.log("Source files test error", e);
   }
