@@ -22,3 +22,9 @@ assert.equal(c, 0);
 const a = { b: 0 };
 a.b++;
 assert.equal(a.b, 1);
+
+// test: updates member expression
+const a = { b: 0 };
+const propName = "b";
+a[propName]++;
+assert.equal(a.b, 1);

@@ -484,15 +484,20 @@ export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: En
     case "Identifier":
       identifierName = e.argument.name;
       const variableEnv = getEnvironmentForValue(env, identifierName)!;
-      const container = variableEnv.values;
-      performUpdate(container, identifierName);
+      performUpdate(variableEnv.values, identifierName);
       break;
     case "MemberExpression":
-      if (e.argument.property.type === "Identifier") {
-        identifierName = e.argument.property.name;
-        evaluate(e.argument.object, (object) => performUpdate(object, identifierName), cerr, env, config);
+      const arg = e.argument;
+      if (arg.property.type === "Identifier") {
+        const cont = (identifierName) =>
+          evaluate(arg.object, (object) => performUpdate(object, identifierName), cerr, env, config);
+        if (arg.computed) {
+          evaluate(arg.property, cont, cerr, env, config);
+        } else {
+          cont(arg.property.name);
+        }
       } else {
-        cerr(NotImplementedException("Only identifiers are supported.", e.argument));
+        cerr(NotImplementedException("Only identifiers are supported.", arg));
       }
       break;
     default:
