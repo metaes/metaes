@@ -41,11 +41,18 @@ for (a of [1, 2]) {
 assert.deepEqual(results, [1, 2]);
 
 // test: for of loop with value destruction
-const result = [];
+const results = [];
 for (let { a } of [{ a: 1 }, { a: 2 }]) {
   results.push(a);
 }
 assert.deepEqual(results, [1, 2]);
+
+// test: for of loop with value destruction and default value
+const results = [];
+for (let { a = "default" } of [{}, {}]) {
+  results.push(a);
+}
+assert.deepEqual(results, ["default", "default"]);
 
 // test: supports do-while
 let test = 10;

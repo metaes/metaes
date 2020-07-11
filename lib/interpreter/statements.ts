@@ -3,7 +3,7 @@ import { evaluate, evaluateArray, visitArray } from "../evaluate";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
-import { EvaluationConfig, MetaesException } from "../types";
+import { EvaluationConfig, MetaesException, Environment } from "../types";
 
 function hoistDeclarations(e: NodeTypes.Statement[], c, cerr, env, config) {
   visitArray(
@@ -302,61 +302,52 @@ export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config
       if (!Array.isArray(right)) {
         cerr(NotImplementedException("Only arrays as right-hand side of for-of loop are supported for now.", e.right));
       } else {
-        switch (e.left.type) {
-          case "Identifier":
-            const name = e.left.name;
-            const bodyEnv = { prev: env, values: {} };
-            visitArray(
-              right,
-              (value, c, cerr) =>
-                evaluate(
-                  { type: "SetValue", name, value, isDeclaration: true },
-                  () => evaluate(e.body, c, cerr, bodyEnv, config),
-                  cerr,
-                  env,
-                  config
-                ),
-              c,
-              cerr
-            );
-            break;
-          case "VariableDeclaration":
-            if (e.left.declarations[0].id.type === "Identifier") {
-              // create iterator in new env
+        function loopAssigningToVariable(name: string, bodyEnv: Environment) {
+          visitArray(
+            right,
+            (value, c, cerr) =>
               evaluate(
-                e.left,
-                (_) =>
-                  visitArray(
-                    right,
-                    (rightItem, c, cerr) => {
-                      const bodyEnv = { prev: env, values: {} };
-                      evaluate(
-                        {
-                          type: "SetValue",
-                          name: (<NodeTypes.Identifier>e.left.declarations[0].id).name,
-                          value: rightItem,
-                          isDeclaration: true
-                        },
-                        () => evaluate(e.body, c, cerr, bodyEnv, config),
-                        cerr,
-                        bodyEnv,
-                        config
-                      );
-                    },
-                    c,
-                    cerr
-                  ),
+                { type: "SetValue", name, value, isDeclaration: true },
+                () => evaluate(e.body, c, cerr, bodyEnv, config),
                 cerr,
                 env,
                 config
-              );
-            } else {
-              cerr(
-                NotImplementedException(
-                  `Left-hand side of type ${e.left.declarations[0].id.type} in ${e.type} not implemented yet.`,
-                  e.left
-                )
-              );
+              ),
+            c,
+            cerr
+          );
+        }
+        const bodyEnv = { prev: env, values: {} };
+
+        switch (e.left.type) {
+          case "Identifier":
+            loopAssigningToVariable(e.left.name, bodyEnv);
+            break;
+          case "VariableDeclaration":
+            const declaration0 = e.left.declarations[0];
+            switch (declaration0.id.type) {
+              case "Identifier":
+                loopAssigningToVariable(declaration0.id.name, bodyEnv);
+                break;
+              case "ObjectPattern":
+                visitArray(
+                  right,
+                  function (values, c, cerr) {
+                    const bodyEnv = { prev: { values, prev: env }, values: {} };
+                    evaluate(declaration0.id, () => evaluate(e.body, c, cerr, bodyEnv, config), cerr, bodyEnv, config);
+                  },
+                  c,
+                  cerr
+                );
+                break;
+              default:
+                cerr(
+                  NotImplementedException(
+                    `Left-hand side of type ${e.left.declarations[0].id.type} in ${e.type} not implemented yet.`,
+                    e.left
+                  )
+                );
+                break;
             }
             break;
           default:
