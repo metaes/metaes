@@ -302,50 +302,70 @@ export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config
       if (!Array.isArray(right)) {
         cerr(NotImplementedException("Only arrays as right-hand side of for-of loop are supported for now.", e.right));
       } else {
-        if (e.left.type === "VariableDeclaration" && e.left.declarations[0].id.type === "Identifier") {
-          // create iterator in new env
-          evaluate(
-            e.left,
-            (_) =>
-              // TODO: iterate over declarations in e.left
-              visitArray(
-                right,
-                (rightItem, c, cerr) => {
-                  const bodyEnv = { prev: env, values: {} };
-
-                  /**
-                   * TODO: currently left-hand side of loop definition is bound to new environment
-                   * for each iteration. It means it supports `let`/`const` style (creates new scope),
-                   * but not `var` (where shouldn't be created).
-                   *
-                   * Should support both semantics.
-                   */
-                  evaluate(
-                    {
-                      type: "SetValue",
-                      name: (<NodeTypes.Identifier>e.left.declarations[0].id).name,
-                      value: rightItem,
-                      isDeclaration: true
+        switch (e.left.type) {
+          case "Identifier":
+            const name = e.left.name;
+            const bodyEnv = { prev: env, values: {} };
+            visitArray(
+              right,
+              (value, c, cerr) =>
+                evaluate(
+                  { type: "SetValue", name, value, isDeclaration: true },
+                  () => evaluate(e.body, c, cerr, bodyEnv, config),
+                  cerr,
+                  env,
+                  config
+                ),
+              c,
+              cerr
+            );
+            break;
+          case "VariableDeclaration":
+            if (e.left.declarations[0].id.type === "Identifier") {
+              // create iterator in new env
+              evaluate(
+                e.left,
+                (_) =>
+                  visitArray(
+                    right,
+                    (rightItem, c, cerr) => {
+                      const bodyEnv = { prev: env, values: {} };
+                      evaluate(
+                        {
+                          type: "SetValue",
+                          name: (<NodeTypes.Identifier>e.left.declarations[0].id).name,
+                          value: rightItem,
+                          isDeclaration: true
+                        },
+                        () => evaluate(e.body, c, cerr, bodyEnv, config),
+                        cerr,
+                        bodyEnv,
+                        config
+                      );
                     },
-                    () => evaluate(e.body, c, cerr, bodyEnv, config),
-                    cerr,
-                    bodyEnv,
-                    config
-                  );
-                },
-                c,
-                cerr
-              ),
-            cerr,
-            env,
-            config
-          );
-        } else {
-          cerr(
-            NotImplementedException(
-              `Left-hand side of type ${e.left.declarations[0].id.type} in ${e.type} not implemented yet.`
-            )
-          );
+                    c,
+                    cerr
+                  ),
+                cerr,
+                env,
+                config
+              );
+            } else {
+              cerr(
+                NotImplementedException(
+                  `Left-hand side of type ${e.left.declarations[0].id.type} in ${e.type} not implemented yet.`,
+                  e.left
+                )
+              );
+            }
+            break;
+          default:
+            cerr(
+              NotImplementedException(
+                `Left-hand side of type ${e.left["type"]} in ${e.type} not implemented yet.`,
+                e.left
+              )
+            );
         }
       }
     },

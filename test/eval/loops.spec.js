@@ -32,6 +32,14 @@ for (let i of [1, 2, 3]) {
 }
 assert.deepEqual(result, [1, 2, 3]);
 
+// test: for of loop with simple assignment
+const results = [];
+let a;
+for (a of [1, 2]) {
+  results.push(a);
+}
+assert.deepEqual(results, [1, 2]);
+
 // test: for of loop with value destruction
 const result = [];
 for (let { a } of [{ a: 1 }, { a: 2 }]) {

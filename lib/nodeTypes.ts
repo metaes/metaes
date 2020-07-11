@@ -210,7 +210,7 @@ export interface ForInStatement extends NodeBase {
 
 export interface ForOfStatement extends NodeBase {
   type: "ForOfStatement";
-  left: VariableDeclaration;
+  left: VariableDeclaration | Identifier;
   right: Expression;
   body: BlockStatement;
 }

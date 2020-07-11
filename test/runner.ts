@@ -75,7 +75,7 @@ function build(folder: string, evalFn, logError = true) {
     const metametaesEval = await getMetaMetaESEval({
       values: { ReferenceError, Error, Set, Object, undefined, Array, TypeError }
     });
-    describe("metaesEval", () => build("eval", metametaesEval, false));
+    // describe("metaesEval", () => build("eval", metametaesEval, false));
   } catch (e) {
     console.log("Source files test error", e);
   }
