@@ -45,7 +45,7 @@ export function CallExpression(
                   cerr(toException(error, e.callee));
                 }
               } else {
-                cerr(new TypeError(callee + " is not a function"));
+                cerr(toException(new TypeError(callee + " is not a function"), e.callee));
               }
             },
             cerr,
@@ -395,26 +395,27 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
     (args) => {
       let calleeNode = e.callee;
 
-      function onValue(callee) {
-        if (typeof callee !== "function") {
-          cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
-        } else {
-          try {
-            c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
-          } catch (error) {
-            cerr(toException(error, calleeNode));
-          }
-        }
-      }
-
       switch (calleeNode.type) {
         case "MemberExpression":
         case "CallExpression":
-          evaluate(calleeNode, onValue, cerr, env, config);
-          break;
         case "Identifier":
-          const { range, loc } = calleeNode;
-          evaluate({ type: "GetValue", name: calleeNode.name, range, loc }, onValue, cerr, env, config);
+          evaluate(
+            calleeNode,
+            function onValue(callee) {
+              if (typeof callee !== "function") {
+                cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
+              } else {
+                try {
+                  c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
+                } catch (error) {
+                  cerr(toException(error, calleeNode));
+                }
+              }
+            },
+            cerr,
+            env,
+            config
+          );
           break;
         default:
           cerr(NotImplementedException(`${calleeNode["type"]} type of callee is not supported yet.`));

@@ -35,9 +35,11 @@ export const evaluateMetaFunction = (
         case "AssignmentPattern":
           const arg = args[i++];
 
-          arg === undefined
-            ? evaluate(param.right, (value) => c((env.values[param.left.name] = value)), cerr, env, config)
-            : c((env.values[param.left.name] = arg));
+          if (typeof arg === "undefined") {
+            evaluate(param.right, (value) => c((env.values[param.left.name] = value)), cerr, env, config);
+          } else {
+            c((env.values[param.left.name] = arg));
+          }
           break;
         default:
           cerr(NotImplementedException(`"${param["type"]}" is not supported type of function param.`, param));

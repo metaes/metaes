@@ -1,3 +1,9 @@
+// test: supports this value
+function ctor() {
+  return 2;
+}
+assert.typeOf(new ctor(), "object");
+
 // test: declares a class
 class C {}
 assert.typeOf(C, "function");
@@ -10,7 +16,7 @@ class Container {
 }
 
 assert.typeOf(Container, "function");
-assert.typeOf(new Container("test"), "object");
+assert.typeOf(new Container(), "object");
 assert.equal(new Container("test").value, "test");
 
 // test: class method
@@ -20,6 +26,19 @@ class Container {
   }
   getValue() {
     return this.value;
+  }
+}
+assert.equal(new Container("test").getValue(), "test");
+
+// test: super class
+class Base {
+  getValue() {
+    return this.value;
+  }
+}
+class Container extends Base {
+  constructor(value) {
+    this.value = value;
   }
 }
 assert.equal(new Container("test").getValue(), "test");

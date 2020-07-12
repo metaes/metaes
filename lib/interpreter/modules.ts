@@ -105,19 +105,20 @@ export function ImportDeclaration(e: NodeTypes.ImportDeclaration, c, cerr, env, 
     e.specifiers,
     (specifier, c, cerr) => {
       const name = specifier.local.name;
+      const modulePath = <string>e.source.value;
 
       switch (specifier.type) {
         case "ImportNamespaceSpecifier":
-          SetValue({ name, value: new ImportBinding("default", e.source.value), isDeclaration: true }, c, cerr, env);
+          SetValue({ name, value: new ImportBinding("default", modulePath), isDeclaration: true }, c, cerr, env);
           break;
         case "ImportSpecifier":
-          SetValue({ name, value: new ImportBinding(name, e.source.value), isDeclaration: true }, c, cerr, env);
+          SetValue({ name, value: new ImportBinding(name, modulePath), isDeclaration: true }, c, cerr, env);
           break;
         case "ImportDefaultSpecifier":
-          SetValue({ name, value: new ImportBinding("default", e.source.value), isDeclaration: true }, c, cerr, env);
+          SetValue({ name, value: new ImportBinding("default", modulePath), isDeclaration: true }, c, cerr, env);
           break;
         default:
-          cerr(NotImplementedException(`${specifier.type!} import specifier is not supported yet.`));
+          cerr(NotImplementedException(`${specifier.type!} import specifier is not supported yet.`, specifier));
           break;
       }
     },

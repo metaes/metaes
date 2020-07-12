@@ -1,5 +1,5 @@
-// test: loops over values with long array
-const input = Array.from(Array(10000).keys());
+// test: loops over values with longer array
+const input = Array.from(Array(100).keys());
 const output = [];
 for (let o of input) {
   output.push(o);
