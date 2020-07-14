@@ -156,9 +156,10 @@ export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, co
     e.object,
     (object) => {
       function getProperty() {
+        const { loc, range } = e.property;
         evaluate(
           e.property,
-          (property) => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
+          (property) => evaluate({ type: "GetProperty", object, property, loc, range }, c, cerr, env, config),
           cerr,
           env,
           config
@@ -174,11 +175,15 @@ export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, co
             } else {
               switch (e.property.type) {
                 case "Identifier":
-                  try {
-                    evaluate({ type: "GetProperty", object, property: e.property.name }, c, cerr, env, config);
-                  } catch (e) {
-                    cerr(toException(e, e.property));
-                  }
+                  const { loc, range } = e.property;
+                  evaluate(
+                    { type: "GetProperty", object, property: e.property.name, loc, range },
+                    c,
+                    cerr,
+                    env,
+                    config
+                  );
+
                   break;
                 default:
                   cerr(NotImplementedException(`Not implemented ${e.property["type"]} property type of ${e.type}`));
@@ -634,7 +639,13 @@ export function SpreadElement(e: NodeTypes.SpreadElement, c, cerr, env, config) 
 }
 
 export function AwaitExpression(e: NodeTypes.AwaitExpression, c, cerr, env, config) {
-  evaluate(e.argument, (arg) => (arg instanceof Promise ? arg.then(c) : c(arg)), cerr, env, config);
+  evaluate(
+    e.argument,
+    (arg) => (typeof arg === "object" && arg instanceof Promise ? arg.then(c) : c(arg)),
+    cerr,
+    env,
+    config
+  );
 }
 
 export default {
