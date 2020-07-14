@@ -7,6 +7,8 @@ import * as NodeTypes from "../nodeTypes";
 import { Continuation, Environment, ErrorContinuation, EvaluationConfig } from "../types";
 import { IfStatement } from "./statements";
 
+const concatSpreads = (all, next) => (next instanceof SpreadElementValue ? all.concat(next.value) : all.concat([next]));
+
 export function CallExpression(
   e: NodeTypes.CallExpression,
   c: Continuation,
@@ -17,10 +19,7 @@ export function CallExpression(
   evaluateArray(
     e.arguments,
     (args) => {
-      args = args.reduce(
-        (total, next) => (next instanceof SpreadElementValue ? total.concat(next.value) : total.concat([next])),
-        []
-      );
+      args = args.reduce(concatSpreads, []);
       switch (e.callee.type) {
         case "Super":
           GetValue(
@@ -406,7 +405,7 @@ export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, co
 }
 
 export function ArrayExpression(e: NodeTypes.ArrayExpression, c, cerr, env, config) {
-  evaluateArray(e.elements, c, cerr, env, config);
+  evaluateArray(e.elements, (values) => c(values.reduce(concatSpreads, [])), cerr, env, config);
 }
 
 export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) {
