@@ -316,6 +316,11 @@ export interface SpreadElement extends NodeBase {
   argument: Expression;
 }
 
+export interface AwaitExpression extends NodeBase {
+  type: "AwaitExpression";
+  argument: Expression;
+}
+
 export interface ExportNamedDeclaration extends NodeBase {
   type: "ExportNamedDeclaration";
   declaration: VariableDeclaration | FunctionDeclaration | ClassDeclaration;
@@ -415,7 +420,8 @@ type Expression =
   | RestElement
   | TemplateLiteral
   | TaggedTemplateExpression
-  | SpreadElement;
+  | SpreadElement
+  | AwaitExpression;
 
 type Comment = Line;
 

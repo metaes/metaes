@@ -1,5 +1,5 @@
 import { callcc } from "../callcc";
-import { getEnvironmentForValue } from "../environment";
+import { getEnvironmentForValue, GetValue } from "../environment";
 import { evaluate, evaluateArray } from "../evaluate";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction, isMetaFunction, evaluateMetaFunction, getMetaFunction } from "../metafunction";
@@ -22,6 +22,21 @@ export function CallExpression(
         []
       );
       switch (e.callee.type) {
+        case "Super":
+          GetValue(
+            { name: "this" },
+            (thisValue) =>
+              evaluate(
+                { type: "Apply", e, fn: Object.getPrototypeOf(thisValue).constructor, thisValue: thisValue, args },
+                c,
+                cerr,
+                env,
+                config
+              ),
+            cerr,
+            env
+          );
+          break;
         case "Identifier":
         case "FunctionExpression":
         case "ConditionalExpression":
@@ -618,6 +633,10 @@ export function SpreadElement(e: NodeTypes.SpreadElement, c, cerr, env, config) 
   evaluate(e.argument, (value) => c(new SpreadElementValue(value)), cerr, env, config);
 }
 
+export function AwaitExpression(e: NodeTypes.AwaitExpression, c, cerr, env, config) {
+  evaluate(e.argument, (arg) => (arg instanceof Promise ? arg.then(c) : c(arg)), cerr, env, config);
+}
+
 export default {
   CallExpression,
   MemberExpression,
@@ -637,5 +656,6 @@ export default {
   ConditionalExpression,
   TemplateLiteral,
   TaggedTemplateExpression,
-  SpreadElement
+  SpreadElement,
+  AwaitExpression
 };

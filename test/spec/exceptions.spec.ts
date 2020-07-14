@@ -1,5 +1,6 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
+import { ECMAScriptInterpreters } from "../../lib/interpreters";
 import { evalFnBodyAsPromise, MetaesContext, metaesEval, noop } from "../../lib/metaes";
 
 describe("Exceptions", () => {
@@ -10,7 +11,13 @@ describe("Exceptions", () => {
         (x) => {
           console.log({ x });
         },
-        resolve
+        resolve,
+        {},
+        {
+          interpreters: {
+            values: Object.fromEntries(Object.entries(ECMAScriptInterpreters).filter(([k]) => k !== "AwaitExpression"))
+          }
+        }
       );
     }));
 

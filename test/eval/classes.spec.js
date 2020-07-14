@@ -49,3 +49,18 @@ class Container extends Base {
   }
 }
 assert.equal(new Container("test").getValue(), "test");
+
+// test: super class super() call
+class Base {
+  constructor(value) {
+    this.value = value;
+  }
+}
+
+class Derived extends Base {
+  constructor(value) {
+    super(value);
+  }
+}
+
+assert.equal(new Derived("test").value, "test");

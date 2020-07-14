@@ -73,7 +73,7 @@ function build(folder: string, evalFn, logError = true) {
     describe("metaesEvalModule", () => build("eval_module", metaesEvalModule));
 
     const metametaesEval = await getMetaMetaESEval({
-      values: { ReferenceError, Error, Set, Object, undefined, Array, TypeError, Function, console }
+      values: { ReferenceError, Error, Set, Object, undefined, Array, TypeError, Function, console, Promise }
     });
     describe("metametaesEval", () => build("eval", metametaesEval, false));
     describe("metametaesEvalModule", () => build("eval_module", metametaesEval, false));
