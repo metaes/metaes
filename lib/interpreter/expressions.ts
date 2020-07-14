@@ -2,7 +2,7 @@ import { callcc } from "../callcc";
 import { getEnvironmentForValue } from "../environment";
 import { evaluate, evaluateArray } from "../evaluate";
 import { LocatedError, NotImplementedException, toException } from "../exceptions";
-import { createMetaFunction } from "../metafunction";
+import { createMetaFunction, isMetaFunction, evaluateMetaFunction, getMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Continuation, Environment, ErrorContinuation, EvaluationConfig } from "../types";
 import { IfStatement } from "./statements";
@@ -401,14 +401,26 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
         case "Identifier":
           evaluate(
             calleeNode,
-            function onValue(callee) {
-              if (typeof callee !== "function") {
-                cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
+            function (callee) {
+              if (isMetaFunction(callee)) {
+                const newThis = Object.create(callee.prototype);
+                evaluateMetaFunction(
+                  getMetaFunction(callee),
+                  (value) => c(typeof value === "object" ? value : newThis),
+                  cerr,
+                  newThis,
+                  args,
+                  config
+                );
               } else {
-                try {
-                  c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
-                } catch (error) {
-                  cerr(toException(error, calleeNode));
+                if (typeof callee !== "function") {
+                  cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
+                } else {
+                  try {
+                    c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
+                  } catch (error) {
+                    cerr(toException(error, calleeNode));
+                  }
                 }
               }
             },

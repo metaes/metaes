@@ -46,7 +46,7 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
         {
           prev: globalEnv,
           values: {
-            "[[GetBindingValue]]": async function (value: ImportBinding, c, cerr, env, config) {
+            async "[[GetBindingValue]]"(value: ImportBinding, c, cerr, env, config) {
               GetValue(
                 { name: "[[ImportModule]]" },
                 async (importTSModule) => {
@@ -57,7 +57,7 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
                 env
               );
             },
-            "[[ExportBinding]]": function ({ name, value, e }, c, cerr, env, config) {
+            "[[ExportBinding]]"({ name, value, e }, c, cerr, env, config) {
               const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
               if (!exportEnv) {
                 return cerr(

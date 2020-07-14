@@ -397,7 +397,9 @@ export function ClassDeclaration(e: NodeTypes.ClassDeclaration, c, cerr, env, co
           ({ key, value }, c) => {
             try {
               if (key === "constructor") {
-                value.prototype = superClass ? Object.create(superClass.prototype) : Object;
+                if (superClass) {
+                  value.prototype = Object.create(superClass.prototype);
+                }
                 c((klass = value));
               } else {
                 c((klass.prototype[key] = value));

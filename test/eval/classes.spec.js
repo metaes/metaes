@@ -1,8 +1,15 @@
-// test: supports this value
+// test: ignores returned primitive value
 function ctor() {
   return 2;
 }
 assert.typeOf(new ctor(), "object");
+
+// test: returns newly created instance
+function ctor() {
+  this.x = 2;
+}
+assert.typeOf(new ctor(), "object");
+assert.equal(new ctor().x, 2);
 
 // test: declares a class
 class C {}
