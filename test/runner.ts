@@ -28,7 +28,7 @@ const globalEnv = {
   prev: { values: global }
 };
 
-function build(folder: string, evalFn, logError = true) {
+function build(folder: string, evalFn, testNamePrefix = "", logError = true) {
   // generate tests on runtime
   before(async () => {
     const files = (await pify(glob)(__dirname + `/${folder}/*.spec.js`)).map(async (file) => ({
@@ -41,12 +41,12 @@ function build(folder: string, evalFn, logError = true) {
       const tests = contents.split(/\/\/ test: .+\n/).filter((line) => line.length);
       const suiteName = name.substring(name.lastIndexOf("/") + 1);
 
-      describe(suiteName, () => {
+      describe(`${testNamePrefix} ${suiteName}`, () => {
         zip(testNames, tests).forEach(([name, value]) => {
           if (name.includes(":skip")) {
             return;
           }
-          const testName = name.replace("// test:", "").trim();
+          const testName = `${testNamePrefix} ${name.replace("// test:", "").trim()}`;
           it(testName, async () => {
             try {
               await evaluateHelper(evalFn, value, fileName, { values: {}, prev: globalEnv });
@@ -75,8 +75,8 @@ function build(folder: string, evalFn, logError = true) {
     const metametaesEval = await getMetaMetaESEval({
       values: { ReferenceError, Error, Set, Object, undefined, Array, TypeError, Function, console, Promise }
     });
-    describe("metametaesEval", () => build("eval", metametaesEval, false));
-    describe("metametaesEvalModule", () => build("eval_module", metametaesEval, false));
+    describe("metametaesEval", () => build("eval", metametaesEval, "[meta2]", false));
+    describe("metametaesEvalModule", () => build("eval_module", metametaesEval, "[meta2]", false));
   } catch (e) {
     console.log("Source files test error", e);
   }
