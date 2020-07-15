@@ -9,7 +9,7 @@ import { getEnvironmentBy } from "../lib/environment";
 import { presentException } from "../lib/exceptions";
 import { ExportEnvironmentSymbol } from "../lib/interpreter/modules";
 import { metaesEval, metaesEvalModule } from "../lib/metaes";
-import { getMetaMetaESEval } from "../lib/metametaes";
+import { getMeta2ESEval } from "../lib/meta2es";
 import { evaluateHelper } from "./spec/testUtils";
 
 const globalEnv = {
@@ -72,11 +72,11 @@ function build(folder: string, evalFn, testNamePrefix = "", logError = true) {
     describe("metaesEval", () => build("eval", metaesEval));
     describe("metaesEvalModule", () => build("eval_module", metaesEvalModule));
 
-    const metametaesEval = await getMetaMetaESEval({
+    const meta2Eval = await getMeta2ESEval({
       values: { ReferenceError, Error, Set, Object, undefined, Array, TypeError, Function, console, Promise }
     });
-    describe("metametaesEval", () => build("eval", metametaesEval, "[meta2]", false));
-    describe("metametaesEvalModule", () => build("eval_module", metametaesEval, "[meta2]", false));
+    describe("meta2esEval", () => build("eval", meta2Eval, "[meta2]", false));
+    describe("meta2esEvalModule", () => build("eval_module", meta2Eval, "[meta2]", false));
   } catch (e) {
     console.log("Source files test error", e);
   }

@@ -11,16 +11,29 @@ import { createScript, metaesEvalModule } from "./metaes";
 import * as NodeTypes from "./nodeTypes";
 import { Environment, Evaluate, EvaluationConfig, MetaesException } from "./types";
 
-function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
+export function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
   const loadedModules = {};
   const loadingModules = {};
 
   const localizedImportTSModule = (base) => (url) => importTSModule(path.join(path.parse(base).dir, url + ".ts"));
 
   async function importTSModule(url) {
+    // console.log("url", url);
     if (loadedModules[url]) {
       return Promise.resolve(loadedModules[url]);
     }
+
+    // if (url === "lib/esprima.ts") {
+    //   return Promise.resolve((loadedModules[url] = { default: require("esprima") }));
+    // }
+
+    // if (url === "lib/fs.ts") {
+    //   return Promise.resolve((loadedModules[url] = { readFileSync }));
+    // }
+
+    // if (url === "lib/typescript.ts") {
+    //   return Promise.resolve((loadedModules[url] = { ModuleKind, ScriptTarget, transpileModule }));
+    // }
 
     if (loadingModules[url]) {
       return loadingModules[url];
@@ -46,12 +59,16 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
         {
           prev: globalEnv,
           values: {
-            async "[[GetBindingValue]]"(value: ImportBinding, c, cerr, env, config) {
+            async "[[GetBindingValue]]"(value: ImportBinding, c, cerr, env) {
               GetValue(
                 { name: "[[ImportModule]]" },
                 async (importTSModule) => {
-                  const mod = await importTSModule(value.modulePath);
-                  c(mod[value.name]);
+                  try {
+                    const mod = await importTSModule(value.modulePath);
+                    c(mod[value.name]);
+                  } catch (e) {
+                    cerr(e);
+                  }
                 },
                 cerr,
                 env
@@ -108,5 +125,8 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
   return importTSModule;
 }
 
-export const getMetaMetaESEval = async (globalEnv: Environment = { values: {} }) =>
+export const getMeta2ESEval = async (globalEnv: Environment = { values: {} }) =>
   (await createTSModulesImporter(globalEnv)("lib/metaes.ts")).metaesEval as Evaluate;
+
+export const getMeta2ES = async (globalEnv: Environment = { values: {} }) =>
+  await createTSModulesImporter(globalEnv)("lib/metaes.ts");

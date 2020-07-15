@@ -2,7 +2,7 @@ import { assert } from "chai";
 import { Evaluate } from "lib/types";
 import { before, describe, it } from "mocha";
 import { presentException } from "../../lib/exceptions";
-import { getMetaMetaESEval } from "../../lib/metametaes";
+import { getMeta2ESEval } from "../../lib/meta2es";
 import { evaluateHelper } from "./testUtils";
 
 async function evaluateHelperWithPrint(evalFn, input, name?) {
@@ -15,11 +15,11 @@ async function evaluateHelperWithPrint(evalFn, input, name?) {
   }
 }
 
-describe("Meta MetaES", function () {
+describe("Meta2ES", function () {
   let metaesEval: Evaluate;
 
   before(async function () {
-    metaesEval = await getMetaMetaESEval({ values: { Object, ReferenceError, Error, Set } });
+    metaesEval = await getMeta2ESEval({ values: { Object, ReferenceError, Error, Set } });
   });
 
   it("evaluates binary expression with literals", async function () {
@@ -27,7 +27,7 @@ describe("Meta MetaES", function () {
   });
 
   it("throws ReferenceError for non-existing ReferenceError", async function () {
-    const metaesEval = await getMetaMetaESEval({ values: { Object, Error, Set } });
+    const metaesEval = await getMeta2ESEval({ values: { Object, Error, Set } });
     try {
       await evaluateHelperWithPrint(metaesEval, "5+5*a");
     } catch (e) {
