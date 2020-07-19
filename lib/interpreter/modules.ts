@@ -141,13 +141,11 @@ export const ImportDeclaration: Interpreter<NodeTypes.ImportDeclaration> = (e, c
 
       switch (specifier.type) {
         case "ImportNamespaceSpecifier":
+        case "ImportDefaultSpecifier":
           SetValue({ name, value: new ImportBinding("default", modulePath), isDeclaration: true }, c, cerr, env);
           break;
         case "ImportSpecifier":
           SetValue({ name, value: new ImportBinding(name, modulePath), isDeclaration: true }, c, cerr, env);
-          break;
-        case "ImportDefaultSpecifier":
-          SetValue({ name, value: new ImportBinding("default", modulePath), isDeclaration: true }, c, cerr, env);
           break;
         default:
           cerr(NotImplementedException(`${specifier["type"]} import specifier is not supported yet.`, specifier));
