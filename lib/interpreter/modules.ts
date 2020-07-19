@@ -1,10 +1,42 @@
-import { GetValue, SetValue } from "../environment";
+import { getEnvironmentBy, GetValue, SetValue } from "../environment";
 import { evaluate, visitArray } from "../evaluate";
-import { NotImplementedException } from "../exceptions";
+import { LocatedException, NotImplementedException } from "../exceptions";
 import * as NodeTypes from "../nodeTypes";
-import { Environment, Interpreters } from "../types";
+import { Environment, Interpreter } from "../types";
 
-export function Identifier(e: NodeTypes.Identifier, c, cerr, env: Environment, config) {
+export const ImportEnvironment = "[[isImportModule]]";
+export const ExportEnvironment = "[[isExportModule]]";
+export const GetBindingValue = "[[GetBindingValue]]";
+export const ImportModule = "[[ImportModule]]";
+export const ExportBinding = "[[ExportBinding]]";
+
+export const modulesEnv = {
+  [GetBindingValue](value: ImportBinding, c, cerr, env: Environment) {
+    GetValue(
+      { name: ImportModule },
+      (importTSModule) =>
+        importTSModule(value.modulePath)
+          .then((mod) => c(mod[value.name]))
+          .catch(cerr),
+      cerr,
+      env
+    );
+  },
+  [ExportBinding]({ name, value, e }, c, cerr, env, config) {
+    const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironment]);
+    if (!exportEnv) {
+      return cerr(
+        LocatedException(
+          `Couldn't export declaration, no environment with '${ExportEnvironment}' property found.`,
+          e.declaration
+        )
+      );
+    }
+    evaluate({ type: "SetValue", name, value, isDeclaration: true }, c, cerr, exportEnv, config);
+  }
+};
+
+export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, config) =>
   evaluate(
     { type: "GetValue", name: e.name },
     (value) =>
@@ -24,12 +56,14 @@ export function Identifier(e: NodeTypes.Identifier, c, cerr, env: Environment, c
     env,
     config
   );
-}
 
-export const ImportEnvironmentSymbol = "[[isImportModule]]";
-export const ExportEnvironmentSymbol = "[[isExportModule]]";
-
-export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, cerr, env: Environment, config) {
+export const ExportNamedDeclaration: Interpreter<NodeTypes.ExportNamedDeclaration> = (
+  e,
+  c,
+  cerr,
+  env: Environment,
+  config
+) =>
   evaluate(
     e.declaration,
     (value) => {
@@ -68,7 +102,7 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
           );
       }
       GetValue(
-        { name: "[[ExportBinding]]" },
+        { name: ExportBinding },
         (exportBinding) => exportBinding({ name, value: toExport, e: e.declaration }, c, cerr, env, config),
         cerr,
         env
@@ -78,14 +112,13 @@ export function ExportNamedDeclaration(e: NodeTypes.ExportNamedDeclaration, c, c
     env,
     config
   );
-}
 
-export function ExportDefaultDeclaration(e: NodeTypes.ExportDefaultDeclaration, c, cerr, env, config) {
+export const ExportDefaultDeclaration: Interpreter<NodeTypes.ExportDefaultDeclaration> = (e, c, cerr, env, config) =>
   evaluate(
     e.declaration,
     (value) =>
       GetValue(
-        { name: "[[ExportBinding]]" },
+        { name: ExportBinding },
         (exportBinding) => exportBinding({ name: "default", value, e: e.declaration }, c, cerr, env, config),
         cerr,
         env
@@ -94,13 +127,12 @@ export function ExportDefaultDeclaration(e: NodeTypes.ExportDefaultDeclaration, 
     env,
     config
   );
-}
 
 export class ImportBinding {
   constructor(public name: string, public modulePath: string) {}
 }
 
-export function ImportDeclaration(e: NodeTypes.ImportDeclaration, c, cerr, env, config) {
+export const ImportDeclaration: Interpreter<NodeTypes.ImportDeclaration> = (e, c, cerr, env) =>
   visitArray(
     e.specifiers,
     (specifier, c, cerr) => {
@@ -118,14 +150,13 @@ export function ImportDeclaration(e: NodeTypes.ImportDeclaration, c, cerr, env, 
           SetValue({ name, value: new ImportBinding("default", modulePath), isDeclaration: true }, c, cerr, env);
           break;
         default:
-          cerr(NotImplementedException(`${specifier.type!} import specifier is not supported yet.`, specifier));
+          cerr(NotImplementedException(`${specifier["type"]} import specifier is not supported yet.`, specifier));
           break;
       }
     },
     c,
     cerr
   );
-}
 
 export default {
   ExportNamedDeclaration,
