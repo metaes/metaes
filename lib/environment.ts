@@ -46,7 +46,7 @@ export function SetValue<T>(
     if (_env) {
       c((_env.values[name] = value));
     } else {
-      cerr({ type: "ReferenceError", value: new ReferenceError(`'${name}' is not defined.`) });
+      cerr({ type: "Error", value: new ReferenceError(`'${name}' is not defined.`) });
     }
   }
 }
@@ -65,7 +65,7 @@ export function GetValue<T>(
   } while ((_env = _env.prev));
 
   cerr({
-    type: "ReferenceError",
+    type: "Error",
     value: new ReferenceError(`"${name}" is not defined.`)
   });
 }

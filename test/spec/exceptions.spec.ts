@@ -21,8 +21,9 @@ describe("Exceptions", () => {
 
   it("should throw ReferenceError", () =>
     new Promise((resolve, _reject) => {
-      metaesEval(`a`, noop, (x) => {
-        assert.equal(x.type, "ReferenceError");
+      metaesEval("a", noop, function (error) {
+        assert.equal(error.value.message, `"a" is not defined.`);
+        assert.equal(error.type, "Error");
         resolve();
       });
     }));

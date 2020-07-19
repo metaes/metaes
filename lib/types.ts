@@ -60,7 +60,7 @@ export type PartialErrorContinuation = (error: Partial<MetaesException> & { type
 
 export type Interpreter<T extends ASTNode | ASTNode[] | object> = (
   e: T,
-  c: Continuation,
+  c: (value?: any) => void,
   cerr: PartialErrorContinuation,
   env: Environment,
   config: EvaluationConfig

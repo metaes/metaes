@@ -139,7 +139,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
     config
   );
 
-export const MemberExpression: Interpreter<NodeTypes.MemberExpression> = (e, c, cerr, env, config) => {
+export const MemberExpression: Interpreter<NodeTypes.MemberExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.object,
     (object) => {
@@ -191,7 +191,6 @@ export const MemberExpression: Interpreter<NodeTypes.MemberExpression> = (e, c, 
     env,
     config
   );
-};
 
 const _createMetaFunction: Interpreter<NodeTypes.ArrowFunctionExpression | NodeTypes.FunctionExpression> = (
   e,
