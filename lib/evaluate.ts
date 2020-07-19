@@ -7,6 +7,7 @@ import {
   Environment,
   ErrorContinuation,
   EvaluationConfig,
+  MetaesException,
   PartialErrorContinuation
 } from "./types";
 
@@ -43,7 +44,7 @@ export function evaluate(
             exception.script = config.script;
           }
           callInterceptor("exit", config, e, env, exception);
-          cerr(exception);
+          cerr(<MetaesException>exception);
         },
         env,
         config
@@ -52,7 +53,7 @@ export function evaluate(
   } else {
     const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
     callInterceptor("exit", config, e, env, exception);
-    cerr({ ...exception, script: config.script });
+    cerr(<MetaesException>exception);
   }
 }
 

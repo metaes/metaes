@@ -2,7 +2,7 @@ import { getEnvironmentBy, GetValue, SetValue } from "../environment";
 import { evaluate, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException } from "../exceptions";
 import * as NodeTypes from "../nodeTypes";
-import { Environment, Interpreter } from "../types";
+import { Environment, Interpreter, Interpreters } from "../types";
 
 export const ImportEnvironment = "[[isImportModule]]";
 export const ExportEnvironment = "[[isExportModule]]";
@@ -10,7 +10,7 @@ export const GetBindingValue = "[[GetBindingValue]]";
 export const ImportModule = "[[ImportModule]]";
 export const ExportBinding = "[[ExportBinding]]";
 
-export const modulesEnv = {
+export const modulesEnv: Interpreters = {
   [GetBindingValue](value: ImportBinding, c, cerr, env: Environment) {
     GetValue(
       { name: ImportModule },

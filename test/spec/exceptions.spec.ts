@@ -13,7 +13,7 @@ describe("Exceptions", () => {
         {},
         {
           interpreters: {
-            values: Object.fromEntries(Object.entries(ECMAScriptInterpreters).filter(([k]) => k !== "AwaitExpression"))
+            values: Object.fromEntries(Object.entries(ECMAScriptInterpreters.values).filter(([k]) => k !== "AwaitExpression"))
           }
         }
       );
