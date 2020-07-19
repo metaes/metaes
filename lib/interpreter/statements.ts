@@ -1,11 +1,11 @@
 import { GetValueSync } from "../environment";
 import { evaluate, evaluateArray, visitArray } from "../evaluate";
-import { LocatedError, NotImplementedException, toException } from "../exceptions";
+import { LocatedException, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
-import { EvaluationConfig, MetaesException, Environment } from "../types";
+import { Environment, Interpreter, MetaesException } from "../types";
 
-function hoistDeclarations(e: NodeTypes.Statement[], c, cerr, env, config) {
+const hoistDeclarations: Interpreter<NodeTypes.Statement[]> = (e, c, cerr, env, config) =>
   visitArray(
     e.filter((e) => e.type === "FunctionDeclaration") as NodeTypes.FunctionDeclaration[],
     (e, c, cerr) =>
@@ -19,9 +19,8 @@ function hoistDeclarations(e: NodeTypes.Statement[], c, cerr, env, config) {
     c,
     cerr
   );
-}
 
-export function BlockStatement(e: NodeTypes.BlockStatement | NodeTypes.Program, c, cerr, env, config) {
+export const BlockStatement: Interpreter<NodeTypes.BlockStatement | NodeTypes.Program> = (e, c, cerr, env, config) =>
   hoistDeclarations(
     e.body,
     () => evaluateArray(e.body, (blockValues) => c(blockValues[blockValues.length - 1]), cerr, env, config),
@@ -29,17 +28,14 @@ export function BlockStatement(e: NodeTypes.BlockStatement | NodeTypes.Program, 
     env,
     config
   );
-}
 
-export function Program(e: NodeTypes.Program, c, cerr, env, config: EvaluationConfig) {
-  GetValueSync("BlockStatement", config.interpreters)(e, c, cerr, env, config);
-}
+export const Program: Interpreter<NodeTypes.Program> = (e, c, cerr, env, config) =>
+  GetValueSync("BlockStatement", config.interpreters)!(e, c, cerr, env, config);
 
-export function VariableDeclaration(e: NodeTypes.VariableDeclaration, c, cerr, env, config) {
+export const VariableDeclaration: Interpreter<NodeTypes.VariableDeclaration> = (e, c, cerr, env, config) =>
   visitArray(e.declarations, (declarator, c, cerr) => evaluate(declarator, c, cerr, env, config), c, cerr);
-}
 
-export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env, config) {
+export const VariableDeclarator: Interpreter<NodeTypes.VariableDeclarator> = (e, c, cerr, env, config) => {
   function assign(rightValue) {
     switch (e.id.type) {
       case "Identifier":
@@ -53,9 +49,9 @@ export function VariableDeclarator(e: NodeTypes.VariableDeclarator, c, cerr, env
     }
   }
   e.init ? evaluate(e.init, assign, cerr, env, config) : assign(undefined);
-}
+};
 
-export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) {
+export const ObjectPattern: Interpreter<NodeTypes.ObjectPattern> = (e, c, cerr, env, config) =>
   visitArray(
     e.properties,
     (property, c, cerr) => {
@@ -99,7 +95,7 @@ export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) 
             evaluate(
               { type: "GetValue", name: keyName },
               assignValue,
-              (e) => (e.type === "ReferenceError" ? assignValue() : cerr(e)),
+              (e) => (e.value instanceof ReferenceError ? assignValue() : cerr(e)),
               env,
               config
             );
@@ -112,9 +108,8 @@ export function ObjectPattern(e: NodeTypes.ObjectPattern, c, cerr, env, config) 
     c,
     cerr
   );
-}
 
-export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, config) {
+export const AssignmentPattern: Interpreter<NodeTypes.AssignmentPattern> = (e, c, cerr, env, config) => {
   if (e.left.type === "Identifier") {
     function assignRight() {
       evaluate(
@@ -140,9 +135,15 @@ export function AssignmentPattern(e: NodeTypes.AssignmentPattern, c, cerr, env, 
   } else {
     cerr(NotImplementedException(`${e.left.type} is not supported as AssignmentPattern left-hand side value.`, e.left));
   }
-}
+};
 
-export function IfStatement(e: NodeTypes.IfStatement | NodeTypes.ConditionalExpression, c, cerr, env, config) {
+export const IfStatement: Interpreter<NodeTypes.IfStatement | NodeTypes.ConditionalExpression> = (
+  e,
+  c,
+  cerr,
+  env,
+  config
+) =>
   evaluate(
     e.test,
     (test) => {
@@ -158,15 +159,13 @@ export function IfStatement(e: NodeTypes.IfStatement | NodeTypes.ConditionalExpr
     env,
     config
   );
-}
 
-export function ExpressionStatement(e: NodeTypes.ExpressionStatement, c, cerr, env, config) {
+export const ExpressionStatement: Interpreter<NodeTypes.ExpressionStatement> = (e, c, cerr, env, config) =>
   evaluate(e.expression, c, cerr, env, config);
-}
 
 export const ExceptionName = "[[Exception]]";
 
-export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: EvaluationConfig) {
+export const TryStatement: Interpreter<NodeTypes.TryStatement> = (e, c, cerr, env, config) =>
   evaluate(
     e.block,
     c,
@@ -186,13 +185,11 @@ export function TryStatement(e: NodeTypes.TryStatement, c, cerr, env, config: Ev
     env,
     config
   );
-}
 
-export function ThrowStatement(e: NodeTypes.ThrowStatement, _c, cerr, env, config) {
+export const ThrowStatement: Interpreter<NodeTypes.ThrowStatement> = (e, _c, cerr, env, config) =>
   evaluate(e.argument, (value) => cerr(value), cerr, env, config);
-}
 
-export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config: EvaluationConfig) {
+export const CatchClause: Interpreter<NodeTypes.CatchClause> = (e, c, cerr, env, config) =>
   evaluate(
     { type: "GetValue", name: ExceptionName },
     (error: MetaesException) =>
@@ -212,27 +209,23 @@ export function CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config: Eval
     env,
     config
   );
-}
 
-export function ReturnStatement(e: NodeTypes.ReturnStatement, _c, cerr, env, config) {
+export const ReturnStatement: Interpreter<NodeTypes.ReturnStatement> = (e, _c, cerr, env, config) =>
   e.argument
     ? evaluate(e.argument, (value) => cerr({ type: "ReturnStatement", value }), cerr, env, config)
     : cerr({ type: "ReturnStatement" });
-}
 
-export function BreakStatement(_e, _c, cerr) {
-  cerr({ type: "BreakStatement" });
-}
+export const BreakStatement: Interpreter<NodeTypes.BreakStatement> = (_e, _c, cerr) => cerr({ type: "BreakStatement" });
 
-export function FunctionDeclaration(e: NodeTypes.FunctionDeclaration, c, cerr, env, config) {
+export const FunctionDeclaration: Interpreter<NodeTypes.FunctionDeclaration> = (e, c, cerr, env, config) => {
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
-    cerr(LocatedError(error, e));
+    cerr(LocatedException(error, e));
   }
-}
+};
 
-export function ForInStatement(e: NodeTypes.ForInStatement, c, cerr, env, config) {
+export const ForInStatement: Interpreter<NodeTypes.ForInStatement> = (e, c, cerr, env, config) =>
   evaluate(
     e.right,
     (right) => {
@@ -259,9 +252,8 @@ export function ForInStatement(e: NodeTypes.ForInStatement, c, cerr, env, config
     env,
     config
   );
-}
 
-export function ForStatement(e: NodeTypes.ForStatement, c, cerr, env, config) {
+export const ForStatement: Interpreter<NodeTypes.ForStatement> = (e, c, cerr, env, config) => {
   const tasks: Function[] = [];
   let running = false;
 
@@ -293,9 +285,9 @@ export function ForStatement(e: NodeTypes.ForStatement, c, cerr, env, config) {
   }
 
   run();
-}
+};
 
-export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config) {
+export const ForOfStatement: Interpreter<NodeTypes.ForOfStatement> = (e, c, cerr, env, config) =>
   evaluate(
     e.right,
     (right) => {
@@ -364,15 +356,14 @@ export function ForOfStatement(e: NodeTypes.ForOfStatement, c, cerr, env, config
     env,
     config
   );
-}
 
-export function WhileStatement(e: NodeTypes.WhileStatement, c, cerr, env, config) {
+export const WhileStatement: Interpreter<NodeTypes.WhileStatement> = (e, c, cerr, env, config) => {
   (function loop() {
     evaluate(e.test, (test) => (test ? evaluate(e.body, loop, cerr, env, config) : c()), cerr, env, config);
   })();
-}
+};
 
-export function DoWhileStatement(e: NodeTypes.DoWhileStatement, c, cerr, env, config) {
+export const DoWhileStatement: Interpreter<NodeTypes.DoWhileStatement> = (e, c, cerr, env, config) => {
   function body() {
     evaluate(e.body, test, cerr, env, config);
   }
@@ -380,13 +371,11 @@ export function DoWhileStatement(e: NodeTypes.DoWhileStatement, c, cerr, env, co
     evaluate(e.test, (value) => (value ? evaluate(e.body, test, cerr, env, config) : c()), cerr, env, config);
   }
   body();
-}
+};
 
-export function EmptyStatement(_e: NodeTypes.EmptyStatement, c) {
-  c();
-}
+export const EmptyStatement: Interpreter<NodeTypes.EmptyStatement> = (_e, c) => c();
 
-export function ClassDeclaration(e: NodeTypes.ClassDeclaration, c, cerr, env, config) {
+export const ClassDeclaration: Interpreter<NodeTypes.ClassDeclaration> = (e, c, cerr, env, config) => {
   function onSuperClass(superClass) {
     let klass = function () {};
     evaluate(
@@ -424,22 +413,20 @@ export function ClassDeclaration(e: NodeTypes.ClassDeclaration, c, cerr, env, co
   } else {
     onSuperClass(null);
   }
-}
+};
 
-export function ClassBody(e: NodeTypes.ClassBody, c, cerr, env, config) {
+export const ClassBody: Interpreter<NodeTypes.ClassBody> = (e, c, cerr, env, config) =>
   evaluateArray(e.body, c, cerr, env, config);
-}
 
-export function MethodDefinition(e: NodeTypes.MethodDefinition, c, cerr, env, config) {
+export const MethodDefinition: Interpreter<NodeTypes.MethodDefinition> = (e, c, cerr, env, config) =>
   evaluate(e.value, (value) => c({ key: e.key.name, value }), cerr, env, config);
-}
 
-export function DebuggerStatement(_e: NodeTypes.DebuggerStatement, c) {
+export const DebuggerStatement: Interpreter<NodeTypes.DebuggerStatement> = (_e, c) => {
   debugger;
   c();
-}
+};
 
-export function SwitchStatement(e: NodeTypes.SwitchStatement, c, cerr, env, config) {
+export const SwitchStatement: Interpreter<NodeTypes.SwitchStatement> = (e, c, cerr, env, config) => {
   let fallthrough = false;
   evaluate(
     e.discriminant,
@@ -475,7 +462,7 @@ export function SwitchStatement(e: NodeTypes.SwitchStatement, c, cerr, env, conf
     env,
     config
   );
-}
+};
 
 export default {
   BlockStatement,

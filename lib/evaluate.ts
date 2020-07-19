@@ -1,7 +1,14 @@
 import { GetValueSync } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
 import { callInterceptor } from "./metaes";
-import { ASTNode, Continuation, Environment, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
+import {
+  ASTNode,
+  Continuation,
+  Environment,
+  ErrorContinuation,
+  EvaluationConfig,
+  PartialErrorContinuation
+} from "./types";
 
 export function defaultScheduler(fn) {
   fn();
@@ -14,7 +21,7 @@ export function evaluate(
   env: Environment,
   config: EvaluationConfig
 ) {
-  const interpreter: Interpreter<any> = GetValueSync(e.type, config.interpreters);
+  const interpreter = GetValueSync(e.type, config.interpreters);
   const schedule = config.schedule || defaultScheduler;
   if (interpreter) {
     callInterceptor("enter", config, e, env);
@@ -45,11 +52,11 @@ export function evaluate(
   } else {
     const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
     callInterceptor("exit", config, e, env, exception);
-    cerr(exception);
+    cerr({ ...exception, script: config.script });
   }
 }
 
-type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;
+type Visitor<T> = (element: T, c: Continuation, cerr: PartialErrorContinuation) => void;
 
 /**
  * visitArray uses trampolining inside as it's likely that too long array execution will eat up callstack.
@@ -58,7 +65,7 @@ type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void
  * @param c
  * @param cerr
  */
-export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) => {
+export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: PartialErrorContinuation) => {
   if (items.length === 0) {
     c([]);
   } else if (items.length === 1) {

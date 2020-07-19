@@ -5,15 +5,16 @@ function isException(value: any): value is MetaesException {
 }
 
 export const toException = <T>(value: T | MetaesException, location?: ASTNode, script?: Script) =>
-  isException(value) ? value : { type: "Error", value, location, script };
+  isException(value) ? value : <const>{ type: "Error", value, location, script };
 
-export const NotImplementedException = (message: string, location?: ASTNode) => ({
-  type: "NotImplemented",
-  message,
-  location
-});
+export const NotImplementedException = (message: string, location?: ASTNode) =>
+  <const>{
+    type: "Error",
+    message,
+    location
+  };
 
-export const LocatedError = (value: any, location: ASTNode) => ({ value, location });
+export const LocatedException = (value: any, location: ASTNode) => <const>{ type: "Error", value, location };
 
 const highlight = (text: string) => `\x1b[1m${text}\x1b[0m`;
 const dim = (text: string) => `\x1b[2m${text}\x1b[0m`;

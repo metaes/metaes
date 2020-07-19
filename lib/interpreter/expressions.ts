@@ -1,21 +1,15 @@
 import { callcc } from "../callcc";
 import { getEnvironmentForValue, GetValue } from "../environment";
 import { evaluate, evaluateArray } from "../evaluate";
-import { LocatedError, NotImplementedException, toException } from "../exceptions";
-import { createMetaFunction, isMetaFunction, evaluateMetaFunction, getMetaFunction } from "../metafunction";
+import { LocatedException, NotImplementedException, toException } from "../exceptions";
+import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
-import { Continuation, Environment, ErrorContinuation, EvaluationConfig } from "../types";
+import { Interpreter } from "../types";
 import { IfStatement } from "./statements";
 
 const concatSpreads = (all, next) => (next instanceof SpreadElementValue ? all.concat(next.value) : all.concat([next]));
 
-export function CallExpression(
-  e: NodeTypes.CallExpression,
-  c: Continuation,
-  cerr: ErrorContinuation,
-  env: Environment,
-  config: EvaluationConfig
-) {
+export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr, env, config) =>
   evaluateArray(
     e.arguments,
     (args) => {
@@ -50,7 +44,7 @@ export function CallExpression(
                       const [receiver, _arguments] = args;
                       receiver(_arguments, c, cerr, env, config);
                     } catch (e) {
-                      cerr({ value: e, message: "Error in continuation receiver." });
+                      cerr({ type: "Error", value: e, message: "Error in continuation receiver." });
                     }
                   } else {
                     evaluate({ type: "Apply", e, fn: callee, args }, c, cerr, env, config);
@@ -86,7 +80,7 @@ export function CallExpression(
                 } else {
                   const source = config.script.source;
                   const callee = typeof source === "string" ? source.substring(...e_callee.range!) : "callee";
-                  cerr(LocatedError(new TypeError(callee + " is not a function"), e_callee));
+                  cerr(LocatedException(new TypeError(callee + " is not a function"), e_callee));
                 }
               }
               if (!e_callee.computed && e_callee.property.type === "Identifier") {
@@ -137,20 +131,15 @@ export function CallExpression(
           );
           break;
         default:
-          cerr({
-            type: "NotImplemented",
-            message: `'${e.callee.type}' callee node is not supported yet.`,
-            location: e.callee
-          });
+          cerr(NotImplementedException(`'${e.callee["type"]}' callee node is not supported yet.`, e.callee));
       }
     },
     cerr,
     env,
     config
   );
-}
 
-export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, config) {
+export const MemberExpression: Interpreter<NodeTypes.MemberExpression> = (e, c, cerr, env, config) => {
   evaluate(
     e.object,
     (object) => {
@@ -202,31 +191,29 @@ export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, co
     env,
     config
   );
-}
+};
 
-function _createMetaFunction(
-  e: NodeTypes.ArrowFunctionExpression | NodeTypes.FunctionExpression,
+const _createMetaFunction: Interpreter<NodeTypes.ArrowFunctionExpression | NodeTypes.FunctionExpression> = (
+  e,
   c,
   cerr,
   env,
   config
-) {
+) => {
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
-    cerr(LocatedError(error, e));
+    cerr(LocatedException(error, e));
   }
-}
+};
 
-export function ArrowFunctionExpression(e: NodeTypes.ArrowFunctionExpression, c, cerr, env, config) {
+export const ArrowFunctionExpression: Interpreter<NodeTypes.ArrowFunctionExpression> = (e, c, cerr, env, config) =>
   _createMetaFunction(e, c, cerr, env, config);
-}
 
-export function FunctionExpression(e: NodeTypes.FunctionExpression, c, cerr, env, config) {
+export const FunctionExpression: Interpreter<NodeTypes.FunctionExpression> = (e, c, cerr, env, config) =>
   _createMetaFunction(e, c, cerr, env, config);
-}
 
-export function AssignmentExpression(e: NodeTypes.AssignmentExpression, c, cerr, env, config: EvaluationConfig) {
+export const AssignmentExpression: Interpreter<NodeTypes.AssignmentExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.right,
     (right) => {
@@ -280,9 +267,8 @@ export function AssignmentExpression(e: NodeTypes.AssignmentExpression, c, cerr,
     env,
     config
   );
-}
 
-export function ObjectExpression(e: NodeTypes.ObjectExpression, c, cerr, env, config) {
+export const ObjectExpression: Interpreter<NodeTypes.ObjectExpression> = (e, c, cerr, env, config) =>
   evaluateArray(
     e.properties,
     (properties) => {
@@ -296,9 +282,8 @@ export function ObjectExpression(e: NodeTypes.ObjectExpression, c, cerr, env, co
     env,
     config
   );
-}
 
-export function Property(e: NodeTypes.Property, c, cerr, env, config) {
+export const Property: Interpreter<NodeTypes.Property> = (e, c, cerr, env, config) => {
   if (e.computed) {
     evaluate(e.key, (key) => evaluate(e.value, (value) => c({ key, value }), cerr, env, config), cerr, env, config);
   } else {
@@ -316,9 +301,9 @@ export function Property(e: NodeTypes.Property, c, cerr, env, config) {
     }
     evaluate(e.value, (value) => c({ key, value }), cerr, env, config);
   }
-}
+};
 
-export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, config) {
+export const BinaryExpression: Interpreter<NodeTypes.BinaryExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.left,
     (left) => {
@@ -402,13 +387,11 @@ export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, co
     env,
     config
   );
-}
 
-export function ArrayExpression(e: NodeTypes.ArrayExpression, c, cerr, env, config) {
+export const ArrayExpression: Interpreter<NodeTypes.ArrayExpression> = (e, c, cerr, env, config) =>
   evaluateArray(e.elements, (values) => c(values.reduce(concatSpreads, [])), cerr, env, config);
-}
 
-export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) {
+export const NewExpression: Interpreter<NodeTypes.NewExpression> = (e, c, cerr, env, config) =>
   evaluateArray(
     e.arguments,
     (args) => {
@@ -433,7 +416,7 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
                 );
               } else {
                 if (typeof callee !== "function") {
-                  cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
+                  cerr(LocatedException(new TypeError(typeof callee + " is not a function"), e));
                 } else {
                   try {
                     c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
@@ -456,13 +439,11 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
     env,
     config
   );
-}
 
-export function SequenceExpression(e: NodeTypes.SequenceExpression, c, cerr, env, config) {
+export const SequenceExpression: Interpreter<NodeTypes.SequenceExpression> = (e, c, cerr, env, config) =>
   evaluateArray(e.expressions, (results) => (results.length ? c(results[results.length - 1]) : c()), cerr, env, config);
-}
 
-export function LogicalExpression(e: NodeTypes.LogicalExpression, c, cerr, env, config) {
+export const LogicalExpression: Interpreter<NodeTypes.LogicalExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.left,
     (left) => {
@@ -478,9 +459,8 @@ export function LogicalExpression(e: NodeTypes.LogicalExpression, c, cerr, env, 
     env,
     config
   );
-}
 
-export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: Environment, config) {
+export const UpdateExpression: Interpreter<NodeTypes.UpdateExpression> = (e, c, cerr, env, config) => {
   function performUpdate(container, identifierName) {
     try {
       if (e.prefix) {
@@ -538,9 +518,9 @@ export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: En
         )
       );
   }
-}
+};
 
-export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Environment, config) {
+export const UnaryExpression: Interpreter<NodeTypes.UnaryExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.argument,
     (argument) => {
@@ -587,17 +567,14 @@ export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Envi
     env,
     config
   );
-}
 
-export function ThisExpression(_e: NodeTypes.ThisExpression, c, cerr, env: Environment, config) {
+export const ThisExpression: Interpreter<NodeTypes.ThisExpression> = (_e, c, cerr, env, config) =>
   evaluate({ type: "GetValue", name: "this" }, c, cerr, env, config);
-}
 
-export function ConditionalExpression(e: NodeTypes.ConditionalExpression, c, cerr, env, config) {
+export const ConditionalExpression: Interpreter<NodeTypes.ConditionalExpression> = (e, c, cerr, env, config) =>
   IfStatement(e, c, cerr, env, config);
-}
 
-export function TemplateLiteral(e: NodeTypes.TemplateLiteral, c, cerr, env, config) {
+export const TemplateLiteral: Interpreter<NodeTypes.TemplateLiteral> = (e, c, cerr, env, config) => {
   if (e.quasis.length === 1 && e.expressions.length === 0) {
     c(e.quasis[0].value.raw);
   } else {
@@ -610,9 +587,9 @@ export function TemplateLiteral(e: NodeTypes.TemplateLiteral, c, cerr, env, conf
       config
     );
   }
-}
+};
 
-export function TaggedTemplateExpression(e: NodeTypes.TaggedTemplateExpression, c, cerr, env, config) {
+export const TaggedTemplateExpression: Interpreter<NodeTypes.TaggedTemplateExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.tag,
     (tag) =>
@@ -627,17 +604,15 @@ export function TaggedTemplateExpression(e: NodeTypes.TaggedTemplateExpression, 
     env,
     config
   );
-}
 
 class SpreadElementValue {
   constructor(public value: any) {}
 }
 
-export function SpreadElement(e: NodeTypes.SpreadElement, c, cerr, env, config) {
+export const SpreadElement: Interpreter<NodeTypes.SpreadElement> = (e, c, cerr, env, config) =>
   evaluate(e.argument, (value) => c(new SpreadElementValue(value)), cerr, env, config);
-}
 
-export function AwaitExpression(e: NodeTypes.AwaitExpression, c, cerr, env, config) {
+export const AwaitExpression: Interpreter<NodeTypes.AwaitExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.argument,
     (arg) => (typeof arg === "object" && arg instanceof Promise ? arg.then(c) : c(arg)),
@@ -645,7 +620,6 @@ export function AwaitExpression(e: NodeTypes.AwaitExpression, c, cerr, env, conf
     env,
     config
   );
-}
 
 export default {
   CallExpression,

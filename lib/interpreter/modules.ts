@@ -2,7 +2,7 @@ import { GetValue, SetValue } from "../environment";
 import { evaluate, visitArray } from "../evaluate";
 import { NotImplementedException } from "../exceptions";
 import * as NodeTypes from "../nodeTypes";
-import { Environment } from "../types";
+import { Environment, Interpreters } from "../types";
 
 export function Identifier(e: NodeTypes.Identifier, c, cerr, env: Environment, config) {
   evaluate(

@@ -3,7 +3,7 @@ import * as path from "path";
 import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 import { getEnvironmentBy, GetValue } from "./environment";
 import { evaluate } from "./evaluate";
-import { LocatedError, presentException } from "./exceptions";
+import { LocatedException, presentException } from "./exceptions";
 import { ExportEnvironmentSymbol, ImportBinding } from "./interpreter/modules";
 import { ExceptionName } from "./interpreter/statements";
 import { ModuleECMAScriptInterpreters } from "./interpreters";
@@ -78,7 +78,7 @@ export function createTSModulesImporter(globalEnv: Environment = { values: {} })
               const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
               if (!exportEnv) {
                 return cerr(
-                  LocatedError(
+                  LocatedException(
                     `Couldn't export declaration, no environment with '${ExportEnvironmentSymbol}' property found.`,
                     e.declaration
                   )

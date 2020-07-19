@@ -201,6 +201,10 @@ export interface ReturnStatement extends NodeBase {
   argument?: Expression;
 }
 
+export interface BreakStatement extends NodeBase {
+  type: "BreakStatement";
+}
+
 export interface ForInStatement extends NodeBase {
   type: "ForInStatement";
   left: Identifier;

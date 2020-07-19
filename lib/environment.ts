@@ -1,4 +1,5 @@
-import { Continuation, ErrorContinuation, EnvironmentBase, Environment } from "./types";
+import { toException } from "./exceptions";
+import { Continuation, Environment, EnvironmentBase, PartialErrorContinuation } from "./types";
 
 export function toEnvironment(environment?: any | EnvironmentBase | Environment): Environment {
   return environment ? ("values" in environment ? environment : { values: environment }) : { values: {} };
@@ -28,7 +29,7 @@ type SetValueT<T> = {
 export function SetValue<T>(
   { name, value, isDeclaration }: SetValueT<T>,
   c: Continuation,
-  cerr: ErrorContinuation,
+  cerr: PartialErrorContinuation,
   env: Environment<T>
 ) {
   let writableEnv: Environment | undefined = env;
@@ -36,7 +37,7 @@ export function SetValue<T>(
     writableEnv = writableEnv.prev;
   }
   if (!writableEnv) {
-    return cerr(new Error(`Can't write to '${name}' value.`));
+    return cerr(toException(new Error(`Can't write to '${name}' value.`)));
   }
   if (isDeclaration) {
     c((writableEnv.values[name] = value));
@@ -53,7 +54,7 @@ export function SetValue<T>(
 export function GetValue<T>(
   { name }: { name: string },
   c: Continuation<T>,
-  cerr: ErrorContinuation,
+  cerr: PartialErrorContinuation,
   env: Environment<T>
 ) {
   let _env: Environment | undefined = env;

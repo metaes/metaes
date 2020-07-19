@@ -44,7 +44,7 @@ try {
 } catch (e) {
   result = e;
 }
-assert.equal(result.type, "NotImplemented");
+assert.equal(result.type, "Error");
 
 // test: does not throw
 let {

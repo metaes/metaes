@@ -1,11 +1,11 @@
 import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
-  type?: "Error" | "ReturnStatement" | "NotImplemented" | "ReferenceError" | "BreakStatement";
-  message?: string;
-  value?: Error | any;
-  location?: ASTNode;
+  type: "Error" | "ReturnStatement" | "BreakStatement";
+  message: string;
+  location: ASTNode;
   script: Script;
+  value?: Error | any;
 };
 
 export type Range = [number, number];
@@ -49,18 +49,19 @@ type Schedule = (task: () => void) => void;
 
 export interface EvaluationConfig {
   interceptor: Interceptor;
-  interpreters: Environment;
+  interpreters: Environment<Interpreter<any>>;
   script: Script;
   schedule?: Schedule;
 }
 
 export type Continuation<T = any> = (value: T) => void;
 export type ErrorContinuation = (error: MetaesException) => void;
+export type PartialErrorContinuation = (error: Partial<MetaesException> & { type: MetaesException["type"] }) => void;
 
-export type Interpreter<T extends ASTNode> = (
+export type Interpreter<T extends ASTNode | ASTNode[] | object> = (
   e: T,
   c: Continuation,
-  cerr: ErrorContinuation,
+  cerr: PartialErrorContinuation,
   env: Environment,
   config: EvaluationConfig
 ) => void;
@@ -86,7 +87,7 @@ export interface NodeBase {
 }
 
 export type ASTNode = NodeBase & {
-  type: any;
+  type: string | any;
 
   // Any other node specific props are allowed
   [key: string]: any;
