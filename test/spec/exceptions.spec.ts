@@ -5,12 +5,10 @@ import { evalFnBodyAsPromise, MetaesContext, metaesEval, noop } from "../../lib/
 
 describe("Exceptions", () => {
   it("should throw on AwaitExpression use", () =>
-    new Promise((resolve) => {
+    new Promise((resolve, reject) => {
       metaesEval(
         `(async ()=>await 2)()`,
-        (x) => {
-          console.log({ x });
-        },
+        reject,
         resolve,
         {},
         {
