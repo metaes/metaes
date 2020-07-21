@@ -253,6 +253,22 @@ export const ForInStatement: Interpreter<NodeTypes.ForInStatement> = (e, c, cerr
     config
   );
 
+export const WhileStatement: Interpreter<NodeTypes.WhileStatement> = (e, c, cerr, env, config) => {
+  (function loop() {
+    evaluate(e.test, (test) => (test ? evaluate(e.body, loop, cerr, env, config) : c()), cerr, env, config);
+  })();
+};
+
+export const DoWhileStatement: Interpreter<NodeTypes.DoWhileStatement> = (e, c, cerr, env, config) => {
+  function body() {
+    evaluate(e.body, test, cerr, env, config);
+  }
+  function test() {
+    evaluate(e.test, (value) => (value ? evaluate(e.body, test, cerr, env, config) : c()), cerr, env, config);
+  }
+  body();
+};
+
 export const ForStatement: Interpreter<NodeTypes.ForStatement> = (e, c, cerr, env, config) => {
   const tasks: Function[] = [];
   let running = false;
@@ -356,22 +372,6 @@ export const ForOfStatement: Interpreter<NodeTypes.ForOfStatement> = (e, c, cerr
     env,
     config
   );
-
-export const WhileStatement: Interpreter<NodeTypes.WhileStatement> = (e, c, cerr, env, config) => {
-  (function loop() {
-    evaluate(e.test, (test) => (test ? evaluate(e.body, loop, cerr, env, config) : c()), cerr, env, config);
-  })();
-};
-
-export const DoWhileStatement: Interpreter<NodeTypes.DoWhileStatement> = (e, c, cerr, env, config) => {
-  function body() {
-    evaluate(e.body, test, cerr, env, config);
-  }
-  function test() {
-    evaluate(e.test, (value) => (value ? evaluate(e.body, test, cerr, env, config) : c()), cerr, env, config);
-  }
-  body();
-};
 
 export const EmptyStatement: Interpreter<NodeTypes.EmptyStatement> = (_e, c) => c();
 

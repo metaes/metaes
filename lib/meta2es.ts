@@ -3,12 +3,12 @@ import * as path from "path";
 import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 import { evaluate } from "./evaluate";
 import { presentException } from "./exceptions";
+import { ImportModule } from "./interpreter/modules";
 import { ExceptionName } from "./interpreter/statements";
 import { ModuleECMAScriptInterpreters } from "./interpreters";
 import { createScript, metaesEvalModule } from "./metaes";
 import * as NodeTypes from "./nodeTypes";
 import { Environment, Evaluate, EvaluationConfig, MetaesException } from "./types";
-import { ImportModule } from "./interpreter/modules";
 
 export function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
   const loadedModules = {};
