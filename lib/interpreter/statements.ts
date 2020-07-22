@@ -170,18 +170,20 @@ export const TryStatement: Interpreter<NodeTypes.TryStatement> = (e, c, cerr, en
     e.block,
     c,
     (exception) =>
-      evaluate(
-        e.handler,
-        () => (e.finalizer ? evaluate(e.finalizer, c, cerr, env, config) : c()),
-        cerr,
-        {
-          values: {
-            [ExceptionName]: exception
-          },
-          prev: env
-        },
-        config
-      ),
+      exception.type === "ReturnStatement"
+        ? cerr(exception)
+        : evaluate(
+            e.handler,
+            () => (e.finalizer ? evaluate(e.finalizer, c, cerr, env, config) : c()),
+            cerr,
+            {
+              values: {
+                [ExceptionName]: exception
+              },
+              prev: env
+            },
+            config
+          ),
     env,
     config
   );

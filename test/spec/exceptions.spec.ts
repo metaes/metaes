@@ -13,7 +13,9 @@ describe("Exceptions", () => {
         {},
         {
           interpreters: {
-            values: Object.fromEntries(Object.entries(ECMAScriptInterpreters.values).filter(([k]) => k !== "AwaitExpression"))
+            values: Object.fromEntries(
+              Object.entries(ECMAScriptInterpreters.values).filter(([k]) => k !== "AwaitExpression")
+            )
           }
         }
       );
@@ -27,9 +29,6 @@ describe("Exceptions", () => {
         resolve();
       });
     }));
-
-  describe("From host functions", () => {});
-  describe("From MetaES functions", () => {});
 
   describe("From blocks", () => {
     it("should exit block statement", async () => {

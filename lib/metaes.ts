@@ -1,7 +1,7 @@
+import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { toEnvironment } from "./environment";
 import { evaluate } from "./evaluate";
 import { ExportEnvironment, ImportEnvironment, modulesEnv } from "./interpreter/modules";
-import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
 import {
@@ -34,7 +34,7 @@ export function createScript(source: Source, cache?: ParseCache, type: ScriptTyp
     return { source, ast: parseFunction(source, cache), scriptId };
   } else if (typeof source === "string") {
     const script: Script = { source, ast: parse(source, {}, cache, type === "module"), scriptId };
-    if (module) {
+    if (type === "module") {
       script.type = type;
     }
     return script;

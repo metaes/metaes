@@ -19,21 +19,11 @@ describe("Meta2ES", function () {
   let metaesEval: Evaluate;
 
   before(async function () {
-    metaesEval = await getMeta2ESEval({ values: { Object, ReferenceError, Error, Set } });
+    metaesEval = await getMeta2ESEval({ values: { Object, Error } });
   });
 
   it("evaluates binary expression with literals", async function () {
     assert.equal(await evaluateHelperWithPrint(metaesEval, "5+5*5"), 30);
-  });
-
-  it("throws ReferenceError for non-existing ReferenceError", async function () {
-    const metaesEval = await getMeta2ESEval({ values: { Object, Error, Set } });
-    try {
-      await evaluateHelperWithPrint(metaesEval, "5+5*a");
-    } catch (e) {
-      assert.instanceOf(e, ReferenceError);
-      assert.equal(e.message, '"ReferenceError" is not defined.');
-    }
   });
 
   it("throws ReferenceError for 'a'", async function () {
@@ -42,6 +32,22 @@ describe("Meta2ES", function () {
     } catch (e) {
       assert.instanceOf(e, ReferenceError);
       assert.equal(e.message, '"a" is not defined.');
+    }
+  });
+
+  it("evaluates function", async function () {
+    const fn = (await evaluateHelperWithPrint(metaesEval, "function f(x){return x*2}")) as Function;
+    assert.typeOf(fn, "function");
+    assert.equal(fn(22), 44);
+  });
+
+  it("throws ReferenceError for non-existing ReferenceError", async function () {
+    const metaesEval = await getMeta2ESEval({ values: { Object } });
+    try {
+      await evaluateHelperWithPrint(metaesEval, "5+5*a");
+    } catch (e) {
+      assert.instanceOf(e, ReferenceError);
+      assert.equal(e.message, '"ReferenceError" is not defined.');
     }
   });
 });
