@@ -14,25 +14,23 @@ export const modulesEnv: Interpreters = {
   [GetBindingValue](value: ImportBinding, c, cerr, env: Environment) {
     GetValue(
       { name: ImportModule },
-      (importTSModule) =>
-        importTSModule(value.modulePath)
-          .then((mod) => c(mod[value.name]))
-          .catch(cerr),
+      (importTSModule) => importTSModule(value.modulePath, (mod) => c(mod[value.name]), cerr),
       cerr,
       env
     );
   },
   [ExportBinding]({ name, value, e }, c, cerr, env, config) {
     const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironment]);
-    if (!exportEnv) {
-      return cerr(
+    if (exportEnv) {
+      evaluate({ type: "SetValue", name, value, isDeclaration: true }, c, cerr, exportEnv, config);
+    } else {
+      cerr(
         LocatedException(
           `Couldn't export declaration, no environment with '${ExportEnvironment}' property found.`,
           e.declaration
         )
       );
     }
-    evaluate({ type: "SetValue", name, value, isDeclaration: true }, c, cerr, exportEnv, config);
   }
 };
 

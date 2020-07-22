@@ -8,39 +8,76 @@ import { ExceptionName } from "./interpreter/statements";
 import { ModuleECMAScriptInterpreters } from "./interpreters";
 import { createScript, metaesEvalModule } from "./metaes";
 import * as NodeTypes from "./nodeTypes";
-import { Environment, Evaluate, EvaluationConfig, MetaesException } from "./types";
+import { Environment, EvaluationConfig, MetaesException } from "./types";
 
-export function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
+const interpreters = {
+  prev: ModuleECMAScriptInterpreters,
+  values: {
+    CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config: EvaluationConfig) {
+      evaluate(
+        { type: "GetValue", name: ExceptionName },
+        (error: MetaesException) =>
+          evaluate(
+            e.body,
+            c,
+            cerr,
+            {
+              values: {
+                [e.param.name]: error
+              },
+              prev: env
+            },
+            config
+          ),
+        cerr,
+        env,
+        config
+      );
+    }
+  }
+};
+
+function createScriptFromTS(url) {
+  const source = transpileModule(readFileSync(url).toString(), {
+    compilerOptions: { target: ScriptTarget.ES2017, module: ModuleKind.ESNext }
+  }).outputText;
+  const script = createScript(source, undefined, "module");
+  script.url = `transpiled://${url}`;
+  return script;
+}
+
+function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
   const loadedModules = {};
   const loadingModules = {};
 
-  const localizedImportTSModule = (base) => (url) => importTSModule(path.join(path.parse(base).dir, url + ".ts"));
+  const localizedImportTSModule = (base) => (url, c, cerr) =>
+    importTSModule(path.join(path.parse(base).dir, url + ".ts"), c, cerr);
 
-  async function importTSModule(url) {
+  function importTSModule(url, c, cerr) {
     if (loadedModules[url]) {
-      return Promise.resolve(loadedModules[url]);
-    }
-
-    if (loadingModules[url]) {
-      return loadingModules[url];
-    }
-
-    return (loadingModules[url] = new Promise((resolve, reject) => {
-      const source = transpileModule(readFileSync(url).toString(), {
-        compilerOptions: { target: ScriptTarget.ES2017, module: ModuleKind.ESNext }
-      }).outputText;
-      const script = createScript(source, undefined, "module");
-      script.url = `transpiled://${url}`;
+      c(loadedModules[url]);
+    } else if (loadingModules[url]) {
+      loadingModules[url].push({ c, cerr });
+    } else {
+      console.log("wait for", url);
+      loadingModules[url] = [{ c, cerr }];
+      const script = createScriptFromTS(url);
 
       metaesEvalModule(
         script,
         function (mod) {
+          const results = loadingModules[url];
+          loadedModules[url] = mod;
           delete loadingModules[url];
-          resolve((loadedModules[url] = mod));
+          console.log("resolved", url);
+          results.forEach(({ c }) => c(mod));
         },
-        (exception) => {
+        function (exception) {
           console.log(presentException(exception));
-          reject(exception.value || exception.message || exception);
+          const results = loadingModules[url];
+
+          delete loadingModules[url];
+          results.forEach(({ cerr }) => cerr(exception.value || exception.message || exception));
         },
         {
           prev: globalEnv,
@@ -50,42 +87,17 @@ export function createTSModulesImporter(globalEnv: Environment = { values: {} })
         },
         {
           script,
-          interpreters: {
-            prev: ModuleECMAScriptInterpreters,
-            values: {
-              CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config: EvaluationConfig) {
-                evaluate(
-                  { type: "GetValue", name: ExceptionName },
-                  (error: MetaesException) =>
-                    evaluate(
-                      e.body,
-                      c,
-                      cerr,
-                      {
-                        values: {
-                          [e.param.name]: error
-                        },
-                        prev: env
-                      },
-                      config
-                    ),
-                  cerr,
-                  env,
-                  config
-                );
-              }
-            }
-          }
+          interpreters
         }
       );
-    }));
+    }
   }
 
   return importTSModule;
 }
 
 export const getMeta2ESEval = async (globalEnv: Environment = { values: {} }) =>
-  (await createTSModulesImporter(globalEnv)("lib/metaes.ts")).metaesEval as Evaluate;
+  getMeta2ES(globalEnv).then((mod) => mod.metaesEval);
 
-export const getMeta2ES = async (globalEnv: Environment = { values: {} }) =>
-  await createTSModulesImporter(globalEnv)("lib/metaes.ts");
+export const getMeta2ES = (globalEnv: Environment = { values: {} }) =>
+  new Promise((resolve, reject) => createTSModulesImporter(globalEnv)("lib/metaes.ts", resolve, reject));
