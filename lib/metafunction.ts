@@ -54,7 +54,7 @@ export const evaluateMetaFunction = (
               c(value)
             : // ignore what was evaluated in function body, return statement in error continuation should carry the value
               c(undefined),
-        (exception) => {
+        function (exception) {
           if (exception.type === "ReturnStatement") {
             c(exception.value);
           } else {
