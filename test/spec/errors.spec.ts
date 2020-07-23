@@ -52,14 +52,6 @@ anonymous:1:0 - BinaryExpression operator "**" is not implemented yet.
 
   1|  2 ** 2
       ~~~~~~`
-  },
-  "unsupported ECMAScript parts: Array pattern": {
-    source: `const [a,b]=[]`,
-    expected: `
-anonymous:1:6 - Init 'ArrayPattern' is not supported yet.
-
-  1|  const [a,b]=[]
-            ~~~~~~~~`
   }
 };
 

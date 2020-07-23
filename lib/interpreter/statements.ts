@@ -44,6 +44,44 @@ export const VariableDeclarator: Interpreter<NodeTypes.VariableDeclarator> = (e,
       case "ObjectPattern":
         evaluate(e.id, c, cerr, { values: rightValue, prev: env, internal: true }, config);
         break;
+      case "ArrayPattern":
+        let index = 0;
+        visitArray(
+          e.id.elements,
+          function (element, c, cerr) {
+            switch (element.type) {
+              case "Identifier":
+                evaluate(
+                  { type: "SetValue", name: element.name, value: rightValue[index++], isDeclaration: true },
+                  c,
+                  cerr,
+                  env,
+                  config
+                );
+                break;
+              case "RestElement":
+                evaluate(
+                  {
+                    type: "SetValue",
+                    name: element.argument.name,
+                    value: rightValue.slice(index),
+                    isDeclaration: true
+                  },
+                  c,
+                  cerr,
+                  env,
+                  config
+                );
+                break;
+              default:
+                cerr(NotImplementedException(`'${element["type"]}' ArrayPattern element is not supported.`, element));
+                break;
+            }
+          },
+          c,
+          cerr
+        );
+        break;
       default:
         cerr(NotImplementedException(`Init '${(<any>e.id).type}' is not supported yet.`, e));
     }

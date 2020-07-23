@@ -102,6 +102,11 @@ export interface ArrayExpression extends NodeBase {
   elements: Expression[];
 }
 
+export interface ArrayPattern extends NodeBase {
+  type: "ArrayPattern";
+  elements: (Identifier | RestElement)[];
+}
+
 export interface NewExpression extends NodeBase {
   type: "NewExpression";
   arguments: Identifier[];
@@ -158,7 +163,7 @@ export interface VariableDeclaration extends NodeBase {
 
 export interface VariableDeclarator extends NodeBase {
   type: "VariableDeclarator";
-  id: Identifier | ObjectPattern;
+  id: Identifier | ObjectPattern | ArrayPattern;
   init: Expression;
 }
 
