@@ -25,6 +25,10 @@ function withStyle(text: string, style: (string) => string) {
 }
 
 export function presentException({ location, value, message, script }: MetaesException, useStyles = true) {
+  let output = "";
+  if (isException(value)) {
+    output += presentException(value) + "\n";
+  }
   if (location) {
     const styled = useStyles ? withStyle : (value) => value;
     const source = typeof script.source === "function" ? script.source.toString() : script.source;
@@ -32,7 +36,9 @@ export function presentException({ location, value, message, script }: MetaesExc
     const startLine = location.loc?.start.line!;
     const startColumn = location.loc?.start.column!;
     const nodeLength = location.range ? location.range[1] - location.range[0] : 1;
-    const sourceLocation = `${url}:${startLine}:${startColumn} - ${value || message}\n\n`;
+    const sourceLocation = `${url}:${startLine}:${startColumn} - ${
+      (isException(value) ? message : value) || message
+    }\n\n`;
     const lines = source.split("\n");
     const line = lines[startLine - 1];
     const lineNumber = styled(startLine + "|", dim);
@@ -40,12 +46,13 @@ export function presentException({ location, value, message, script }: MetaesExc
     const lineNumberSize = startLine.toString().length;
     const paddingSum = 5;
     return (
-      sourceLocation +
-      `  ${lineNumber}  ${lineValue}` +
-      "\n" +
-      `${" ".repeat(paddingSum + lineNumberSize + startColumn)}${styled("~".repeat(nodeLength), error)}`
+      output +
+      (sourceLocation +
+        `  ${lineNumber}  ${lineValue}` +
+        "\n" +
+        `${" ".repeat(paddingSum + lineNumberSize + startColumn)}${styled("~".repeat(nodeLength), error)}`)
     );
   } else {
-    return value;
+    return output + value;
   }
 }

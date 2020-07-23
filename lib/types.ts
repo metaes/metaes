@@ -5,7 +5,7 @@ export type MetaesException = {
   message: string;
   location: ASTNode;
   script: Script;
-  value?: Error | any;
+  value?: Error | any | MetaesException;
 };
 
 export type Range = [number, number];

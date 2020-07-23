@@ -418,7 +418,7 @@ export const NewExpression: Interpreter<NodeTypes.NewExpression> = (e, c, cerr, 
                   cerr(LocatedException(new TypeError(typeof callee + " is not a function"), e));
                 } else {
                   try {
-                    c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
+                    c(new callee(...args));
                   } catch (error) {
                     cerr(toException(error, calleeNode));
                   }

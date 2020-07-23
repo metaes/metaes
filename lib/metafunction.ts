@@ -99,7 +99,7 @@ export const createMetaFunction = (e: FunctionNode, closure: Environment, config
     config
   });
 
-const MetaesSymbol = (typeof Symbol === "function" ? Symbol : (_) => _)("__metaes__");
+const MetaesSymbol = Symbol("__metaes__");
 
 export function markAsMetaFunction(fn: Function, meta: MetaesFunction) {
   fn[MetaesSymbol] = meta;

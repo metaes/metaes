@@ -19,7 +19,7 @@ describe("Meta2ES", function () {
   let metaesEval: Evaluate;
 
   before(async function () {
-    metaesEval = await getMeta2ESEval({ values: { Object, Error } });
+    metaesEval = await getMeta2ESEval({ values: { Object, Error, ReferenceError, Symbol, Date } });
   });
 
   it("evaluates binary expression with literals", async function () {
@@ -42,9 +42,9 @@ describe("Meta2ES", function () {
   });
 
   it("throws ReferenceError for non-existing ReferenceError", async function () {
-    const metaesEval = await getMeta2ESEval({ values: { Object } });
+    const metaesEval = await getMeta2ESEval({ values: { Object, Date } });
     try {
-      await evaluateHelperWithPrint(metaesEval, "5+5*a");
+      await evaluateHelperWithPrint(metaesEval, "a");
     } catch (e) {
       assert.instanceOf(e, ReferenceError);
       assert.equal(e.message, '"ReferenceError" is not defined.');
