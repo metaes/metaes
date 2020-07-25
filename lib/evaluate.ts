@@ -29,13 +29,13 @@ export function evaluate(
     schedule(function run() {
       interpreter(
         e,
-        function (value) {
+        function _c(value) {
           schedule(function exit() {
             callInterceptor("exit", config, e, env, value);
             c(value);
           });
         },
-        function exception(exception) {
+        function _cerr(exception) {
           exception = toException(exception);
           if (!exception.location) {
             exception.location = e;
