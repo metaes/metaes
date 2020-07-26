@@ -1,7 +1,12 @@
 import { createScript } from "../../lib/metaes";
-import { Environment } from "../../lib/types";
+import { Environment, Evaluate } from "../../lib/types";
 
-export const evaluateHelper = (evalFn, input: string, name = "anonymous", env: Environment = { values: {} }) =>
+export const evaluateHelper = (
+  evalFn: Evaluate,
+  input: string,
+  name = "anonymous",
+  env: Environment = { values: {} }
+) =>
   new Promise((resolve, reject) => {
     const script = createScript(input);
     script.url = name;

@@ -1,64 +1,41 @@
 import { readFileSync } from "fs";
 import * as path from "path";
 import { createScript, metaesEvalModule } from "./metaes";
-import { evaluate } from "./evaluate";
-import { ExceptionName } from "./interpreter/statements";
-import { ModuleECMAScriptInterpreters } from "./interpreters";
+import { getTrampolineScheduler, evaluate } from "./evaluate";
 import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 import { presentException } from "./exceptions";
 import { ImportModule } from "./interpreter/modules";
 import { Continuation, Environment, ErrorContinuation, EvaluationConfig, MetaesException } from "./types";
+import { ModuleECMAScriptInterpreters } from "./interpreters";
+import { ExceptionName } from "./interpreter/statements";
 import * as NodeTypes from "./nodeTypes";
 
 const interpreters = {
   prev: ModuleECMAScriptInterpreters,
   values: {
-    // CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config: EvaluationConfig) {
-    //   evaluate(
-    //     { type: "GetValue", name: ExceptionName },
-    //     (error: MetaesException) =>
-    //       evaluate(
-    //         e.body,
-    //         c,
-    //         cerr,
-    //         {
-    //           values: {
-    //             [e.param.name]: error
-    //           },
-    //           prev: env
-    //         },
-    //         config
-    //       ),
-    //     cerr,
-    //     env,
-    //     config
-    //   );
-    // }
+    CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config: EvaluationConfig) {
+      evaluate(
+        { type: "GetValue", name: ExceptionName },
+        (error: MetaesException) =>
+          evaluate(
+            e.body,
+            c,
+            cerr,
+            {
+              values: {
+                [e.param.name]: error
+              },
+              prev: env
+            },
+            config
+          ),
+        cerr,
+        env,
+        config
+      );
+    }
   }
 };
-
-function getTrampolineScheduler() {
-  const tasks: Function[] = [];
-  let running = false;
-
-  function run() {
-    if (running) {
-      return;
-    }
-    running = true;
-    while (tasks.length) {
-      tasks.pop()!();
-    }
-    running = false;
-  }
-
-  return function (fn) {
-    tasks.push(fn);
-    if (!running) {
-      run();
-    }
-  };
-}
 
 function createScriptFromTS(url) {
   const source = transpileModule(readFileSync(url).toString(), {
@@ -96,7 +73,7 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
     } else if (loadingModules[url]) {
       loadingModules[url].push({ c, cerr });
     } else {
-      console.log("wait for", url);
+      // console.log("wait for", url);
       loadingModules[url] = [{ c, cerr }];
       try {
         const script = createScriptFromTS(url);
@@ -107,7 +84,7 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
             const results = loadingModules[url];
             loadedModules[url] = mod;
             delete loadingModules[url];
-            console.log("resolved", url);
+            // console.log("resolved", url);
             results.forEach(({ c }) => c(mod));
           },
           function (exception) {
@@ -125,11 +102,12 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
           },
           {
             script,
+            interpreters,
             schedule: getTrampolineScheduler()
           }
         );
       } catch (error) {
-        cerr(error.value || error);
+        cerr(error);
       }
     }
   }
@@ -138,7 +116,7 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
 }
 
 export const getMeta2ESEval = async (globalEnv: Environment = { values: {} }) =>
-  getMeta2ES(globalEnv).then((mod) => mod.metaesEval);
+  getMeta2ES(globalEnv).then((mod: any) => mod.metaesEval);
 
 export const getMeta2ES = (globalEnv: Environment = { values: {} }) =>
   new Promise((resolve, reject) => createTSModulesImporter(globalEnv)("./lib/metaes.ts", resolve, reject));

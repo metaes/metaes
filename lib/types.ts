@@ -74,6 +74,7 @@ export type MetaesFunction = {
   e: FunctionNode;
   closure: Environment;
   config: EvaluationConfig;
+  prev?: MetaesFunction;
 };
 
 export interface NodeLoc {

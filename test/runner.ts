@@ -11,6 +11,7 @@ import { ExportEnvironment } from "../lib/interpreter/modules";
 import { metaesEval, metaesEvalModule } from "../lib/metaes";
 import { getMeta2ESEval } from "../lib/meta2es";
 import { evaluateHelper } from "./spec/testUtils";
+import { Evaluate } from "lib/types";
 
 const globalEnv = {
   values: {
@@ -28,7 +29,7 @@ const globalEnv = {
   prev: { values: global }
 };
 
-function build(folder: string, evalFn, testNamePrefix = "", logError = true) {
+function build(folder: string, evalFn: Evaluate, testNamePrefix = "", logError = true) {
   // generate tests on runtime
   before(async () => {
     const files = (await pify(glob)(__dirname + `/${folder}/*.spec.js`)).map(async (file) => ({
@@ -72,7 +73,7 @@ function build(folder: string, evalFn, testNamePrefix = "", logError = true) {
     describe("metaesEval", () => build("eval", metaesEval));
     describe("metaesEvalModule", () => build("eval_module", metaesEvalModule));
 
-    const meta2Eval = await getMeta2ESEval({
+    const meta2Eval = (await getMeta2ESEval({
       values: {
         ReferenceError,
         Error,
@@ -87,7 +88,7 @@ function build(folder: string, evalFn, testNamePrefix = "", logError = true) {
         Date,
         Symbol
       }
-    });
+    })) as Evaluate;
     describe("meta2esEval", () => build("eval", meta2Eval, "[meta2]", false));
     describe("meta2esEvalModule", () => build("eval_module", meta2Eval, "[meta2]", false));
   } catch (e) {

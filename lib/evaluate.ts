@@ -15,6 +15,29 @@ export function defaultScheduler(fn) {
   fn();
 }
 
+export function getTrampolineScheduler() {
+  const tasks: Function[] = [];
+  let running = false;
+
+  function run() {
+    if (running) {
+      return;
+    }
+    running = true;
+    while (tasks.length) {
+      tasks.pop()!();
+    }
+    running = false;
+  }
+
+  return function (fn) {
+    tasks.push(fn);
+    if (!running) {
+      run();
+    }
+  };
+}
+
 export function evaluate(
   e: ASTNode,
   c: Continuation,
@@ -59,35 +82,13 @@ export function evaluate(
 
 type Visitor<T> = (element: T, c: Continuation, cerr: PartialErrorContinuation) => void;
 
-/**
- * visitArray uses trampolining inside as it's likely that too long array execution will eat up callstack.
- * @param items
- * @param fn
- * @param c
- * @param cerr
- */
 export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: PartialErrorContinuation) => {
   if (items.length === 0) {
     c([]);
   } else if (items.length === 1) {
     fn(items[0], (value) => c([value]), cerr);
   } else {
-    // Array of loop function arguments to be applied next time
-    // TODO: convert to nextOperation or similar, there is always only one? What about callcc?
-    const tasks: any[] = [];
-    // Indicates if tasks execution is done. Initially it is done.
-    let done = true;
-
-    // Simple `loop` function executor, just loop over arguments until nothing is left.
-    function execute() {
-      done = false;
-      while (tasks.length) {
-        // @ts-ignore
-        loop(...tasks.shift());
-      }
-      done = true;
-    }
-
+    const schedule = getTrampolineScheduler();
     const visited = new Set();
 
     function loop(index, accumulated: T[]) {
@@ -103,10 +104,7 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
             }
             accumulated.push(value);
             visited.add(index);
-            tasks.push([index + 1, accumulated]);
-            if (done) {
-              execute();
-            }
+            schedule(() => loop(index + 1, accumulated));
           },
           cerr
         );
@@ -116,7 +114,7 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
     }
 
     // start
-    loop(0, []);
+    schedule(() => loop(0, []));
   }
 };
 

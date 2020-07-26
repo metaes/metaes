@@ -1,5 +1,5 @@
 import { GetValueSync } from "../environment";
-import { evaluate, evaluateArray, visitArray } from "../evaluate";
+import { evaluate, evaluateArray, visitArray, getTrampolineScheduler } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
@@ -294,43 +294,37 @@ export const ForInStatement: Interpreter<NodeTypes.ForInStatement> = (e, c, cerr
   );
 
 export const WhileStatement: Interpreter<NodeTypes.WhileStatement> = (e, c, cerr, env, config) => {
+  const schedule = getTrampolineScheduler();
   (function loop() {
-    evaluate(e.test, (test) => (test ? evaluate(e.body, loop, cerr, env, config) : c()), cerr, env, config);
+    evaluate(
+      e.test,
+      (test) => (test ? schedule(() => evaluate(e.body, loop, cerr, env, config)) : c()),
+      cerr,
+      env,
+      config
+    );
   })();
 };
 
 export const DoWhileStatement: Interpreter<NodeTypes.DoWhileStatement> = (e, c, cerr, env, config) => {
+  const schedule = getTrampolineScheduler();
   function body() {
     evaluate(e.body, test, cerr, env, config);
   }
   function test() {
-    evaluate(e.test, (value) => (value ? evaluate(e.body, test, cerr, env, config) : c()), cerr, env, config);
+    evaluate(
+      e.test,
+      (value) => (value ? schedule(() => evaluate(e.body, test, cerr, env, config)) : c()),
+      cerr,
+      env,
+      config
+    );
   }
   body();
 };
 
 export const ForStatement: Interpreter<NodeTypes.ForStatement> = (e, c, cerr, env, config) => {
-  const tasks: Function[] = [];
-  let running = false;
-
-  function schedule(fn) {
-    tasks.push(fn);
-    if (!running) {
-      run();
-    }
-  }
-
-  function run() {
-    if (running) {
-      return;
-    }
-    running = true;
-    while (tasks.length) {
-      tasks.pop()!();
-    }
-    running = false;
-  }
-
+  const schedule = getTrampolineScheduler();
   const update = () => (e.update ? evaluate(e.update, test, cerr, env, config) : test());
   const test = () => (e.test ? evaluate(e.test, (test) => (test ? body() : c()), cerr, env, config) : body());
   const body = () => schedule(() => evaluate(e.body, update, cerr, { values: {}, prev: env }, config));
@@ -339,8 +333,6 @@ export const ForStatement: Interpreter<NodeTypes.ForStatement> = (e, c, cerr, en
   } else {
     test();
   }
-
-  run();
 };
 
 export const ForOfStatement: Interpreter<NodeTypes.ForOfStatement> = (e, c, cerr, env, config) =>

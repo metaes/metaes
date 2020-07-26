@@ -1,7 +1,11 @@
-import { evaluate, visitArray } from "./evaluate";
+import { evaluate, visitArray, getTrampolineScheduler } from "./evaluate";
 import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
 import { Continuation, Environment, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
+
+const MetaFunction = Symbol.for("metaFunction");
+export const isMetaFunction = (fn?: Function) => fn && !!fn[MetaFunction];
+export const getMetaFunction = (fn: Function): MetaesFunction => fn[MetaFunction];
 
 // TODO: move to interpreter style
 export const evaluateMetaFunction = (
@@ -10,7 +14,7 @@ export const evaluateMetaFunction = (
   cerr: ErrorContinuation,
   thisObject: any,
   args: any[],
-  executionTimeConfig?: EvaluationConfig
+  executionTimeConfig?: Partial<EvaluationConfig>
 ) => {
   const { e, closure, config } = metaFunction;
   const env = {
@@ -80,7 +84,8 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
       (r) => (result = r),
       (ex) => (exception = toException(ex)),
       this,
-      args
+      args,
+      { schedule: getTrampolineScheduler() }
     );
     if (exception) {
       throw exception;
@@ -88,7 +93,7 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
     return result;
   };
 
-  markAsMetaFunction(fn, metaFunction);
+  fn[MetaFunction] = metaFunction;
   return fn;
 };
 
@@ -98,17 +103,3 @@ export const createMetaFunction = (e: FunctionNode, closure: Environment, config
     closure,
     config
   });
-
-const MetaesSymbol = Symbol("__metaes__");
-
-export function markAsMetaFunction(fn: Function, meta: MetaesFunction) {
-  fn[MetaesSymbol] = meta;
-}
-
-export function isMetaFunction(fn?: Function) {
-  return fn && !!fn[MetaesSymbol];
-}
-
-export function getMetaFunction(fn: Function) {
-  return fn[MetaesSymbol];
-}

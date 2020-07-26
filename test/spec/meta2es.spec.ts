@@ -5,9 +5,9 @@ import { presentException } from "../../lib/exceptions";
 import { getMeta2ESEval } from "../../lib/meta2es";
 import { evaluateHelper } from "./testUtils";
 
-async function evaluateHelperWithPrint(evalFn, input, name?) {
+async function evaluateHelperWithPrint(evalFn, input, name?, env = { values: {} }) {
   try {
-    return await evaluateHelper(evalFn, input, name, { values: {} });
+    return await evaluateHelper(evalFn, input, name, env);
   } catch (e) {
     // console.log("e", e);
     console.log(presentException(e));
@@ -19,7 +19,25 @@ describe("Meta2ES", function () {
   let metaesEval: Evaluate;
 
   before(async function () {
-    metaesEval = await getMeta2ESEval({ values: { Object, Error, ReferenceError, Symbol, Date } });
+    metaesEval = await getMeta2ESEval({
+      values: { Object, Error, ReferenceError, Symbol, Date, Set, undefined, console }
+    });
+  });
+
+  it("supports function call", async function () {
+    assert.equal(await evaluateHelperWithPrint(metaesEval, "(x=>x+1)(1)"), 2);
+  });
+
+  it("runs metafunction from native function", async function () {
+    assert.deepEqual(
+      await evaluateHelperWithPrint(
+        metaesEval,
+        "const f = d=>{ console.log({d}); return d>1}; globalThis.f=f; [1, 2].filter(d=>{ console.log({d}); return d>1})",
+        null,
+        { values: { globalThis, console } }
+      ),
+      [2]
+    );
   });
 
   it("evaluates binary expression with literals", async function () {

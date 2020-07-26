@@ -16,3 +16,9 @@ function f(a = "test") {
 }
 assert.equal(f(), "test");
 assert.equal(f(44), 44);
+
+// test: supports call from host function
+assert.deepEqual(
+  [1, 2].filter((d) => d > 1),
+  [2]
+);
