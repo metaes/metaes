@@ -93,6 +93,12 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
     return result;
   };
 
+  if (metaFunction.e.type === "FunctionExpression" && metaFunction.e.id) {
+    metaFunction = {
+      ...metaFunction,
+      closure: { values: { [metaFunction.e.id.name]: fn }, prev: metaFunction.closure }
+    };
+  }
   fn[MetaFunction] = metaFunction;
   return fn;
 };

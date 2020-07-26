@@ -22,3 +22,13 @@ assert.deepEqual(
   [1, 2].filter((d) => d > 1),
   [2]
 );
+
+// test: passes named function expression name to function body
+let result = 0;
+(function loop(i) {
+  result++;
+  if (i > 1) {
+    loop(i - 1);
+  }
+})(10);
+assert.equal(result, 10);

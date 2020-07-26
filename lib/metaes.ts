@@ -81,7 +81,7 @@ export const safeEvaluate: Evaluate = (
   }
 };
 
-export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
+export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
   safeEvaluate(
     function inject() {
       return { script: toScript(input), config: { ...BaseConfig, ...config }, env: toEnvironment(env) };
@@ -89,7 +89,6 @@ export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
     c,
     cerr
   );
-};
 
 export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
   const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironment]: true };
