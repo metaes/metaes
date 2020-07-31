@@ -74,7 +74,6 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
     } else if (loadingModules[url]) {
       loadingModules[url].push({ c, cerr });
     } else {
-      // console.log("wait for", url);
       loadingModules[url] = [{ c, cerr }];
       try {
         const script = createScriptFromTS(url);
@@ -85,7 +84,6 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
             const results = loadingModules[url];
             loadedModules[url] = mod;
             delete loadingModules[url];
-            // console.log("resolved", url);
             results.forEach(({ c }) => c(mod));
           },
           function (exception) {
