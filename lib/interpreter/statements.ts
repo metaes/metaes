@@ -269,23 +269,59 @@ export const ForInStatement: Interpreter<NodeTypes.ForInStatement> = (e, c, cerr
   evaluate(
     e.right,
     (right) => {
-      const leftNode = e.left;
-      if (leftNode.type === "Identifier") {
-        visitArray(
-          Object.keys(right),
-          (name, c, cerr) =>
-            evaluate(
-              { type: "SetValue", name: leftNode.name, value: name, isDeclaration: false },
-              () => evaluate(e.body, c, cerr, env, config),
-              cerr,
-              env,
-              config
-            ),
-          c,
-          cerr
-        );
-      } else {
-        cerr(NotImplementedException("Only identifier in left-hand side is supported now."));
+      const left = e.left;
+      switch (left.type) {
+        case "Identifier":
+          visitArray(
+            Object.keys(right),
+            (name, c, cerr) =>
+              evaluate(
+                { type: "SetValue", name: left.name, value: name, isDeclaration: false },
+                () => evaluate(e.body, c, cerr, env, config),
+                cerr,
+                env,
+                config
+              ),
+            c,
+            cerr
+          );
+          break;
+        case "VariableDeclaration": {
+          const declaration0 = left.declarations[0];
+          function loopAssigningToVariable(name: string, bodyEnv: Environment) {
+            visitArray(
+              Object.keys(right),
+              (value, c, cerr) =>
+                evaluate(
+                  { type: "SetValue", name, value, isDeclaration: true },
+                  () => evaluate(e.body, c, cerr, bodyEnv, config),
+                  cerr,
+                  env,
+                  config
+                ),
+              c,
+              cerr
+            );
+          }
+          const bodyEnv = { prev: env, values: {} };
+          switch (declaration0.id.type) {
+            case "Identifier":
+              loopAssigningToVariable(declaration0.id.name, bodyEnv);
+              break;
+            default:
+              cerr(
+                NotImplementedException(
+                  `Left-hand side of type ${left.declarations[0].id.type} in ${e.type} not implemented yet.`,
+                  e.left
+                )
+              );
+              break;
+          }
+          break;
+        }
+        default:
+          cerr(NotImplementedException("Only identifier in left-hand side is supported now."));
+          break;
       }
     },
     cerr,
@@ -298,7 +334,10 @@ export const WhileStatement: Interpreter<NodeTypes.WhileStatement> = (e, c, cerr
   (function loop() {
     evaluate(
       e.test,
-      (test) => (test ? schedule(() => evaluate(e.body, loop, cerr, env, config)) : c()),
+      (test) =>
+        test
+          ? schedule(() => evaluate(e.body, loop, (ex) => (ex.type === "BreakStatement" ? c() : cerr(ex)), env, config))
+          : c(),
       cerr,
       env,
       config
@@ -314,7 +353,10 @@ export const DoWhileStatement: Interpreter<NodeTypes.DoWhileStatement> = (e, c, 
   function test() {
     evaluate(
       e.test,
-      (value) => (value ? schedule(() => evaluate(e.body, test, cerr, env, config)) : c()),
+      (value) =>
+        value
+          ? schedule(() => evaluate(e.body, test, (ex) => (ex.type === "BreakStatement" ? c() : cerr(ex)), env, config))
+          : c(),
       cerr,
       env,
       config

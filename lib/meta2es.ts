@@ -16,14 +16,14 @@ const interpreters = {
     CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config: EvaluationConfig) {
       evaluate(
         { type: "GetValue", name: ExceptionName },
-        (error: MetaesException) =>
+        (exception: MetaesException) =>
           evaluate(
             e.body,
             c,
             cerr,
             {
               values: {
-                [e.param.name]: error
+                [e.param.name]: exception
               },
               prev: env
             },
@@ -59,7 +59,8 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
         c(loadedModules[url]);
       } else {
         try {
-          c((loadedModules[url] = { default: require(url) }));
+          const mod = require(url);
+          c((loadedModules[url] = { ...mod, default: mod }));
         } catch (e) {
           cerr(e);
         }
@@ -118,5 +119,7 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
 export const getMeta2ESEval = async (globalEnv: Environment = { values: {} }) =>
   getMeta2ES(globalEnv).then((mod: any) => mod.metaesEval);
 
-export const getMeta2ES = (globalEnv: Environment = { values: {} }) =>
-  new Promise((resolve, reject) => createTSModulesImporter(globalEnv)("./lib/metaes.ts", resolve, reject));
+export const getModule2 = (path: string, globalEnv: Environment = { values: {} }) =>
+  new Promise((resolve, reject) => createTSModulesImporter(globalEnv)(path, resolve, reject));
+
+export const getMeta2ES = (globalEnv: Environment = { values: {} }) => getModule2("./lib/metaes.ts", globalEnv);

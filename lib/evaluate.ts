@@ -10,6 +10,9 @@ import {
   MetaesException,
   PartialErrorContinuation
 } from "./types";
+import { EvalNode } from "./nodeTypes";
+
+export const getLocRangeOf = ({ loc, range }: ASTNode) => ({ loc, range });
 
 export function defaultScheduler(fn) {
   fn();
@@ -39,7 +42,7 @@ export function getTrampolineScheduler() {
 }
 
 export function evaluate(
-  e: ASTNode,
+  e: EvalNode,
   c: Continuation,
   cerr: ErrorContinuation,
   env: Environment,

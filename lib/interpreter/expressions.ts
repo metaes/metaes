@@ -1,6 +1,6 @@
 import { callcc } from "../callcc";
 import { getEnvironmentForValue, GetValue, GetValueSync } from "../environment";
-import { evaluate, evaluateArray } from "../evaluate";
+import { evaluate, evaluateArray, getLocRangeOf } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
@@ -19,7 +19,14 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
             { name: "this" },
             (thisValue) =>
               evaluate(
-                { type: "Apply", e, fn: Object.getPrototypeOf(thisValue).constructor, thisValue: thisValue, args },
+                {
+                  type: "Apply",
+                  e,
+                  fn: Object.getPrototypeOf(thisValue).constructor,
+                  thisValue: thisValue,
+                  args,
+                  ...getLocRangeOf(e)
+                },
                 c,
                 cerr,
                 env,
@@ -46,7 +53,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
                       cerr({ type: "Error", value: e, message: "Error in continuation receiver." });
                     }
                   } else {
-                    evaluate({ type: "Apply", e, fn: callee, args }, c, cerr, env, config);
+                    evaluate({ type: "Apply", e, fn: callee, args, ...getLocRangeOf(e) }, c, cerr, env, config);
                   }
                 } catch (error) {
                   cerr(toException(error, e.callee));
@@ -61,8 +68,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
           );
           break;
         case "MemberExpression":
-          const e_callee = e.callee as NodeTypes.MemberExpression;
-          const { loc, range } = e_callee;
+          const e_callee = e.callee;
 
           evaluate(
             e_callee.object,
@@ -70,7 +76,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
               function evalApply(property) {
                 if (typeof property === "function") {
                   evaluate(
-                    { type: "Apply", e, fn: property, thisValue: object, args, loc, range },
+                    { type: "Apply", e, fn: property, thisValue: object, args, ...getLocRangeOf(e_callee) },
                     c,
                     cerr,
                     env,
@@ -84,7 +90,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
               }
               if (!e_callee.computed && e_callee.property.type === "Identifier") {
                 evaluate(
-                  { type: "GetProperty", object, property: e_callee.property.name, loc, range },
+                  { type: "GetProperty", object, property: e_callee.property.name, ...getLocRangeOf(e_callee) },
                   evalApply,
                   cerr,
                   env,
@@ -95,7 +101,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
                   e_callee.property,
                   (propertyValue) =>
                     evaluate(
-                      { type: "GetProperty", object, property: propertyValue, loc, range },
+                      { type: "GetProperty", object, property: propertyValue, ...getLocRangeOf(e_callee) },
                       evalApply,
                       cerr,
                       env,
@@ -143,10 +149,10 @@ export const MemberExpression: Interpreter<NodeTypes.MemberExpression> = (e, c, 
     e.object,
     (object) => {
       function getProperty() {
-        const { loc, range } = e.property;
         evaluate(
           e.property,
-          (property) => evaluate({ type: "GetProperty", object, property, loc, range }, c, cerr, env, config),
+          (property) =>
+            evaluate({ type: "GetProperty", object, property, ...getLocRangeOf(e.property) }, c, cerr, env, config),
           cerr,
           env,
           config
@@ -162,9 +168,8 @@ export const MemberExpression: Interpreter<NodeTypes.MemberExpression> = (e, c, 
             } else {
               switch (e.property.type) {
                 case "Identifier":
-                  const { loc, range } = e.property;
                   evaluate(
-                    { type: "GetProperty", object, property: e.property.name, loc, range },
+                    { type: "GetProperty", object, property: e.property.name, ...getLocRangeOf(e.property) },
                     c,
                     cerr,
                     env,
@@ -218,7 +223,13 @@ export const AssignmentExpression: Interpreter<NodeTypes.AssignmentExpression> =
       const e_left = e.left;
       switch (e_left.type) {
         case "Identifier":
-          evaluate({ type: "SetValue", name: e_left.name, value: right, isDeclaration: false }, c, cerr, env, config);
+          evaluate(
+            { type: "SetValue", name: e_left.name, value: right, isDeclaration: false, ...getLocRangeOf(e_left) },
+            c,
+            cerr,
+            env,
+            config
+          );
           break;
         case "MemberExpression":
           evaluate(
@@ -542,16 +553,46 @@ export const UnaryExpression: Interpreter<NodeTypes.UnaryExpression> = (e, c, ce
           c(void argument);
           break;
         case "delete":
-          if (e.argument.type === "Identifier") {
-            const name = e.argument.name;
-            const variableEnv = getEnvironmentForValue(env, name);
-            try {
-              c(variableEnv!.values[name]);
-            } catch (e) {
-              cerr(e);
+          switch (e.argument.type) {
+            case "Identifier":
+              const name = e.argument.name;
+              const variableEnv = getEnvironmentForValue(env, name);
+              try {
+                c(variableEnv!.values[name]);
+              } catch (e) {
+                cerr(e);
+              }
+              break;
+            case "MemberExpression": {
+              const argumentNode = e.argument;
+              evaluate(
+                e.argument.object,
+                (object) => {
+                  const evalProperty = () =>
+                    evaluate(argumentNode.property, (property) => c(delete object[property]), cerr, env, config);
+
+                  switch (argumentNode.property.type) {
+                    case "Identifier":
+                      if (argumentNode.computed) {
+                        evalProperty();
+                      } else {
+                        c(delete object[argumentNode.property.name]);
+                      }
+                      break;
+                    default:
+                      evalProperty();
+                      break;
+                  }
+                },
+                cerr,
+                env,
+                config
+              );
+              break;
             }
-          } else {
-            cerr(NotImplementedException(`Delete on operator of type "${e.argument.type}" is not implemented yet.`));
+            default:
+              cerr(NotImplementedException(`Delete on operator of type "${e.argument.type}" is not implemented yet.`));
+              break;
           }
           break;
         default:
@@ -579,7 +620,9 @@ export const TemplateLiteral: Interpreter<NodeTypes.TemplateLiteral> = (e, c, ce
     evaluateArray(
       e.expressions,
       (expressions) =>
-        c(expressions.map((expr, i) => e.quasis[i].value.raw + expr) + e.quasis[e.quasis.length - 1].value.raw),
+        c(
+          expressions.map((expr, i) => e.quasis[i].value.raw + expr).join("") + e.quasis[e.quasis.length - 1].value.raw
+        ),
       cerr,
       env,
       config

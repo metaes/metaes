@@ -3,7 +3,7 @@ import { NotImplementedException, toException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
 import { Continuation, Environment, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
 
-const MetaFunction = Symbol.for("metaFunction");
+const MetaFunction = Symbol.for("[[MetaFunction]]");
 export const isMetaFunction = (fn?: Function) => fn && !!fn[MetaFunction];
 export const getMetaFunction = (fn: Function): MetaesFunction => fn[MetaFunction];
 

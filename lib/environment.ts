@@ -1,4 +1,5 @@
 import { toException } from "./exceptions";
+import { GetValueT, SetValueT } from "./nodeTypes";
 import { Continuation, Environment, EnvironmentBase, PartialErrorContinuation } from "./types";
 
 export function toEnvironment(environment?: any | EnvironmentBase | Environment): Environment {
@@ -20,14 +21,8 @@ export function getEnvironmentForValue(env: Environment, name: string): Environm
   return getEnvironmentBy(env, (env) => name in env.values);
 }
 
-type SetValueT<T> = {
-  name: string;
-  value: T;
-  isDeclaration: boolean;
-};
-
 export function SetValue<T>(
-  { name, value, isDeclaration }: SetValueT<T>,
+  { name, value, isDeclaration }: Omit<SetValueT<T>, "type">,
   c: Continuation,
   cerr: PartialErrorContinuation,
   env: Environment<T>
@@ -52,7 +47,7 @@ export function SetValue<T>(
 }
 
 export function GetValue<T>(
-  { name }: { name: string },
+  { name }: Omit<GetValueT, "type">,
   c: Continuation<T>,
   cerr: PartialErrorContinuation,
   env: Environment<T>

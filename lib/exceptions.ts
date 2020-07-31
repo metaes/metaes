@@ -27,7 +27,7 @@ function withStyle(text: string, style: (string) => string) {
 export function presentException({ location, value, message, script }: MetaesException, useStyles = true) {
   let output = "";
   if (isException(value)) {
-    output += presentException(value) + "\n";
+    output += presentException(value, useStyles) + "\n";
   }
   if (location) {
     const styled = useStyles ? withStyle : (value) => value;
@@ -43,7 +43,7 @@ export function presentException({ location, value, message, script }: MetaesExc
     const line = lines[startLine - 1];
     const lineNumber = styled(startLine + "|", dim);
     const lineValue = styled(line, highlight);
-    const lineNumberSize = startLine.toString().length;
+    const lineNumberSize = startLine?.toString().length || 0;
     const paddingSum = 5;
     return (
       output +

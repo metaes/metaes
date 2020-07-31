@@ -1,20 +1,11 @@
-import { evaluate } from "../evaluate";
-import { NotImplementedException } from "../exceptions";
+import { evaluate, getLocRangeOf } from "../evaluate";
+import { NotImplementedException, toException } from "../exceptions";
 import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Interpreter } from "../types";
 
 export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, config) =>
-  evaluate(
-    { type: "GetValue", name: e.name },
-    c,
-    (exception) => {
-      exception.location = e;
-      cerr(exception);
-    },
-    env,
-    config
-  );
+  evaluate({ type: "GetValue", name: e.name, ...getLocRangeOf(e) }, c, cerr, env, config);
 
 export const Literal: Interpreter<NodeTypes.Literal> = (e, c) => c(e.value);
 
@@ -31,10 +22,16 @@ export const Apply: Interpreter<NodeTypes.Apply> = ({ fn, thisValue, args }, c, 
 };
 
 export const GetProperty: Interpreter<NodeTypes.GetProperty> = ({ object, property }, c, cerr, _env, _config) => {
-  try {
-    c(object[property]);
-  } catch (e) {
-    cerr(e);
+  if (object) {
+    try {
+      c(object[property]);
+    } catch (e) {
+      cerr(toException(e));
+    }
+  } else {
+    cerr(
+      toException(new TypeError(`Cannot read property '${property}' of ${object === null ? "null" : typeof object}`))
+    );
   }
 };
 

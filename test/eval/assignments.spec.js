@@ -5,13 +5,13 @@ o[key] = true;
 assert.isTrue(o[key]);
 
 // test: throws on assigning to non existent variable (strict mode on default)
-let caught;
+let error;
 try {
-  aGlobalVariable = 2;
+  x = 2;
 } catch (e) {
-  caught = e instanceof ReferenceError;
+  error = e;
 }
-assert.isTrue(caught);
+assert.instanceOf(error, ReferenceError);
 
 // test: assigns default value
 let { d = 3 } = {};

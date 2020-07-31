@@ -61,3 +61,19 @@ do {
   counter++;
 } while (test--);
 assert.equal(counter, 11);
+
+// test: supports do-while break
+let i = 1;
+do {
+  if (i === 5) {
+    break;
+  }
+} while (i++);
+assert.equal(i, 5);
+
+// test: variable declartor in for-in loop
+const result = [];
+for (let i in { a: 1, b: 2, c: 3 }) {
+  result.push(i);
+}
+assert.deepEqual(result, ["a", "b", "c"]);

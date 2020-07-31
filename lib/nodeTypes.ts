@@ -212,7 +212,7 @@ export interface BreakStatement extends NodeBase {
 
 export interface ForInStatement extends NodeBase {
   type: "ForInStatement";
-  left: Identifier;
+  left: Identifier | VariableDeclaration;
   right: Expression;
   body: Statement;
 }
@@ -430,7 +430,10 @@ type Expression =
   | TemplateLiteral
   | TaggedTemplateExpression
   | SpreadElement
-  | AwaitExpression;
+  | AwaitExpression
+  | ObjectPattern
+  | AssignmentPattern
+  | ArrayPattern;
 
 type Comment = Line;
 
@@ -442,7 +445,7 @@ export interface Apply extends NodeBase {
   type: "Apply";
   e: CallExpression;
   fn: Function;
-  thisValue: any;
+  thisValue?: any;
   args: any[];
 }
 
@@ -462,6 +465,18 @@ export interface SetProperty extends NodeBase {
 
 type Base = Apply | GetProperty | SetProperty;
 
+export type SetValueT<T> = NodeBase & {
+  type: "SetValue";
+  name: string;
+  value: T;
+  isDeclaration: boolean;
+};
+
+export type GetValueT = NodeBase & {
+  type: "GetValue";
+  name: string;
+};
+
 export type JavaScriptASTNode =
   | Base
   | Expression
@@ -470,3 +485,5 @@ export type JavaScriptASTNode =
   | VariableDeclarator
   | Comment
   | MethodDefinition;
+
+export type EvalNode = JavaScriptASTNode | Apply | GetProperty | SetProperty | SetValueT<any> | GetValueT;

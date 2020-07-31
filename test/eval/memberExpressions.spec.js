@@ -29,3 +29,12 @@ try {
   result = e instanceof TypeError;
 }
 assert.isTrue(result);
+
+// test: member expression TypeError
+let a = null;
+try {
+  a.b;
+} catch (e) {
+  assert.instanceOf(e, TypeError);
+  assert.equal(e.message, "Cannot read property 'b' of null");
+}
