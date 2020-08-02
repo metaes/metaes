@@ -443,7 +443,7 @@ export interface Line extends NodeBase {
 
 export interface Apply extends NodeBase {
   type: "Apply";
-  e: CallExpression;
+  e: CallExpression | TaggedTemplateExpression;
   fn: Function;
   thisValue?: any;
   args: any[];

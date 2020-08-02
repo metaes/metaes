@@ -1,5 +1,5 @@
 import { GetValueSync } from "../environment";
-import { evaluate, evaluateArray, visitArray, getTrampolineScheduler } from "../evaluate";
+import { evaluate, evaluateArray, visitArray, getTrampolineScheduler, getLocRangeOf } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
@@ -107,7 +107,13 @@ export const ObjectPattern: Interpreter<NodeTypes.ObjectPattern> = (e, c, cerr, 
               switch (property.value.type) {
                 case "Identifier":
                   evaluate(
-                    { type: "SetValue", name: property.value.name, value, isDeclaration: true },
+                    {
+                      type: "SetValue",
+                      name: property.value.name,
+                      value,
+                      isDeclaration: true,
+                      ...getLocRangeOf(property)
+                    },
                     c,
                     cerr,
                     env,
@@ -131,7 +137,7 @@ export const ObjectPattern: Interpreter<NodeTypes.ObjectPattern> = (e, c, cerr, 
               }
             }
             evaluate(
-              { type: "GetValue", name: keyName },
+              { type: "GetValue", name: keyName, ...getLocRangeOf(property) },
               assignValue,
               (e) => (e.value instanceof ReferenceError ? assignValue() : cerr(e)),
               env,
@@ -161,10 +167,16 @@ export const AssignmentPattern: Interpreter<NodeTypes.AssignmentPattern> = (e, c
     }
 
     evaluate(
-      { type: "GetValue", name: e.left.name },
+      { type: "GetValue", name: e.left.name, ...getLocRangeOf(e.left) },
       (value) =>
         value
-          ? evaluate({ type: "SetValue", name: e.left.name, isDeclaration: true, value }, c, cerr, env, config)
+          ? evaluate(
+              { type: "SetValue", name: e.left.name, isDeclaration: true, value, ...getLocRangeOf(e.left) },
+              c,
+              cerr,
+              env,
+              config
+            )
           : assignRight(),
       assignRight,
       env,
@@ -276,7 +288,7 @@ export const ForInStatement: Interpreter<NodeTypes.ForInStatement> = (e, c, cerr
             Object.keys(right),
             (name, c, cerr) =>
               evaluate(
-                { type: "SetValue", name: left.name, value: name, isDeclaration: false },
+                { type: "SetValue", name: left.name, value: name, isDeclaration: false, ...getLocRangeOf(left) },
                 () => evaluate(e.body, c, cerr, env, config),
                 cerr,
                 env,
@@ -293,7 +305,7 @@ export const ForInStatement: Interpreter<NodeTypes.ForInStatement> = (e, c, cerr
               Object.keys(right),
               (value, c, cerr) =>
                 evaluate(
-                  { type: "SetValue", name, value, isDeclaration: true },
+                  { type: "SetValue", name, value, isDeclaration: true, ...getLocRangeOf(declaration0) },
                   () => evaluate(e.body, c, cerr, bodyEnv, config),
                   cerr,
                   env,
@@ -389,7 +401,7 @@ export const ForOfStatement: Interpreter<NodeTypes.ForOfStatement> = (e, c, cerr
             right,
             (value, c, cerr) =>
               evaluate(
-                { type: "SetValue", name, value, isDeclaration: true },
+                { type: "SetValue", name, value, isDeclaration: true, ...getLocRangeOf(e.right) },
                 () => evaluate(e.body, c, cerr, bodyEnv, config),
                 cerr,
                 env,

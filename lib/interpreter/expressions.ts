@@ -124,8 +124,20 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
             (callee) => {
               try {
                 const cnt = (thisValue?) =>
-                  evaluate({ type: "Apply", e, fn: callee, thisValue, args }, c, cerr, env, config);
-                evaluate({ type: "GetValue", name: "this" }, cnt, () => cnt(undefined), env, config);
+                  evaluate(
+                    { type: "Apply", e, fn: callee, thisValue, args, ...getLocRangeOf(e.callee) },
+                    c,
+                    cerr,
+                    env,
+                    config
+                  );
+                evaluate(
+                  { type: "GetValue", name: "this", ...getLocRangeOf(e.callee) },
+                  cnt,
+                  () => cnt(undefined),
+                  env,
+                  config
+                );
               } catch (error) {
                 cerr(toException(error, e.callee));
               }
@@ -175,7 +187,6 @@ export const MemberExpression: Interpreter<NodeTypes.MemberExpression> = (e, c, 
                     env,
                     config
                   );
-
                   break;
                 default:
                   cerr(NotImplementedException(`Not implemented ${e.property["type"]} property type of ${e.type}`));
@@ -253,7 +264,14 @@ export const AssignmentExpression: Interpreter<NodeTypes.AssignmentExpression> =
                 );
               } else if (property.type === "Identifier") {
                 evaluate(
-                  { type: "SetProperty", object, property: property.name, value: right, operator: e.operator },
+                  {
+                    type: "SetProperty",
+                    object,
+                    property: property.name,
+                    value: right,
+                    operator: e.operator,
+                    ...getLocRangeOf(e)
+                  },
                   c,
                   cerr,
                   env,
@@ -607,8 +625,8 @@ export const UnaryExpression: Interpreter<NodeTypes.UnaryExpression> = (e, c, ce
     config
   );
 
-export const ThisExpression: Interpreter<NodeTypes.ThisExpression> = (_e, c, cerr, env, config) =>
-  evaluate({ type: "GetValue", name: "this" }, c, cerr, env, config);
+export const ThisExpression: Interpreter<NodeTypes.ThisExpression> = (e, c, cerr, env, config) =>
+  evaluate({ type: "GetValue", name: "this", ...getLocRangeOf(e) }, c, cerr, env, config);
 
 export const ConditionalExpression: Interpreter<NodeTypes.ConditionalExpression> = (e, c, cerr, env, config) =>
   GetValueSync("IfStatement", config.interpreters)!(e, c, cerr, env, config);
@@ -636,7 +654,14 @@ export const TaggedTemplateExpression: Interpreter<NodeTypes.TaggedTemplateExpre
     (tag) =>
       evaluate(
         e.quasi,
-        (quasi) => evaluate({ type: "Apply", e, fn: tag, thisValue: undefined, args: [quasi] }, c, cerr, env, config),
+        (quasi) =>
+          evaluate(
+            { type: "Apply", e, fn: tag, thisValue: undefined, args: [quasi], ...getLocRangeOf(e.quasi) },
+            c,
+            cerr,
+            env,
+            config
+          ),
         cerr,
         env,
         config
