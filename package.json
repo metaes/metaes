@@ -43,6 +43,7 @@
     "typescript": "^3.9.3"
   },
   "dependencies": {
-    "esprima": "^4.0.1"
+    "esprima": "^4.0.1",
+    "meriyah": "^2.1.1"
   }
 }

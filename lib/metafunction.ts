@@ -14,7 +14,8 @@ export const evaluateMetaFunction = (
   cerr: ErrorContinuation,
   thisObject: any,
   args: any[],
-  executionTimeConfig?: Partial<EvaluationConfig>
+  executionTimeConfig?: Partial<EvaluationConfig>,
+  fromNative?
 ) => {
   const { e, closure, config } = metaFunction;
   const env = {
@@ -62,7 +63,11 @@ export const evaluateMetaFunction = (
           if (exception.type === "ReturnStatement") {
             c(exception.value);
           } else {
-            cerr(exception);
+            if (fromNative) {
+              cerr({ value: exception, type: "Error", script: config.script });
+            } else {
+              cerr(exception);
+            }
           }
         },
         env,
@@ -82,10 +87,16 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
       (ex) => (exception = ex),
       this,
       args,
-      { schedule: getTrampolineScheduler() }
+      { schedule: getTrampolineScheduler() },
+      true
     );
     if (exception) {
-      throw exception.value;
+      let value = exception.value;
+      while (value.value) {
+        value = value.value;
+      }
+      debugger;
+      throw value;
     }
     return result;
   };

@@ -1,6 +1,6 @@
 import { callcc } from "../callcc";
 import { getEnvironmentForValue, GetValue, GetValueSync } from "../environment";
-import { evaluate, evaluateArray, getLocRangeOf } from "../evaluate";
+import { evaluate, evaluateArray, getLocRangeOf, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
@@ -291,20 +291,29 @@ export const AssignmentExpression: Interpreter<NodeTypes.AssignmentExpression> =
     config
   );
 
-export const ObjectExpression: Interpreter<NodeTypes.ObjectExpression> = (e, c, cerr, env, config) =>
-  evaluateArray(
+export const ObjectExpression: Interpreter<NodeTypes.ObjectExpression> = (e, c, cerr, env, config) => {
+  let result = {};
+  visitArray(
     e.properties,
-    (properties) => {
-      const object = {};
-      for (let { key, value } of properties) {
-        object[key] = value;
-      }
-      c(object);
-    },
-    cerr,
-    env,
-    config
+    (itemNode, c, cerr) =>
+      evaluate(
+        itemNode,
+        function (item) {
+          if (item instanceof SpreadElementValue) {
+            c((result = Object.assign(result, item.value)));
+          } else {
+            const { key, value } = item;
+            c((result[key] = value));
+          }
+        },
+        cerr,
+        env,
+        config
+      ),
+    () => c(result),
+    cerr
   );
+};
 
 export const Property: Interpreter<NodeTypes.Property> = (e, c, cerr, env, config) => {
   if (e.computed) {

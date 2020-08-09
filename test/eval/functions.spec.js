@@ -32,3 +32,9 @@ let result = 0;
   }
 })(10);
 assert.equal(result, 10);
+
+// test: supports Function.prototype.call :skip
+function add(a, b) {
+  return a + b;
+}
+assert.equal(add.apply(null, [1, 2]), 3);

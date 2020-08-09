@@ -1,4 +1,4 @@
-import * as esprima from "esprima";
+import * as esprima from "meriyah";
 import { Program } from "./nodeTypes";
 import { Range } from "./types";
 
@@ -31,7 +31,9 @@ function esprimaParse(source: string, options: ParserOptions = {}, module: boole
     const { parse, parseModule } = esprima;
     return (module ? parseModule : parse)(source, {
       range: true,
+      ranges: true,
       comment: true,
+      next: true,
       attachComment: true,
       loc: true,
       source: true,
