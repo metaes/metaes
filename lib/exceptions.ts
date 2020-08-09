@@ -11,6 +11,7 @@ export const NotImplementedException = (message: string, location?: ASTNode) =>
   <const>{
     type: "Error",
     message,
+    value: new Error(message),
     location
   };
 

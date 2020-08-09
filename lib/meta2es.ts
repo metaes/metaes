@@ -1,41 +1,11 @@
 import { readFileSync } from "fs";
 import * as path from "path";
-import { createScript, metaesEvalModule } from "./metaes";
-import { getTrampolineScheduler, evaluate } from "./evaluate";
 import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
+import { getTrampolineScheduler } from "./evaluate";
 import { presentException } from "./exceptions";
 import { ImportModule } from "./interpreter/modules";
-import { Continuation, Environment, ErrorContinuation, EvaluationConfig, MetaesException } from "./types";
-import { ModuleECMAScriptInterpreters } from "./interpreters";
-import { ExceptionName } from "./interpreter/statements";
-import * as NodeTypes from "./nodeTypes";
-
-const interpreters = {
-  prev: ModuleECMAScriptInterpreters,
-  values: {
-    CatchClause(e: NodeTypes.CatchClause, c, cerr, env, config: EvaluationConfig) {
-      evaluate(
-        { type: "GetValue", name: ExceptionName },
-        (exception: MetaesException) =>
-          evaluate(
-            e.body,
-            c,
-            cerr,
-            {
-              values: {
-                [e.param.name]: exception
-              },
-              prev: env
-            },
-            config
-          ),
-        cerr,
-        env,
-        config
-      );
-    }
-  }
-};
+import { createScript, metaesEvalModule } from "./metaes";
+import { Continuation, Environment, ErrorContinuation } from "./types";
 
 function createScriptFromTS(url) {
   const source = transpileModule(readFileSync(url).toString(), {
@@ -101,7 +71,6 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
           },
           {
             script,
-            interpreters,
             schedule: getTrampolineScheduler()
           }
         );

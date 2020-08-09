@@ -62,9 +62,6 @@ export const evaluateMetaFunction = (
           if (exception.type === "ReturnStatement") {
             c(exception.value);
           } else {
-            if (!exception.script) {
-              exception.script = config.script;
-            }
             cerr(exception);
           }
         },
@@ -88,7 +85,7 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
       { schedule: getTrampolineScheduler() }
     );
     if (exception) {
-      throw exception;
+      throw toException(exception);
     }
     return result;
   };

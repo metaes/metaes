@@ -59,7 +59,7 @@ try {
 } catch (e) {
   result = e;
 }
-assert.equal(result.type, "Error");
+assert.equal(result.message, "Computed property in ObjectPattern is not supported yet.");
 
 // test: does not throw
 let {

@@ -213,7 +213,7 @@ export const IfStatement: Interpreter<NodeTypes.IfStatement | NodeTypes.Conditio
 export const ExpressionStatement: Interpreter<NodeTypes.ExpressionStatement> = (e, c, cerr, env, config) =>
   evaluate(e.expression, c, cerr, env, config);
 
-export const ExceptionName = "[[Exception]]";
+export const ExceptionName = "[[CatchClauseException]]";
 
 export const TryStatement: Interpreter<NodeTypes.TryStatement> = (e, c, cerr, env, config) =>
   evaluate(
@@ -251,7 +251,7 @@ export const CatchClause: Interpreter<NodeTypes.CatchClause> = (e, c, cerr, env,
         cerr,
         {
           values: {
-            [e.param.name]: error.value || error
+            [e.param.name]: error.value
           },
           prev: env
         },

@@ -9,9 +9,8 @@ async function evaluateHelperWithPrint(evalFn, input, name?, env = { values: {} 
   try {
     return await evaluateHelper(evalFn, input, name, env);
   } catch (e) {
-    // console.log("e", e);
     console.log(presentException(e));
-    throw e.value;
+    throw e;
   }
 }
 
@@ -48,8 +47,8 @@ describe("Meta2ES", function () {
     try {
       await evaluateHelperWithPrint(metaesEval, "5+5*a");
     } catch (e) {
-      assert.instanceOf(e, ReferenceError);
-      assert.equal(e.message, '"a" is not defined.');
+      assert.instanceOf(e.value, ReferenceError);
+      assert.equal(e.value.message, '"a" is not defined.');
     }
   });
 
@@ -60,7 +59,7 @@ describe("Meta2ES", function () {
   });
 
   it("throws ReferenceError for non-existing ReferenceError", async function () {
-    const metaesEval = await getMeta2ESEval({ values: { Object, Date } });
+    const metaesEval = await getMeta2ESEval({ values: { Object } });
     try {
       await evaluateHelperWithPrint(metaesEval, "a");
     } catch (e) {

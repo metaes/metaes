@@ -48,7 +48,7 @@ anonymous:1:0 - TypeError: [].something is not a function
   "unsupported ECMAScript parts: power operator": {
     source: `2 ** 2`,
     expected: `
-anonymous:1:0 - BinaryExpression operator "**" is not implemented yet.
+anonymous:1:0 - Error: BinaryExpression operator "**" is not implemented yet.
 
   1|  2 ** 2
       ~~~~~~`
