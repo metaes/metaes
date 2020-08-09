@@ -1,5 +1,5 @@
-import { evaluate, visitArray, getTrampolineScheduler } from "./evaluate";
-import { NotImplementedException, toException } from "./exceptions";
+import { evaluate, getTrampolineScheduler, visitArray } from "./evaluate";
+import { NotImplementedException } from "./exceptions";
 import { FunctionNode } from "./nodeTypes";
 import { Continuation, Environment, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
 
@@ -79,13 +79,13 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
     evaluateMetaFunction(
       metaFunction,
       (r) => (result = r),
-      (ex) => (exception = toException(ex)),
+      (ex) => (exception = ex),
       this,
       args,
       { schedule: getTrampolineScheduler() }
     );
     if (exception) {
-      throw toException(exception);
+      throw exception.value;
     }
     return result;
   };

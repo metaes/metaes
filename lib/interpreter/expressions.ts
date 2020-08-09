@@ -193,10 +193,6 @@ export const MemberExpression: Interpreter<NodeTypes.MemberExpression> = (e, c, 
               }
             }
             break;
-          case "Literal":
-            // TODO: use GetProperty
-            evaluate(e.property, c, cerr, { values: object }, config);
-            break;
           default:
             cerr(NotImplementedException("This kind of member expression is not supported yet."));
         }

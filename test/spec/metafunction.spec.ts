@@ -63,8 +63,8 @@ describe("Meta functions", () => {
     try {
       fn();
     } catch (e) {
-      assert.equal(e.value.message, message);
-      assert.instanceOf(e.value, errorConstructor);
+      assert.equal(e.message, message);
+      assert.instanceOf(e, errorConstructor);
     }
   });
 });
