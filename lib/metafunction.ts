@@ -63,11 +63,8 @@ export const evaluateMetaFunction = (
           if (exception.type === "ReturnStatement") {
             c(exception.value);
           } else {
-            if (fromNative) {
-              cerr({ value: exception, type: "Error", script: config.script });
-            } else {
-              cerr(exception);
-            }
+            // TODO: add test
+            cerr({ value: exception, type: "Error", script: config.script });
           }
         },
         env,
@@ -95,8 +92,7 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
       while (value.value) {
         value = value.value;
       }
-      debugger;
-      throw value;
+      throw exception;
     }
     return result;
   };
