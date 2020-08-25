@@ -14,8 +14,7 @@ export const evaluateMetaFunction = (
   cerr: ErrorContinuation,
   thisObject: any,
   args: any[],
-  executionTimeConfig?: Partial<EvaluationConfig>,
-  fromNative?
+  executionTimeConfig?: Partial<EvaluationConfig>
 ) => {
   const { e, closure, config } = metaFunction;
   const env = {
@@ -84,8 +83,7 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
       (ex) => (exception = ex),
       this,
       args,
-      { schedule: getTrampolineScheduler() },
-      true
+      { schedule: getTrampolineScheduler() }
     );
     if (exception) {
       let value = exception.value;
