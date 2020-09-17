@@ -63,7 +63,8 @@ export const evaluateMetaFunction = (
             c(exception.value);
           } else {
             // TODO: add test
-            cerr({ value: exception, type: "Error", script: config.script });
+            // cerr({ value: exception, type: "Error", script: config.script });
+            cerr(exception);
           }
         },
         env,
@@ -86,11 +87,11 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
       { schedule: getTrampolineScheduler() }
     );
     if (exception) {
-      let value = exception.value;
-      while (value.value) {
-        value = value.value;
-      }
-      throw exception;
+      // let value = exception.value;
+      // while (value.value) {
+      //   value = value.value;
+      // }
+      throw exception.value;
     }
     return result;
   };

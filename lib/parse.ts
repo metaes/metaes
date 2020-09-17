@@ -1,4 +1,4 @@
-import * as esprima from "esprima";
+import * as parsingLib from "meriyah";
 import { Program } from "./nodeTypes";
 import { Range } from "./types";
 
@@ -23,12 +23,11 @@ type ParserOptions = {
   comment?: boolean;
   attachComment?: boolean;
   loc?: boolean;
-  source?: boolean;
 };
 
-function esprimaParse(source: string, options: ParserOptions = {}, module: boolean = false) {
+function parseWithLib(source: string, options: ParserOptions = {}, module: boolean = false) {
   try {
-    const { parse, parseModule } = esprima;
+    const { parse, parseModule } = parsingLib;
     return (module ? parseModule : parse)(source, {
       range: true,
       ranges: true,
@@ -36,7 +35,6 @@ function esprimaParse(source: string, options: ParserOptions = {}, module: boole
       next: true,
       attachComment: true,
       loc: true,
-      source: true,
       ...options
     });
   } catch (e) {
@@ -50,10 +48,10 @@ export const parse: Parser = (source, options = {}, cache?, module = false) => {
     if ((ast = cache.get(source))) {
       return ast;
     } else {
-      return cache.set(source, esprimaParse(source, options, module));
+      return cache.set(source, parseWithLib(source, options, module));
     }
   } else {
-    return esprimaParse(source, options, module);
+    return parseWithLib(source, options, module);
   }
 };
 
