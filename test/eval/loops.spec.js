@@ -71,7 +71,7 @@ do {
 } while (i++);
 assert.equal(i, 5);
 
-// test: variable declartor in for-in loop
+// test: variable declarator in for-in loop
 const result = [];
 for (let i in { a: 1, b: 2, c: 3 }) {
   result.push(i);
