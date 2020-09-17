@@ -37,7 +37,7 @@ export const modulesEnv: Interpreters = {
 
 export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, config) =>
   evaluate(
-    { type: "GetValue", name: e.name },
+    get(e.name),
     (value) =>
       value instanceof ImportBinding
         ? evaluate(

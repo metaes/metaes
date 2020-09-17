@@ -192,7 +192,7 @@ export const ThrowStatement: Interpreter<NodeTypes.ThrowStatement> = (e, _c, cer
 
 export const CatchClause: Interpreter<NodeTypes.CatchClause> = (e, c, cerr, env, config) =>
   evaluate(
-    { type: "GetValue", name: ExceptionName },
+    get(ExceptionName),
     (error: MetaesException) =>
       evaluate(
         e.body,

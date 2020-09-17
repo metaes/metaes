@@ -16,7 +16,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
       switch (e.callee.type) {
         case "Super":
           evaluate(
-            { type: "GetValue", name: "this" },
+            get("this"),
             (thisValue) =>
               evaluate(
                 at(e, apply(Object.getPrototypeOf(thisValue).constructor, thisValue, args, e)),
