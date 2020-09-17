@@ -124,7 +124,7 @@ export const MemberExpression: Interpreter<NodeTypes.MemberExpression> = (e, c, 
   evaluate(
     e.object,
     (object) => {
-      function getProperty2() {
+      function getProp() {
         evaluate(
           e.property,
           (property) => evaluate(at(e.property, getProperty(object, property)), c, cerr, env, config),
@@ -134,12 +134,12 @@ export const MemberExpression: Interpreter<NodeTypes.MemberExpression> = (e, c, 
         );
       }
       if (e.computed) {
-        getProperty2();
+        getProp();
       } else {
         switch (e.property.type) {
           case "Identifier":
             if (e.computed) {
-              getProperty2();
+              getProp();
             } else {
               switch (e.property.type) {
                 case "Identifier":
