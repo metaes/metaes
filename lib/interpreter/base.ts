@@ -41,7 +41,6 @@ export const GetProperty: Interpreter<NodeTypes.GetProperty> = ({ object, proper
   }
 };
 
-// TODO: when not using `=` should also incorporate GetValue
 export const SetProperty: Interpreter<NodeTypes.SetProperty> = ({ object, property, value, operator }, c, cerr) => {
   switch (operator) {
     case "=":
