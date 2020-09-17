@@ -65,15 +65,15 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
           const e_callee = e.callee;
 
           evaluate(
-            e_callee.object,
+            e.callee.object,
             (object) => {
               function evalApply(property) {
                 if (typeof property === "function") {
                   evaluate(at(e, apply(property, object, args, e)), c, cerr, env, config);
                 } else {
                   const source = config.script.source;
-                  const callee = typeof source === "string" ? source.substring(...e_callee.range!) : "callee";
-                  cerr(LocatedException(new TypeError(callee + " is not a function"), e_callee));
+                  const callee = typeof source === "string" ? source.substring(...e.callee.range!) : "callee";
+                  cerr(LocatedException(new TypeError(callee + " is not a function"), e.callee));
                 }
               }
               if (!e_callee.computed && e_callee.property.type === "Identifier") {
@@ -100,7 +100,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
             (callee) => {
               try {
                 const cnt = (thisValue?) =>
-                  evaluate(at(e_callee, apply(callee, thisValue, args, e)), c, cerr, env, config);
+                  evaluate(at(e.callee, apply(callee, thisValue, args, e)), c, cerr, env, config);
                 evaluate(at(e.callee, get("this")), cnt, () => cnt(undefined), env, config);
               } catch (error) {
                 cerr(toException(error, e.callee));
