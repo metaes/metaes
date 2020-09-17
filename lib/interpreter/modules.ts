@@ -1,4 +1,4 @@
-import { getEnvironmentBy, GetValue, SetValue } from "../environment";
+import { getEnvironmentBy } from "../environment";
 import { evaluate, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException } from "../exceptions";
 import * as NodeTypes from "../nodeTypes";
@@ -11,12 +11,13 @@ export const ImportModule = "[[ImportModule]]";
 export const ExportBinding = "[[ExportBinding]]";
 
 export const modulesEnv: Interpreters = {
-  [GetBindingValue](value: ImportBinding, c, cerr, env: Environment) {
-    GetValue(
-      { name: ImportModule },
+  [GetBindingValue](value: ImportBinding, c, cerr, env, config) {
+    evaluate(
+      { type: "GetValue", name: ImportModule },
       (importTSModule) => importTSModule(value.modulePath, (mod) => c(mod[value.name]), cerr),
       cerr,
-      env
+      env,
+      config
     );
   },
   [ExportBinding]({ name, value, e }, c, cerr, env, config) {
@@ -99,11 +100,12 @@ export const ExportNamedDeclaration: Interpreter<NodeTypes.ExportNamedDeclaratio
             )
           );
       }
-      GetValue(
-        { name: ExportBinding },
+      evaluate(
+        { type: "GetValue", name: ExportBinding },
         (exportBinding) => exportBinding({ name, value: toExport, e: e.declaration }, c, cerr, env, config),
         cerr,
-        env
+        env,
+        config
       );
     },
     cerr,
@@ -115,11 +117,12 @@ export const ExportDefaultDeclaration: Interpreter<NodeTypes.ExportDefaultDeclar
   evaluate(
     e.declaration,
     (value) =>
-      GetValue(
-        { name: ExportBinding },
+      evaluate(
+        { type: "GetValue", name: ExportBinding },
         (exportBinding) => exportBinding({ name: "default", value, e: e.declaration }, c, cerr, env, config),
         cerr,
-        env
+        env,
+        config
       ),
     cerr,
     env,
@@ -130,7 +133,7 @@ export class ImportBinding {
   constructor(public name: string, public modulePath: string) {}
 }
 
-export const ImportDeclaration: Interpreter<NodeTypes.ImportDeclaration> = (e, c, cerr, env) =>
+export const ImportDeclaration: Interpreter<NodeTypes.ImportDeclaration> = (e, c, cerr, env, config) =>
   visitArray(
     e.specifiers,
     (specifier, c, cerr) => {
@@ -140,10 +143,22 @@ export const ImportDeclaration: Interpreter<NodeTypes.ImportDeclaration> = (e, c
       switch (specifier.type) {
         case "ImportNamespaceSpecifier":
         case "ImportDefaultSpecifier":
-          SetValue({ name, value: new ImportBinding("default", modulePath), isDeclaration: true }, c, cerr, env);
+          evaluate(
+            { type: "SetValue", name, value: new ImportBinding("default", modulePath), isDeclaration: true },
+            c,
+            cerr,
+            env,
+            config
+          );
           break;
         case "ImportSpecifier":
-          SetValue({ name, value: new ImportBinding(name, modulePath), isDeclaration: true }, c, cerr, env);
+          evaluate(
+            { type: "SetValue", name, value: new ImportBinding(name, modulePath), isDeclaration: true },
+            c,
+            cerr,
+            env,
+            config
+          );
           break;
         default:
           cerr(NotImplementedException(`${specifier["type"]} import specifier is not supported yet.`, specifier));

@@ -1,5 +1,5 @@
 import { callcc } from "../callcc";
-import { getEnvironmentForValue, GetValue, GetValueSync } from "../environment";
+import { getEnvironmentForValue, GetValueSync } from "../environment";
 import { evaluate, evaluateArray, getLocRangeOf, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
@@ -15,8 +15,8 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
       args = args.reduce(concatSpreads, []);
       switch (e.callee.type) {
         case "Super":
-          GetValue(
-            { name: "this" },
+          evaluate(
+            { type: "GetValue", name: "this" },
             (thisValue) =>
               evaluate(
                 {
@@ -33,7 +33,8 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
                 config
               ),
             cerr,
-            env
+            env,
+            config
           );
           break;
         case "Identifier":
@@ -248,7 +249,14 @@ export const AssignmentExpression: Interpreter<NodeTypes.AssignmentExpression> =
                   e_left.property,
                   (property) =>
                     evaluate(
-                      { type: "SetProperty", object, property, value: right, operator: e.operator },
+                      {
+                        type: "SetProperty",
+                        object,
+                        property,
+                        value: right,
+                        operator: e.operator,
+                        ...getLocRangeOf(e)
+                      },
                       c,
                       cerr,
                       env,
