@@ -12,7 +12,6 @@ import {
   PartialErrorContinuation
 } from "./types";
 
-export const posAt = ({ loc, range }: ASTNode) => ({ loc, range });
 export const at = <T>({ loc, range }: ASTNode, rest: T) => <const>{ loc, range, ...rest };
 export const declare = (name: string, value: any) => <const>{ type: "SetValue", name, value, isDeclaration: true };
 export const get = (name: string) => <const>{ type: "GetValue", name };
