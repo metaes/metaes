@@ -14,7 +14,7 @@ export const modulesEnv: Interpreters = {
   [GetBindingValueName](value: ImportBinding, c, cerr, env, config) {
     evaluate(
       get(ImportModuleName),
-      (importTSModule) => importTSModule(value.modulePath, (mod) => c(mod[value.name]), cerr),
+      (importModule) => importModule(value.modulePath, (mod) => c(mod[value.name]), cerr),
       cerr,
       env,
       config
