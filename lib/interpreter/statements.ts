@@ -1,5 +1,5 @@
 import { GetValueSync } from "../environment";
-import { evaluate, evaluateArray, visitArray, getTrampolineScheduler, getLocRangeOf } from "../evaluate";
+import { at, declare, evaluate, evaluateArray, get, getTrampolineScheduler, set, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
@@ -9,13 +9,7 @@ const hoistDeclarations: Interpreter<NodeTypes.Statement[]> = (e, c, cerr, env, 
   visitArray(
     e.filter((e) => e.type === "FunctionDeclaration") as NodeTypes.FunctionDeclaration[],
     (e, c, cerr) =>
-      evaluate(
-        e,
-        (value) => evaluate({ type: "SetValue", name: e.id.name, value, isDeclaration: true }, c, cerr, env, config),
-        cerr,
-        env,
-        config
-      ),
+      evaluate(e, (value) => evaluate(declare(e.id.name, value), c, cerr, env, config), cerr, env, config),
     c,
     cerr
   );
@@ -39,7 +33,7 @@ export const VariableDeclarator: Interpreter<NodeTypes.VariableDeclarator> = (e,
   function assign(rightValue) {
     switch (e.id.type) {
       case "Identifier":
-        evaluate({ type: "SetValue", name: e.id.name, value: rightValue, isDeclaration: true }, c, cerr, env, config);
+        evaluate(declare(e.id.name, rightValue), c, cerr, env, config);
         break;
       case "ObjectPattern":
         evaluate(e.id, c, cerr, { values: rightValue, prev: env, internal: true }, config);
@@ -51,27 +45,10 @@ export const VariableDeclarator: Interpreter<NodeTypes.VariableDeclarator> = (e,
           function (element, c, cerr) {
             switch (element.type) {
               case "Identifier":
-                evaluate(
-                  { type: "SetValue", name: element.name, value: rightValue[index++], isDeclaration: true },
-                  c,
-                  cerr,
-                  env,
-                  config
-                );
+                evaluate(declare(element.name, rightValue[index++]), c, cerr, env, config);
                 break;
               case "RestElement":
-                evaluate(
-                  {
-                    type: "SetValue",
-                    name: element.argument.name,
-                    value: rightValue.slice(index),
-                    isDeclaration: true
-                  },
-                  c,
-                  cerr,
-                  env,
-                  config
-                );
+                evaluate(declare(element.argument.name, rightValue.slice(index)), c, cerr, env, config);
                 break;
               default:
                 cerr(NotImplementedException(`'${element["type"]}' ArrayPattern element is not supported.`, element));
@@ -106,19 +83,7 @@ export const ObjectPattern: Interpreter<NodeTypes.ObjectPattern> = (e, c, cerr, 
             function assignValue(value?) {
               switch (property.value.type) {
                 case "Identifier":
-                  evaluate(
-                    {
-                      type: "SetValue",
-                      name: property.value.name,
-                      value,
-                      isDeclaration: true,
-                      ...getLocRangeOf(property)
-                    },
-                    c,
-                    cerr,
-                    env,
-                    config
-                  );
+                  evaluate(at(property, declare(property.value.name, value)), c, cerr, env, config);
                   break;
                 case "ObjectPattern":
                   if (value) {
@@ -137,7 +102,7 @@ export const ObjectPattern: Interpreter<NodeTypes.ObjectPattern> = (e, c, cerr, 
               }
             }
             evaluate(
-              { type: "GetValue", name: keyName, ...getLocRangeOf(property) },
+              at(property, get(keyName)),
               assignValue,
               (e) => (e.value instanceof ReferenceError ? assignValue() : cerr(e)),
               env,
@@ -156,28 +121,12 @@ export const ObjectPattern: Interpreter<NodeTypes.ObjectPattern> = (e, c, cerr, 
 export const AssignmentPattern: Interpreter<NodeTypes.AssignmentPattern> = (e, c, cerr, env, config) => {
   if (e.left.type === "Identifier") {
     function assignRight() {
-      evaluate(
-        e.right,
-        (right) =>
-          evaluate({ type: "SetValue", name: e.left.name, value: right, isDeclaration: true }, c, cerr, env, config),
-        cerr,
-        env,
-        config
-      );
+      evaluate(e.right, (right) => evaluate(declare(e.left.name, right), c, cerr, env, config), cerr, env, config);
     }
 
     evaluate(
-      { type: "GetValue", name: e.left.name, ...getLocRangeOf(e.left) },
-      (value) =>
-        value
-          ? evaluate(
-              { type: "SetValue", name: e.left.name, isDeclaration: true, value, ...getLocRangeOf(e.left) },
-              c,
-              cerr,
-              env,
-              config
-            )
-          : assignRight(),
+      at(e.left, get(e.left.name)),
+      (value) => (value ? evaluate(at(e.left, declare(e.left.name, value)), c, cerr, env, config) : assignRight()),
       assignRight,
       env,
       config
@@ -287,13 +236,7 @@ export const ForInStatement: Interpreter<NodeTypes.ForInStatement> = (e, c, cerr
           visitArray(
             Object.keys(right),
             (name, c, cerr) =>
-              evaluate(
-                { type: "SetValue", name: left.name, value: name, isDeclaration: false, ...getLocRangeOf(left) },
-                () => evaluate(e.body, c, cerr, env, config),
-                cerr,
-                env,
-                config
-              ),
+              evaluate(at(left, set(left.name, name)), () => evaluate(e.body, c, cerr, env, config), cerr, env, config),
             c,
             cerr
           );
@@ -305,7 +248,7 @@ export const ForInStatement: Interpreter<NodeTypes.ForInStatement> = (e, c, cerr
               Object.keys(right),
               (value, c, cerr) =>
                 evaluate(
-                  { type: "SetValue", name, value, isDeclaration: true, ...getLocRangeOf(declaration0) },
+                  at(declaration0, declare(name, value)),
                   () => evaluate(e.body, c, cerr, bodyEnv, config),
                   cerr,
                   env,
@@ -401,7 +344,7 @@ export const ForOfStatement: Interpreter<NodeTypes.ForOfStatement> = (e, c, cerr
             right,
             (value, c, cerr) =>
               evaluate(
-                { type: "SetValue", name, value, isDeclaration: true, ...getLocRangeOf(e.right) },
+                at(e.right, declare(name, value)),
                 () => evaluate(e.body, c, cerr, bodyEnv, config),
                 cerr,
                 env,
@@ -485,7 +428,7 @@ export const ClassDeclaration: Interpreter<NodeTypes.ClassDeclaration> = (e, c, 
           },
           () =>
             e.id
-              ? evaluate({ type: "SetValue", name: e.id.name, value: klass, isDeclaration: true }, c, cerr, env, config)
+              ? evaluate(declare(e.id.name, klass), c, cerr, env, config)
               : cerr(NotImplementedException("Not implemented case")),
           cerr
         ),

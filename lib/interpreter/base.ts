@@ -1,11 +1,11 @@
-import { evaluate, getLocRangeOf } from "../evaluate";
+import { at, evaluate, get } from "../evaluate";
 import { NotImplementedException, toException } from "../exceptions";
 import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Interpreter } from "../types";
 
 export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, config) =>
-  evaluate({ type: "GetValue", name: e.name, ...getLocRangeOf(e) }, c, cerr, env, config);
+  evaluate(at(e, get(e.name)), c, cerr, env, config);
 
 export const Literal: Interpreter<NodeTypes.Literal> = (e, c) => c(e.value);
 

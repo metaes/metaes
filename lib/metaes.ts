@@ -1,7 +1,7 @@
 import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { toEnvironment } from "./environment";
 import { evaluate } from "./evaluate";
-import { ExportEnvironment, ImportEnvironment, modulesEnv } from "./interpreter/modules";
+import { ExportEnvironmentSymbol, ImportEnvironmentSymbol, modulesEnv } from "./interpreter/modules";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
 import {
@@ -91,8 +91,8 @@ export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
   );
 
 export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
-  const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironment]: true };
-  const exportsEnv = { prev: importsEnv, values: {}, [ExportEnvironment]: true };
+  const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };
+  const exportsEnv = { prev: importsEnv, values: {}, [ExportEnvironmentSymbol]: true };
 
   safeEvaluate(
     function inject() {

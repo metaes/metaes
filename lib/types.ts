@@ -82,10 +82,12 @@ export interface NodeLoc {
   end: { column: number; line: number };
 }
 
-export interface NodeBase {
+type Position = {
   loc?: NodeLoc;
   range?: [number, number];
-}
+};
+
+export type NodeBase = Position;
 
 export type ASTNode = NodeBase & {
   type: string | any;

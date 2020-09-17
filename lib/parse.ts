@@ -1,4 +1,4 @@
-import * as esprima from "meriyah";
+import * as esprima from "esprima";
 import { Program } from "./nodeTypes";
 import { Range } from "./types";
 

@@ -1,6 +1,7 @@
 import { GetValueSync } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
 import { callInterceptor } from "./metaes";
+import { CallExpression, EvalNode, TaggedTemplateExpression } from "./nodeTypes";
 import {
   ASTNode,
   Continuation,
@@ -10,9 +11,34 @@ import {
   MetaesException,
   PartialErrorContinuation
 } from "./types";
-import { EvalNode } from "./nodeTypes";
 
-export const getLocRangeOf = ({ loc, range }: ASTNode) => ({ loc, range });
+export const posAt = ({ loc, range }: ASTNode) => ({ loc, range });
+export const at = <T>({ loc, range }: ASTNode, rest: T) => <const>{ loc, range, ...rest };
+export const declare = (name: string, value: any) => <const>{ type: "SetValue", name, value, isDeclaration: true };
+export const get = (name: string) => <const>{ type: "GetValue", name };
+export const set = (name: string, value: any) => <const>{ type: "SetValue", name, value, isDeclaration: false };
+export const apply = (
+  fn: Function,
+  thisValue: any | undefined,
+  args: any[] = [],
+  e: CallExpression | TaggedTemplateExpression
+) =>
+  <const>{
+    type: "Apply",
+    fn,
+    thisValue,
+    args,
+    e
+  };
+export const getProperty = (object: any, property: any) => <const>{ type: "GetProperty", object, property };
+export const setProperty = (object: any, property: any, value: any, operator: string) =>
+  <const>{
+    type: "SetProperty",
+    object,
+    property,
+    value,
+    operator
+  };
 
 export function defaultScheduler(fn) {
   fn();

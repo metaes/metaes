@@ -1,33 +1,33 @@
 import { getEnvironmentBy } from "../environment";
-import { evaluate, visitArray } from "../evaluate";
+import { declare, evaluate, get, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException } from "../exceptions";
 import * as NodeTypes from "../nodeTypes";
 import { Environment, Interpreter, Interpreters } from "../types";
 
-export const ImportEnvironment = "[[isImportModule]]";
-export const ExportEnvironment = "[[isExportModule]]";
-export const GetBindingValue = "[[GetBindingValue]]";
-export const ImportModule = "[[ImportModule]]";
-export const ExportBinding = "[[ExportBinding]]";
+export const ImportEnvironmentSymbol = "[[isImportModule]]";
+export const ExportEnvironmentSymbol = "[[isExportModule]]";
+export const GetBindingValueName = "[[GetBindingValue]]";
+export const ImportModuleName = "[[ImportModule]]";
+export const ExportBindingName = "[[ExportBinding]]";
 
 export const modulesEnv: Interpreters = {
-  [GetBindingValue](value: ImportBinding, c, cerr, env, config) {
+  [GetBindingValueName](value: ImportBinding, c, cerr, env, config) {
     evaluate(
-      { type: "GetValue", name: ImportModule },
+      get(ImportModuleName),
       (importTSModule) => importTSModule(value.modulePath, (mod) => c(mod[value.name]), cerr),
       cerr,
       env,
       config
     );
   },
-  [ExportBinding]({ name, value, e }, c, cerr, env, config) {
-    const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironment]);
+  [ExportBindingName]({ name, value, e }, c, cerr, env, config) {
+    const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
     if (exportEnv) {
-      evaluate({ type: "SetValue", name, value, isDeclaration: true }, c, cerr, exportEnv, config);
+      evaluate(declare(name, value), c, cerr, exportEnv, config);
     } else {
       cerr(
         LocatedException(
-          `Couldn't export declaration, no environment with '${ExportEnvironment}' property found.`,
+          `Couldn't export declaration, no environment with '${ExportEnvironmentSymbol}' property found.`,
           e.declaration
         )
       );
@@ -41,7 +41,7 @@ export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, c
     (value) =>
       value instanceof ImportBinding
         ? evaluate(
-            { type: "GetValue", name: "[[GetBindingValue]]" },
+            get(GetBindingValueName),
             (getBindingValue) => getBindingValue(value, c, cerr, env, config),
             cerr,
             env,
@@ -101,7 +101,7 @@ export const ExportNamedDeclaration: Interpreter<NodeTypes.ExportNamedDeclaratio
           );
       }
       evaluate(
-        { type: "GetValue", name: ExportBinding },
+        get(ExportBindingName),
         (exportBinding) => exportBinding({ name, value: toExport, e: e.declaration }, c, cerr, env, config),
         cerr,
         env,
@@ -118,7 +118,7 @@ export const ExportDefaultDeclaration: Interpreter<NodeTypes.ExportDefaultDeclar
     e.declaration,
     (value) =>
       evaluate(
-        { type: "GetValue", name: ExportBinding },
+        get(ExportBindingName),
         (exportBinding) => exportBinding({ name: "default", value, e: e.declaration }, c, cerr, env, config),
         cerr,
         env,
@@ -143,22 +143,10 @@ export const ImportDeclaration: Interpreter<NodeTypes.ImportDeclaration> = (e, c
       switch (specifier.type) {
         case "ImportNamespaceSpecifier":
         case "ImportDefaultSpecifier":
-          evaluate(
-            { type: "SetValue", name, value: new ImportBinding("default", modulePath), isDeclaration: true },
-            c,
-            cerr,
-            env,
-            config
-          );
+          evaluate(declare(name, new ImportBinding("default", modulePath)), c, cerr, env, config);
           break;
         case "ImportSpecifier":
-          evaluate(
-            { type: "SetValue", name, value: new ImportBinding(name, modulePath), isDeclaration: true },
-            c,
-            cerr,
-            env,
-            config
-          );
+          evaluate(declare(name, new ImportBinding(name, modulePath)), c, cerr, env, config);
           break;
         default:
           cerr(NotImplementedException(`${specifier["type"]} import specifier is not supported yet.`, specifier));

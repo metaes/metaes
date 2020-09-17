@@ -3,7 +3,7 @@ import * as path from "path";
 import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 import { getTrampolineScheduler } from "./evaluate";
 import { presentException } from "./exceptions";
-import { ImportModule } from "./interpreter/modules";
+import { ImportModuleName } from "./interpreter/modules";
 import { createScript, metaesEvalModule } from "./metaes";
 import { Continuation, Environment, ErrorContinuation } from "./types";
 
@@ -66,7 +66,7 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
           {
             prev: globalEnv,
             values: {
-              [ImportModule]: localizedImportTSModule(url)
+              [ImportModuleName]: localizedImportTSModule(url)
             }
           },
           {
