@@ -23,7 +23,7 @@ const a = { b: 0 };
 a.b++;
 assert.equal(a.b, 1);
 
-// test: updates member expression
+// test: updates member expression with computed property
 const a = { b: 0 };
 const propName = "b";
 a[propName]++;
