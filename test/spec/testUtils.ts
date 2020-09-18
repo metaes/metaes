@@ -42,7 +42,7 @@ const globalEnv = {
 export function buildTests(folder: string, evalFn: Evaluate, testNamePrefix = "", logError = true) {
   // generate tests on runtime
   before(async () => {
-    const files = (await pify(glob)(`/${folder}/*.spec.js`)).map(async (file) => ({
+    const files = (await pify(glob)(`${folder}/*.spec.js`)).map(async (file) => ({
       name: file,
       contents: (await fs.readFile(file)).toString()
     }));
