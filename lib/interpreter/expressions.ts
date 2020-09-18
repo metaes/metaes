@@ -47,7 +47,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
                       cerr({ type: "Error", value: e, message: "Error in continuation receiver." });
                     }
                   } else {
-                    evaluate(apply(callee, undefined, args, e), c, cerr, env, config);
+                    evaluate(at(e, apply(callee, undefined, args, e)), c, cerr, env, config);
                   }
                 } catch (error) {
                   cerr(toException(error, e.callee));
@@ -99,8 +99,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
             e.callee,
             (callee) => {
               try {
-                const cnt = (thisValue?) =>
-                  evaluate(at(e.callee, apply(callee, thisValue, args, e)), c, cerr, env, config);
+                const cnt = (thisValue?) => evaluate(at(e, apply(callee, thisValue, args, e)), c, cerr, env, config);
                 evaluate(at(e.callee, get("this")), cnt, () => cnt(undefined), env, config);
               } catch (error) {
                 cerr(toException(error, e.callee));
