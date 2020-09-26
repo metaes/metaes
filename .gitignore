@@ -10,6 +10,3 @@ build
 .vscode
 
 !test/eval/**/*.js
-!test/eval_module/**/*.js
-lib/test.run.ts
-metaes.js

@@ -19,9 +19,10 @@
     "test:local": "mocha --recursive test/spec test/runner",
     "test:interpreter-only": "mocha test/runner.js test/spec/callcc.spec.js ",
     "dist:compile": "tsc -p tsconfig-build.json --declaration",
+    "create-build-folder": "rm -rf build; mkdir -p build/lib",
     "dist:copy": "cp package.json README.md tsconfig.json .npmignore build/lib",
-    "dist:dry": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish --dry-run",
-    "dist": "npm run dist:compile; npm run dist:copy; cd build/lib; npm publish"
+    "dist:dry": "npm run create-build-folder; npm run dist:compile; npm run dist:copy; cd build/lib; npm publish --dry-run",
+    "dist": "npm run create-build-folder; npm run dist:compile; npm run dist:copy; cd build/lib; npm publish"
   },
   "repository": {
     "type": "git",
@@ -29,7 +30,7 @@
   },
   "main": "metaes",
   "license": "MIT",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "devDependencies": {
     "@types/chai": "^4.2.0",
     "@types/node": "^8.10.52",
@@ -43,7 +44,6 @@
     "typescript": "^3.9.3"
   },
   "dependencies": {
-    "esprima": "^4.0.1",
     "meriyah": "^2.1.1"
   }
 }

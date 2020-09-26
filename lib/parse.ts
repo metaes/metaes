@@ -4,7 +4,7 @@ import { Range } from "./types";
 
 export type Parser = (source: string, options?: ParserOptions, cache?: ParseCache, module?: boolean) => Program;
 
-interface EsprimaError {
+interface ParseErrorDetail {
   message: string;
   lineNumber: number;
   description: string;
@@ -13,7 +13,7 @@ interface EsprimaError {
 }
 
 export class ParseError extends Error {
-  constructor(public error: EsprimaError) {
+  constructor(public error: ParseErrorDetail) {
     super(error.message);
   }
 }
@@ -48,7 +48,7 @@ export const parse: Parser = (source, options = {}, cache?, module = false) => {
     if ((ast = cache.get(source))) {
       return ast;
     } else {
-      return cache.set(source, parseWithLib(source, options, module));
+      return cache.set(source, parseWithLib(source, options, module) as Program);
     }
   } else {
     return parseWithLib(source, options, module);
