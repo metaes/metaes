@@ -1,7 +1,7 @@
+import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { toEnvironment } from "./environment";
 import { evaluate } from "./evaluate";
-import { ExportEnvironmentSymbol, ImportEnvironmentSymbol } from "./interpreter/modules";
-import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
+import { ExportEnvironmentSymbol, ImportEnvironmentSymbol, modulesEnv } from "./interpreter/modules";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
 import {
@@ -13,7 +13,8 @@ import {
   EvaluationConfig,
   Phase,
   Script,
-  Source
+  Source,
+  ScriptType
 } from "./types";
 
 export interface Context {
@@ -24,7 +25,7 @@ let scriptIdsCounter = 0;
 
 export const nextScriptId = () => "" + scriptIdsCounter++;
 
-export function createScript(source: Source, cache?: ParseCache, useModule: boolean = false): Script {
+export function createScript(source: Source, cache?: ParseCache, type: ScriptType = "script"): Script {
   const scriptId = nextScriptId();
 
   if (typeof source === "object") {
@@ -32,9 +33,9 @@ export function createScript(source: Source, cache?: ParseCache, useModule: bool
   } else if (typeof source === "function") {
     return { source, ast: parseFunction(source, cache), scriptId };
   } else if (typeof source === "string") {
-    const script: Script = { source, ast: parse(source, {}, cache, useModule), scriptId };
-    if (useModule) {
-      script.isModule = useModule;
+    const script: Script = { source, ast: parse(source, {}, cache, type === "module"), scriptId };
+    if (type === "module") {
+      script.type = type;
     }
     return script;
   } else {
@@ -42,8 +43,8 @@ export function createScript(source: Source, cache?: ParseCache, useModule: bool
   }
 }
 
-export function toScript(input: Source | Script, cache?: ParseCache, useModule: boolean = false) {
-  return isScript(input) ? input : createScript(input, cache, useModule);
+export function toScript(input: Source | Script, cache?: ParseCache, type: ScriptType = "script") {
+  return isScript(input) ? input : createScript(input, cache, type);
 }
 
 export function isScript(script: any): script is Script {
@@ -80,7 +81,7 @@ export const safeEvaluate: Evaluate = (
   }
 };
 
-export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
+export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
   safeEvaluate(
     function inject() {
       return { script: toScript(input), config: { ...BaseConfig, ...config }, env: toEnvironment(env) };
@@ -88,20 +89,15 @@ export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
     c,
     cerr
   );
-};
 
 export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
-  const importsEnv = { values: {}, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };
-  const exportsEnv: Environment = {
-    prev: importsEnv,
-    values: {},
-    [ExportEnvironmentSymbol]: true
-  };
+  const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };
+  const exportsEnv = { prev: importsEnv, values: {}, [ExportEnvironmentSymbol]: true };
 
   safeEvaluate(
     function inject() {
       return {
-        script: toScript(input, undefined, true),
+        script: toScript(input, undefined, "module"),
         config: { ...BaseConfig, interpreters: ModuleECMAScriptInterpreters, ...config },
         env: { values: {}, prev: exportsEnv }
       };

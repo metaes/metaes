@@ -1,48 +1,47 @@
-import { evaluate } from "../evaluate";
-import { NotImplementedException } from "../exceptions";
+import { at, evaluate, get } from "../evaluate";
+import { NotImplementedException, toException } from "../exceptions";
 import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
-import { Environment } from "../types";
+import { Interpreter } from "../types";
 
-export function Identifier(e: NodeTypes.Identifier, c, cerr, env: Environment, config) {
-  evaluate(
-    { type: "GetValue", name: e.name },
-    c,
-    exception => {
-      exception.location = e;
-      cerr(exception);
-    },
-    env,
-    config
-  );
-}
+export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, config) =>
+  evaluate(at(e, get(e.name)), c, cerr, env, config);
 
-export function Literal(e: NodeTypes.Literal, c) {
-  c(e.value);
-}
+export const Literal: Interpreter<NodeTypes.Literal> = (e, c) => c(e.value);
 
-export function Apply({ fn, thisValue, args }: NodeTypes.Apply, c, cerr, _env, config) {
+const { call, apply } = Function.prototype;
+
+export const Apply: Interpreter<NodeTypes.Apply> = ({ fn, thisValue, args }, c, cerr, _env, config) => {
   try {
     if (isMetaFunction(fn)) {
       evaluateMetaFunction(getMetaFunction(fn), c, cerr, thisValue, args, config);
+    }
+    // TODO: add tests
+    else if (isMetaFunction(thisValue) && (fn === call || fn === apply)) {
+      evaluateMetaFunction(getMetaFunction(thisValue), c, cerr, undefined, args, config);
     } else {
       c(fn.apply(thisValue, args));
     }
   } catch (e) {
     cerr(e);
   }
-}
+};
 
-export function GetProperty({ object, property }: NodeTypes.GetProperty, c, cerr, _env, _config) {
-  try {
-    c(object[property]);
-  } catch (e) {
-    cerr(e);
+export const GetProperty: Interpreter<NodeTypes.GetProperty> = ({ object, property }, c, cerr, _env, _config) => {
+  if (object) {
+    try {
+      c(object[property]);
+    } catch (e) {
+      cerr(toException(e));
+    }
+  } else {
+    cerr(
+      toException(new TypeError(`Cannot read property '${property}' of ${object === null ? "null" : typeof object}`))
+    );
   }
-}
+};
 
-// TODO: when not using `=` should also incorporate GetValue
-export function SetProperty({ object, property, value, operator }: NodeTypes.SetProperty, c, cerr) {
+export const SetProperty: Interpreter<NodeTypes.SetProperty> = ({ object, property, value, operator }, c, cerr) => {
   switch (operator) {
     case "=":
       c((object[property] = value));
@@ -83,7 +82,7 @@ export function SetProperty({ object, property, value, operator }: NodeTypes.Set
     default:
       cerr(NotImplementedException(`Operator '${operator}' is not supported.`));
   }
-}
+};
 
 export default {
   Identifier,

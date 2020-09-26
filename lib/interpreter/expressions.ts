@@ -1,29 +1,38 @@
 import { callcc } from "../callcc";
-import { getEnvironmentForValue } from "../environment";
-import { evaluate, evaluateArray } from "../evaluate";
-import { LocatedError, NotImplementedException, toException } from "../exceptions";
-import { createMetaFunction } from "../metafunction";
+import { getEnvironmentForValue, GetValueSync } from "../environment";
+import { apply, at, evaluate, evaluateArray, get, getProperty, set, setProperty, visitArray } from "../evaluate";
+import { LocatedException, NotImplementedException, toException } from "../exceptions";
+import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
-import { Continuation, Environment, ErrorContinuation, EvaluationConfig } from "../types";
-import { IfStatement } from "./statements";
+import { Interpreter } from "../types";
 
-export function CallExpression(
-  e: NodeTypes.CallExpression,
-  c: Continuation,
-  cerr: ErrorContinuation,
-  env: Environment,
-  config: EvaluationConfig
-) {
+const concatSpreads = (all, next) => (next instanceof SpreadElementValue ? all.concat(next.value) : all.concat([next]));
+
+export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr, env, config) =>
   evaluateArray(
     e.arguments,
     (args) => {
-      args = args.reduce(
-        (total, next) => (next instanceof SpreadElementValue ? total.concat(next.value) : total.concat([next])),
-        []
-      );
+      args = args.reduce(concatSpreads, []);
       switch (e.callee.type) {
+        case "Super":
+          evaluate(
+            get("this"),
+            (thisValue) =>
+              evaluate(
+                at(e, apply(Object.getPrototypeOf(thisValue).constructor, thisValue, args, e)),
+                c,
+                cerr,
+                env,
+                config
+              ),
+            cerr,
+            env,
+            config
+          );
+          break;
         case "Identifier":
         case "FunctionExpression":
+        case "ConditionalExpression":
         case "CallExpression":
           evaluate(
             e.callee,
@@ -35,16 +44,16 @@ export function CallExpression(
                       const [receiver, _arguments] = args;
                       receiver(_arguments, c, cerr, env, config);
                     } catch (e) {
-                      cerr({ value: e, message: "Error in continuation receiver." });
+                      cerr({ type: "Error", value: e, message: "Error in continuation receiver." });
                     }
                   } else {
-                    evaluate({ type: "Apply", e, fn: callee, args }, c, cerr, env, config);
+                    evaluate(at(e, apply(callee, undefined, args, e)), c, cerr, env, config);
                   }
                 } catch (error) {
                   cerr(toException(error, e.callee));
                 }
               } else {
-                cerr(new TypeError(callee + " is not a function"));
+                cerr(toException(new TypeError(callee + " is not a function"), e.callee));
               }
             },
             cerr,
@@ -53,26 +62,27 @@ export function CallExpression(
           );
           break;
         case "MemberExpression":
-          const e_callee = e.callee as NodeTypes.MemberExpression;
+          const e_callee = e.callee;
+
           evaluate(
-            e_callee.object,
+            e.callee.object,
             (object) => {
               function evalApply(property) {
-                evaluate({ type: "Apply", e, fn: property, thisValue: object, args }, c, cerr, env, config);
+                if (typeof property === "function") {
+                  evaluate(at(e, apply(property, object, args, e)), c, cerr, env, config);
+                } else {
+                  const source = config.script.source;
+                  const callee = typeof source === "string" ? source.substring(...e.callee.range!) : "callee";
+                  cerr(LocatedException(new TypeError(callee + " is not a function"), e.callee));
+                }
               }
               if (!e_callee.computed && e_callee.property.type === "Identifier") {
-                evaluate(
-                  { type: "GetProperty", object, property: e_callee.property.name },
-                  evalApply,
-                  cerr,
-                  env,
-                  config
-                );
+                evaluate(at(e_callee, getProperty(object, e_callee.property.name)), evalApply, cerr, env, config);
               } else {
                 evaluate(
                   e_callee.property,
                   (propertyValue) =>
-                    evaluate({ type: "GetProperty", object, property: propertyValue }, evalApply, cerr, env, config),
+                    evaluate(at(e_callee, getProperty(object, propertyValue)), evalApply, cerr, env, config),
                   cerr,
                   env,
                   config
@@ -89,9 +99,8 @@ export function CallExpression(
             e.callee,
             (callee) => {
               try {
-                const cnt = (thisValue?) =>
-                  evaluate({ type: "Apply", e, fn: callee, thisValue, args }, c, cerr, env, config);
-                evaluate({ type: "GetValue", name: "this" }, cnt, () => cnt(undefined), env, config);
+                const cnt = (thisValue?) => evaluate(at(e, apply(callee, thisValue, args, e)), c, cerr, env, config);
+                evaluate(at(e.callee, get("this")), cnt, () => cnt(undefined), env, config);
               } catch (error) {
                 cerr(toException(error, e.callee));
               }
@@ -102,60 +111,43 @@ export function CallExpression(
           );
           break;
         default:
-          cerr({
-            type: "NotImplemented",
-            message: `This kind of callee node ('${e.callee.type}') is not supported yet.`,
-            location: e.callee
-          });
+          cerr(NotImplementedException(`'${e.callee["type"]}' callee node is not supported yet.`, e.callee));
       }
     },
     cerr,
     env,
     config
   );
-}
 
-export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, config) {
+export const MemberExpression: Interpreter<NodeTypes.MemberExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.object,
     (object) => {
-      if (e.computed) {
+      function getProp() {
         evaluate(
           e.property,
-          (property) => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
+          (property) => evaluate(at(e.property, getProperty(object, property)), c, cerr, env, config),
           cerr,
           env,
           config
         );
+      }
+      if (e.computed) {
+        getProp();
       } else {
         switch (e.property.type) {
           case "Identifier":
             if (e.computed) {
-              // TODO: dry?
-              evaluate(
-                e.property,
-                (property) => evaluate({ type: "GetProperty", object, property }, c, cerr, env, config),
-                cerr,
-                env,
-                config
-              );
+              getProp();
             } else {
               switch (e.property.type) {
                 case "Identifier":
-                  try {
-                    evaluate({ type: "GetProperty", object, property: e.property.name }, c, cerr, env, config);
-                  } catch (e) {
-                    cerr(toException(e, e.property));
-                  }
+                  evaluate(at(e.property, getProperty(object, e.property.name)), c, cerr, env, config);
                   break;
                 default:
                   cerr(NotImplementedException(`Not implemented ${e.property["type"]} property type of ${e.type}`));
               }
             }
-            break;
-          case "Literal":
-            // TODO: use GetProperty
-            evaluate(e.property, c, cerr, { values: object }, config);
             break;
           default:
             cerr(NotImplementedException("This kind of member expression is not supported yet."));
@@ -166,38 +158,35 @@ export function MemberExpression(e: NodeTypes.MemberExpression, c, cerr, env, co
     env,
     config
   );
-}
 
-function _createMetaFunction(
-  e: NodeTypes.ArrowFunctionExpression | NodeTypes.FunctionExpression,
+const _createMetaFunction: Interpreter<NodeTypes.ArrowFunctionExpression | NodeTypes.FunctionExpression> = (
+  e,
   c,
   cerr,
   env,
   config
-) {
+) => {
   try {
     c(createMetaFunction(e, env, config));
   } catch (error) {
-    cerr(LocatedError(error, e));
+    cerr(LocatedException(error, e));
   }
-}
+};
 
-export function ArrowFunctionExpression(e: NodeTypes.ArrowFunctionExpression, c, cerr, env, config) {
+export const ArrowFunctionExpression: Interpreter<NodeTypes.ArrowFunctionExpression> = (e, c, cerr, env, config) =>
   _createMetaFunction(e, c, cerr, env, config);
-}
 
-export function FunctionExpression(e: NodeTypes.FunctionExpression, c, cerr, env, config) {
+export const FunctionExpression: Interpreter<NodeTypes.FunctionExpression> = (e, c, cerr, env, config) =>
   _createMetaFunction(e, c, cerr, env, config);
-}
 
-export function AssignmentExpression(e: NodeTypes.AssignmentExpression, c, cerr, env, config: EvaluationConfig) {
+export const AssignmentExpression: Interpreter<NodeTypes.AssignmentExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.right,
     (right) => {
       const e_left = e.left;
       switch (e_left.type) {
         case "Identifier":
-          evaluate({ type: "SetValue", name: e_left.name, value: right, isDeclaration: false }, c, cerr, env, config);
+          evaluate(at(e_left, set(e_left.name, right)), c, cerr, env, config);
           break;
         case "MemberExpression":
           evaluate(
@@ -207,21 +196,15 @@ export function AssignmentExpression(e: NodeTypes.AssignmentExpression, c, cerr,
               if (e_left.computed) {
                 evaluate(
                   e_left.property,
-                  (property) =>
-                    evaluate(
-                      { type: "SetProperty", object, property, value: right, operator: e.operator },
-                      c,
-                      cerr,
-                      env,
-                      config
-                    ),
+                  (property) => evaluate(at(e, setProperty(object, property, right, e.operator)), c, cerr, env, config),
                   cerr,
                   env,
                   config
                 );
               } else if (property.type === "Identifier") {
                 evaluate(
-                  { type: "SetProperty", object, property: property.name, value: right, operator: e.operator },
+                  at(e, setProperty(object, property.name, right, e.operator)),
+
                   c,
                   cerr,
                   env,
@@ -244,27 +227,34 @@ export function AssignmentExpression(e: NodeTypes.AssignmentExpression, c, cerr,
     env,
     config
   );
-}
 
-export function ObjectExpression(e: NodeTypes.ObjectExpression, c, cerr, env, config) {
-  evaluateArray(
+export const ObjectExpression: Interpreter<NodeTypes.ObjectExpression> = (e, c, cerr, env, config) => {
+  let result = {};
+  visitArray(
     e.properties,
-    (properties) => {
-      const object = {};
-      for (let { key, value } of properties) {
-        object[key] = value;
-      }
-      c(object);
-    },
-    cerr,
-    env,
-    config
+    (itemNode, c, cerr) =>
+      evaluate(
+        itemNode,
+        function (item) {
+          if (item instanceof SpreadElementValue) {
+            c((result = Object.assign(result, item.value)));
+          } else {
+            const { key, value } = item;
+            c((result[key] = value));
+          }
+        },
+        cerr,
+        env,
+        config
+      ),
+    () => c(result),
+    cerr
   );
-}
+};
 
-export function Property(e: NodeTypes.Property, c, cerr, env, config) {
+export const Property: Interpreter<NodeTypes.Property> = (e, c, cerr, env, config) => {
   if (e.computed) {
-    cerr(NotImplementedException("Computed properties are not supported yet."));
+    evaluate(e.key, (key) => evaluate(e.value, (value) => c({ key, value }), cerr, env, config), cerr, env, config);
   } else {
     let key;
     switch (e.key.type) {
@@ -280,9 +270,9 @@ export function Property(e: NodeTypes.Property, c, cerr, env, config) {
     }
     evaluate(e.value, (value) => c({ key, value }), cerr, env, config);
   }
-}
+};
 
-export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, config) {
+export const BinaryExpression: Interpreter<NodeTypes.BinaryExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.left,
     (left) => {
@@ -354,7 +344,7 @@ export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, co
               c(left | right);
               break;
             default:
-              cerr(NotImplementedException(e.type + ` operator "${e.operator}" is not implemented yet.`));
+              cerr(NotImplementedException(e.type + ` operator "${e.operator}" is not implemented yet.`, e));
           }
         },
         cerr,
@@ -366,13 +356,11 @@ export function BinaryExpression(e: NodeTypes.BinaryExpression, c, cerr, env, co
     env,
     config
   );
-}
 
-export function ArrayExpression(e: NodeTypes.ArrayExpression, c, cerr, env, config) {
-  evaluateArray(e.elements, c, cerr, env, config);
-}
+export const ArrayExpression: Interpreter<NodeTypes.ArrayExpression> = (e, c, cerr, env, config) =>
+  evaluateArray(e.elements, (values) => c(values.reduce(concatSpreads, [])), cerr, env, config);
 
-export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) {
+export const NewExpression: Interpreter<NodeTypes.NewExpression> = (e, c, cerr, env, config) =>
   evaluateArray(
     e.arguments,
     (args) => {
@@ -380,39 +368,51 @@ export function NewExpression(e: NodeTypes.NewExpression, c, cerr, env, config) 
 
       switch (calleeNode.type) {
         case "MemberExpression":
-          evaluate(calleeNode, onValue, cerr, env, config);
-          break;
+        case "CallExpression":
         case "Identifier":
-          evaluate({ type: "GetValue", name: calleeNode.name }, onValue, cerr, env, config);
-
-          function onValue(callee) {
-            if (typeof callee !== "function") {
-              cerr(LocatedError(new TypeError(typeof callee + " is not a function"), e));
-            } else {
-              try {
-                c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
-              } catch (error) {
-                cerr(toException(error, calleeNode));
+          evaluate(
+            calleeNode,
+            function (callee) {
+              if (isMetaFunction(callee)) {
+                const newThis = Object.create(callee.prototype);
+                evaluateMetaFunction(
+                  getMetaFunction(callee),
+                  (value) => c(typeof value === "object" ? value : newThis),
+                  cerr,
+                  newThis,
+                  args,
+                  config
+                );
+              } else {
+                if (typeof callee !== "function") {
+                  cerr(LocatedException(new TypeError(typeof callee + " is not a function"), e));
+                } else {
+                  try {
+                    c(new (Function.prototype.bind.apply(callee, [undefined].concat(args)))());
+                  } catch (error) {
+                    cerr(toException(error, calleeNode));
+                  }
+                }
               }
-            }
-          }
-
+            },
+            cerr,
+            env,
+            config
+          );
           break;
         default:
-          cerr(NotImplementedException(`This type of callee is not supported yet.`));
+          cerr(NotImplementedException(`${calleeNode["type"]} type of callee is not supported yet.`));
       }
     },
     cerr,
     env,
     config
   );
-}
 
-export function SequenceExpression(e: NodeTypes.SequenceExpression, c, cerr, env, config) {
+export const SequenceExpression: Interpreter<NodeTypes.SequenceExpression> = (e, c, cerr, env, config) =>
   evaluateArray(e.expressions, (results) => (results.length ? c(results[results.length - 1]) : c()), cerr, env, config);
-}
 
-export function LogicalExpression(e: NodeTypes.LogicalExpression, c, cerr, env, config) {
+export const LogicalExpression: Interpreter<NodeTypes.LogicalExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.left,
     (left) => {
@@ -428,54 +428,57 @@ export function LogicalExpression(e: NodeTypes.LogicalExpression, c, cerr, env, 
     env,
     config
   );
-}
 
-export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: Environment, config) {
+export const UpdateExpression: Interpreter<NodeTypes.UpdateExpression> = (e, c, cerr, env, config) => {
+  function performUpdate(container, identifierName) {
+    try {
+      if (e.prefix) {
+        switch (e.operator) {
+          case "++":
+            c(++container[identifierName]);
+            break;
+          case "--":
+            c(--container[identifierName]);
+            break;
+          default:
+            throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
+        }
+      } else {
+        switch (e.operator) {
+          case "++":
+            c(container[identifierName]++);
+            break;
+          case "--":
+            c(container[identifierName]--);
+            break;
+          default:
+            throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
+        }
+      }
+    } catch (e) {
+      cerr(e);
+    }
+  }
+  let identifierName;
   switch (e.argument.type) {
     case "Identifier":
-      const propName = e.argument.name;
-      evaluate(
-        { type: "GetValue", name: propName },
-        (_) => {
-          // discard found value
-          // if value is found, there must be an env for that value, don't check for negative case
-          // TODO: integrate with `getEnvironmentForValue`
-          let foundEnv: Environment = env;
-          while (!(propName in foundEnv.values)) {
-            foundEnv = foundEnv.prev!;
-          }
-          try {
-            if (e.prefix) {
-              switch (e.operator) {
-                case "++":
-                  c(++foundEnv.values[propName]);
-                  break;
-                case "--":
-                  c(--foundEnv.values[propName]);
-                  break;
-                default:
-                  throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
-              }
-            } else {
-              switch (e.operator) {
-                case "++":
-                  c(foundEnv.values[propName]++);
-                  break;
-                case "--":
-                  c(foundEnv.values[propName]--);
-                  break;
-                default:
-                  throw NotImplementedException(`Support of operator of type '${e.operator}' not implemented yet.`);
-              }
-            }
-          } catch (e) {
-            cerr(e);
-          }
-        },
-        cerr,
-        env,
-        config
-      );
+      identifierName = e.argument.name;
+      const variableEnv = getEnvironmentForValue(env, identifierName)!;
+      performUpdate(variableEnv.values, identifierName);
+      break;
+    case "MemberExpression":
+      const arg = e.argument;
+      if (arg.property.type === "Identifier") {
+        const cont = (identifierName) =>
+          evaluate(arg.object, (object) => performUpdate(object, identifierName), cerr, env, config);
+        if (arg.computed) {
+          evaluate(arg.property, cont, cerr, env, config);
+        } else {
+          cont(arg.property.name);
+        }
+      } else {
+        cerr(NotImplementedException("Only identifiers are supported.", arg));
+      }
       break;
     default:
       cerr(
@@ -484,9 +487,9 @@ export function UpdateExpression(e: NodeTypes.UpdateExpression, c, cerr, env: En
         )
       );
   }
-}
+};
 
-export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Environment, config) {
+export const UnaryExpression: Interpreter<NodeTypes.UnaryExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.argument,
     (argument) => {
@@ -510,16 +513,46 @@ export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Envi
           c(void argument);
           break;
         case "delete":
-          if (e.argument.type === "Identifier") {
-            const name = e.argument.name;
-            const variableEnv = getEnvironmentForValue(env, name);
-            try {
-              c(variableEnv!.values[name]);
-            } catch (e) {
-              cerr(e);
+          switch (e.argument.type) {
+            case "Identifier":
+              const name = e.argument.name;
+              const variableEnv = getEnvironmentForValue(env, name);
+              try {
+                c(variableEnv!.values[name]);
+              } catch (e) {
+                cerr(e);
+              }
+              break;
+            case "MemberExpression": {
+              const argumentNode = e.argument;
+              evaluate(
+                e.argument.object,
+                (object) => {
+                  const evalProperty = () =>
+                    evaluate(argumentNode.property, (property) => c(delete object[property]), cerr, env, config);
+
+                  switch (argumentNode.property.type) {
+                    case "Identifier":
+                      if (argumentNode.computed) {
+                        evalProperty();
+                      } else {
+                        c(delete object[argumentNode.property.name]);
+                      }
+                      break;
+                    default:
+                      evalProperty();
+                      break;
+                  }
+                },
+                cerr,
+                env,
+                config
+              );
+              break;
             }
-          } else {
-            cerr(NotImplementedException(`Delete on operator of type "${e.argument.type}" is not implemented yet.`));
+            default:
+              cerr(NotImplementedException(`Delete on operator of type "${e.argument.type}" is not implemented yet.`));
+              break;
           }
           break;
         default:
@@ -533,31 +566,37 @@ export function UnaryExpression(e: NodeTypes.UnaryExpression, c, cerr, env: Envi
     env,
     config
   );
-}
 
-export function ThisExpression(_e: NodeTypes.ThisExpression, c, cerr, env: Environment, config) {
-  evaluate({ type: "GetValue", name: "this" }, c, cerr, env, config);
-}
+export const ThisExpression: Interpreter<NodeTypes.ThisExpression> = (e, c, cerr, env, config) =>
+  evaluate(at(e, get("this")), c, cerr, env, config);
 
-export function ConditionalExpression(e: NodeTypes.ConditionalExpression, c, cerr, env, config) {
-  IfStatement(e, c, cerr, env, config);
-}
+export const ConditionalExpression: Interpreter<NodeTypes.ConditionalExpression> = (e, c, cerr, env, config) =>
+  GetValueSync("IfStatement", config.interpreters)!(e, c, cerr, env, config);
 
-export function TemplateLiteral(e: NodeTypes.TemplateLiteral, c, cerr) {
+export const TemplateLiteral: Interpreter<NodeTypes.TemplateLiteral> = (e, c, cerr, env, config) => {
   if (e.quasis.length === 1 && e.expressions.length === 0) {
     c(e.quasis[0].value.raw);
   } else {
-    cerr(NotImplementedException(`Only single-quasis and expression-free template literals are supported for now.`));
+    evaluateArray(
+      e.expressions,
+      (expressions) =>
+        c(
+          expressions.map((expr, i) => e.quasis[i].value.raw + expr).join("") + e.quasis[e.quasis.length - 1].value.raw
+        ),
+      cerr,
+      env,
+      config
+    );
   }
-}
+};
 
-export function TaggedTemplateExpression(e: NodeTypes.TaggedTemplateExpression, c, cerr, env, config) {
+export const TaggedTemplateExpression: Interpreter<NodeTypes.TaggedTemplateExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.tag,
     (tag) =>
       evaluate(
         e.quasi,
-        (quasi) => evaluate({ type: "Apply", e, fn: tag, thisValue: undefined, args: [quasi] }, c, cerr, env, config),
+        (quasi) => evaluate(at(e.quasi, apply(tag, undefined, [quasi], e)), c, cerr, env, config),
         cerr,
         env,
         config
@@ -566,15 +605,22 @@ export function TaggedTemplateExpression(e: NodeTypes.TaggedTemplateExpression, 
     env,
     config
   );
-}
 
 class SpreadElementValue {
   constructor(public value: any) {}
 }
 
-export function SpreadElement(e: NodeTypes.SpreadElement, c, cerr, env, config) {
+export const SpreadElement: Interpreter<NodeTypes.SpreadElement> = (e, c, cerr, env, config) =>
   evaluate(e.argument, (value) => c(new SpreadElementValue(value)), cerr, env, config);
-}
+
+export const AwaitExpression: Interpreter<NodeTypes.AwaitExpression> = (e, c, cerr, env, config) =>
+  evaluate(
+    e.argument,
+    (arg) => (typeof arg === "object" && arg instanceof Promise ? arg.then(c) : c(arg)),
+    cerr,
+    env,
+    config
+  );
 
 export default {
   CallExpression,
@@ -595,5 +641,6 @@ export default {
   ConditionalExpression,
   TemplateLiteral,
   TaggedTemplateExpression,
-  SpreadElement
+  SpreadElement,
+  AwaitExpression
 };

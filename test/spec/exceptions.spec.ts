@@ -1,42 +1,47 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
+import { ECMAScriptInterpreters } from "../../lib/interpreters";
 import { evalFnBodyAsPromise, MetaesContext, metaesEval, noop } from "../../lib/metaes";
 
 describe("Exceptions", () => {
   it("should throw on AwaitExpression use", () =>
-    new Promise(resolve => {
+    new Promise((resolve, reject) => {
       metaesEval(
         `(async ()=>await 2)()`,
-        x => {
-          console.log({ x });
-        },
-        resolve
+        reject,
+        resolve,
+        {},
+        {
+          interpreters: {
+            values: Object.fromEntries(
+              Object.entries(ECMAScriptInterpreters.values).filter(([k]) => k !== "AwaitExpression")
+            )
+          }
+        }
       );
     }));
 
   it("should throw ReferenceError", () =>
     new Promise((resolve, _reject) => {
-      metaesEval(`a`, noop, x => {
-        assert.equal(x.type, "ReferenceError");
+      metaesEval("a", noop, function (error) {
+        assert.equal(error.value.message, `"a" is not defined.`);
+        assert.equal(error.type, "Error");
         resolve();
       });
     }));
-
-  describe("From host functions", () => {});
-  describe("From MetaES functions", () => {});
 
   describe("From blocks", () => {
     it("should exit block statement", async () => {
       try {
         await evalFnBodyAsPromise({
           context: new MetaesContext(),
-          source: function() {
+          source: function () {
             throw 1;
           }
         });
         throw new Error("Didn't throw");
       } catch (e) {
-        assert.equal(e.type, "ThrowStatement");
+        assert.equal(e.type, "Error");
       }
     });
 
@@ -44,14 +49,14 @@ describe("Exceptions", () => {
       try {
         await evalFnBodyAsPromise({
           context: new MetaesContext(),
-          source: function() {
+          source: function () {
             (() => {
               throw 1;
             })();
           }
         });
       } catch (e) {
-        assert.equal(e.type, "ThrowStatement");
+        assert.equal(e.type, "Error");
       }
     });
 
@@ -59,7 +64,7 @@ describe("Exceptions", () => {
       assert.equal(
         await evalFnBodyAsPromise({
           context: new MetaesContext(),
-          source: function() {
+          source: function () {
             try {
               (async () => {
                 throw 1;
@@ -75,22 +80,21 @@ describe("Exceptions", () => {
     });
 
     it("should catch any error in try statement", async () => {
-      // declare variable to stop TypeScript warnings
-      let a;
-
-      assert.isTrue(
-        (await evalFnBodyAsPromise({
+      assert.instanceOf(
+        await evalFnBodyAsPromise({
           context: new MetaesContext(),
-          source: function() {
+          source: function () {
             let error;
             try {
-              a; //
+              // @ts-ignore
+              a;
             } catch (e) {
               error = e;
             }
             error;
           }
-        })) instanceof ReferenceError
+        }),
+        ReferenceError
       );
     });
   });

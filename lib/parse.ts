@@ -1,10 +1,10 @@
-import * as esprima from "esprima";
+import * as parsingLib from "meriyah";
 import { Program } from "./nodeTypes";
 import { Range } from "./types";
 
-export type Parser = (source: string, options?: ParserOptions, cache?: ParseCache, useModule?: boolean) => Program;
+export type Parser = (source: string, options?: ParserOptions, cache?: ParseCache, module?: boolean) => Program;
 
-interface EsprimaError {
+interface ParseErrorDetail {
   message: string;
   lineNumber: number;
   description: string;
@@ -13,7 +13,7 @@ interface EsprimaError {
 }
 
 export class ParseError extends Error {
-  constructor(public error: EsprimaError) {
+  constructor(public error: ParseErrorDetail) {
     super(error.message);
   }
 }
@@ -23,18 +23,18 @@ type ParserOptions = {
   comment?: boolean;
   attachComment?: boolean;
   loc?: boolean;
-  source?: boolean;
 };
 
-function esprimaParse(source: string, options: ParserOptions = {}, useModule: boolean = false) {
+function parseWithLib(source: string, options: ParserOptions = {}, module: boolean = false) {
   try {
-    const { parse, parseModule } = esprima;
-    return (useModule ? parseModule : parse)(source, {
+    const { parse, parseModule } = parsingLib;
+    return (module ? parseModule : parse)(source, {
       range: true,
+      ranges: true,
       comment: true,
+      next: true,
       attachComment: true,
       loc: true,
-      source: true,
       ...options
     });
   } catch (e) {
@@ -42,16 +42,16 @@ function esprimaParse(source: string, options: ParserOptions = {}, useModule: bo
   }
 }
 
-export const parse: Parser = (source, options = {}, cache?, useModule = false) => {
+export const parse: Parser = (source, options = {}, cache?, module = false) => {
   let ast;
   if (cache) {
     if ((ast = cache.get(source))) {
       return ast;
     } else {
-      return cache.set(source, esprimaParse(source, options, useModule));
+      return cache.set(source, parseWithLib(source, options, module) as Program);
     }
   } else {
-    return esprimaParse(source, options, useModule);
+    return parseWithLib(source, options, module);
   }
 };
 

@@ -1,20 +1,23 @@
 import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
-  // TODO: ThrowStatement not needed?
-  type?: "Error" | "ReturnStatement" | "NotImplemented" | "ThrowStatement" | "ReferenceError" | string;
-  message?: string;
-  value?: Error | any;
-  location?: ASTNode;
+  type: "Error" | "ReturnStatement" | "BreakStatement";
+  message: string;
+  location: ASTNode;
+  script: Script;
+  value?: Error | any | MetaesException;
 };
 
 export type Range = [number, number];
+
+export type ScriptType = "script" | "module";
 
 export type Script = {
   ast: ASTNode;
   source: Source;
   scriptId: string;
-  isModule?: boolean;
+  url?: string;
+  type?: ScriptType;
 };
 
 export type Source = string | ASTNode | Function;
@@ -46,18 +49,19 @@ type Schedule = (task: () => void) => void;
 
 export interface EvaluationConfig {
   interceptor: Interceptor;
-  interpreters: Environment;
+  interpreters: Environment<Interpreter<any>>;
   script: Script;
   schedule?: Schedule;
 }
 
 export type Continuation<T = any> = (value: T) => void;
 export type ErrorContinuation = (error: MetaesException) => void;
+export type PartialErrorContinuation = (error: Partial<MetaesException> & { type: MetaesException["type"] }) => void;
 
-export type Interpreter<T extends ASTNode> = (
+export type Interpreter<T extends ASTNode | ASTNode[] | object> = (
   e: T,
-  c: Continuation,
-  cerr: ErrorContinuation,
+  c: (value?: any) => void,
+  cerr: PartialErrorContinuation,
   env: Environment,
   config: EvaluationConfig
 ) => void;
@@ -70,6 +74,7 @@ export type MetaesFunction = {
   e: FunctionNode;
   closure: Environment;
   config: EvaluationConfig;
+  prev?: MetaesFunction;
 };
 
 export interface NodeLoc {
@@ -77,13 +82,15 @@ export interface NodeLoc {
   end: { column: number; line: number };
 }
 
-export interface NodeBase {
+type Position = {
   loc?: NodeLoc;
   range?: [number, number];
-}
+};
+
+export type NodeBase = Position;
 
 export type ASTNode = NodeBase & {
-  type: any;
+  type: string | any;
 
   // Any other node specific props are allowed
   [key: string]: any;

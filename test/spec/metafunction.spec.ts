@@ -7,11 +7,11 @@ describe("Meta functions", () => {
     let forms = [
       "(a, b) => a + b",
       (a, b) => a + b,
-      function(a, b) {
+      function (a, b) {
         return a + b;
       }
     ];
-    forms.forEach(form => metaesEval(form, adderFn => assert.equal(adderFn(1, 2), 3)));
+    forms.forEach((form) => metaesEval(form, (adderFn) => assert.equal(adderFn(1, 2), 3)));
   });
 
   it("should throw an error", () => {
@@ -20,7 +20,7 @@ describe("Meta functions", () => {
       () => {
         throw new Error("should have happened");
       },
-      fn => (_fn = fn),
+      (fn) => (_fn = fn),
       undefined,
       { values: { Error } } // global contains constructor for Error
     );
@@ -34,8 +34,8 @@ describe("Meta functions", () => {
     let _fn;
     metaesEval(
       () => thrower(),
-      fn => (_fn = fn),
-      e => {
+      (fn) => (_fn = fn),
+      (e) => {
         console.log("error", e);
       },
       { thrower }
@@ -43,7 +43,7 @@ describe("Meta functions", () => {
     expect(_fn).to.throw();
   });
 
-  it("should throw an receive the same error from external function", () => {
+  it("should throw and receive the same error from external function", () => {
     const message = "A message";
     const errorConstructor = TypeError;
     function thrower() {
@@ -52,10 +52,10 @@ describe("Meta functions", () => {
     let fn;
     metaesEval(
       () => thrower(),
-      result => {
+      (result) => {
         fn = result;
       },
-      e => {
+      (e) => {
         console.log("error", e);
       },
       { thrower }
@@ -63,8 +63,8 @@ describe("Meta functions", () => {
     try {
       fn();
     } catch (e) {
-      assert.equal(e.value.message, message);
-      assert.instanceOf(e.value, errorConstructor);
+      assert.equal(e.message, message);
+      assert.instanceOf(e, errorConstructor);
     }
   });
 });

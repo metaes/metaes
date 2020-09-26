@@ -14,3 +14,9 @@ assert.instanceOf(error, ReferenceError);
 var z;
 delete z;
 assert.equal(typeof z, "undefined");
+
+// test: deletes property from object
+const a = { b: true };
+assert.equal(a.b, true);
+delete a.b;
+assert.isUndefined(a.b);

@@ -1,39 +1,101 @@
 import { GetValueSync } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
 import { callInterceptor } from "./metaes";
-import { ASTNode, Continuation, Environment, ErrorContinuation, EvaluationConfig, Interpreter } from "./types";
+import { CallExpression, EvalNode, TaggedTemplateExpression } from "./nodeTypes";
+import {
+  ASTNode,
+  Continuation,
+  Environment,
+  ErrorContinuation,
+  EvaluationConfig,
+  MetaesException,
+  PartialErrorContinuation
+} from "./types";
+
+export const at = <T>({ loc, range }: ASTNode, rest: T) => <const>{ loc, range, ...rest };
+export const declare = (name: string, value: any) => <const>{ type: "SetValue", name, value, isDeclaration: true };
+export const get = (name: string) => <const>{ type: "GetValue", name };
+export const set = (name: string, value: any) => <const>{ type: "SetValue", name, value, isDeclaration: false };
+export const apply = (
+  fn: Function,
+  thisValue: any | undefined,
+  args: any[] = [],
+  e: CallExpression | TaggedTemplateExpression
+) =>
+  <const>{
+    type: "Apply",
+    fn,
+    thisValue,
+    args,
+    e
+  };
+export const getProperty = (object: any, property: any) => <const>{ type: "GetProperty", object, property };
+export const setProperty = (object: any, property: any, value: any, operator: string) =>
+  <const>{
+    type: "SetProperty",
+    object,
+    property,
+    value,
+    operator
+  };
 
 export function defaultScheduler(fn) {
   fn();
 }
 
+export function getTrampolineScheduler() {
+  const tasks: Function[] = [];
+  let running = false;
+
+  function run() {
+    if (running) {
+      return;
+    }
+    running = true;
+    while (tasks.length) {
+      tasks.pop()!();
+    }
+    running = false;
+  }
+
+  return function (fn) {
+    tasks.push(fn);
+    if (!running) {
+      run();
+    }
+  };
+}
+
 export function evaluate(
-  e: ASTNode,
+  e: EvalNode,
   c: Continuation,
   cerr: ErrorContinuation,
   env: Environment,
   config: EvaluationConfig
 ) {
-  const interpreter: Interpreter<any> = GetValueSync(e.type, config.interpreters);
+  const interpreter = GetValueSync(e.type, config.interpreters);
   const schedule = config.schedule || defaultScheduler;
   if (interpreter) {
     callInterceptor("enter", config, e, env);
     schedule(function run() {
       interpreter(
         e,
-        function(value) {
+        function _c(value) {
           schedule(function exit() {
             callInterceptor("exit", config, e, env, value);
             c(value);
           });
         },
-        function exception(exception) {
+        function _cerr(exception) {
           exception = toException(exception);
           if (!exception.location) {
             exception.location = e;
           }
+          if (!exception.script) {
+            exception.script = config.script;
+          }
           callInterceptor("exit", config, e, env, exception);
-          cerr(exception);
+          cerr(<MetaesException>exception);
         },
         env,
         config
@@ -42,41 +104,19 @@ export function evaluate(
   } else {
     const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
     callInterceptor("exit", config, e, env, exception);
-    cerr(exception);
+    cerr(<MetaesException>exception);
   }
 }
 
-type Visitor<T> = (element: T, c: Continuation, cerr: ErrorContinuation) => void;
+type Visitor<T> = (element: T, c: Continuation, cerr: PartialErrorContinuation) => void;
 
-/**
- * visitArray uses trampolining inside as it's likely that too long array execution will eat up callstack.
- * @param items
- * @param fn
- * @param c
- * @param cerr
- */
-export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: ErrorContinuation) => {
+export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: PartialErrorContinuation) => {
   if (items.length === 0) {
     c([]);
   } else if (items.length === 1) {
-    fn(items[0], value => c([value]), cerr);
+    fn(items[0], (value) => c([value]), cerr);
   } else {
-    // Array of loop function arguments to be applied next time
-    // TODO: convert to nextOperation or similar, there is always only one? What about callcc?
-    const tasks: any[] = [];
-    // Indicates if tasks execution is done. Initially it is done.
-    let done = true;
-
-    // Simple `loop` function executor, just loop over arguments until nothing is left.
-    function execute() {
-      done = false;
-      while (tasks.length) {
-        // @ts-ignore
-        loop(...tasks.shift());
-      }
-      done = true;
-    }
-
+    const schedule = getTrampolineScheduler();
     const visited = new Set();
 
     function loop(index, accumulated: T[]) {
@@ -92,10 +132,7 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
             }
             accumulated.push(value);
             visited.add(index);
-            tasks.push([index + 1, accumulated]);
-            if (done) {
-              execute();
-            }
+            schedule(() => loop(index + 1, accumulated));
           },
           cerr
         );
@@ -105,7 +142,7 @@ export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr:
     }
 
     // start
-    loop(0, []);
+    schedule(() => loop(0, []));
   }
 };
 

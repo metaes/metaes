@@ -26,7 +26,14 @@ export interface Super extends NodeBase {
 
 export interface CallExpression extends NodeBase {
   type: "CallExpression";
-  callee: Identifier | MemberExpression | CallExpression | FunctionExpression | Super | ArrowFunctionExpression;
+  callee:
+    | Identifier
+    | MemberExpression
+    | CallExpression
+    | FunctionExpression
+    | Super
+    | ArrowFunctionExpression
+    | ConditionalExpression;
   arguments: Expression[];
 }
 
@@ -95,10 +102,15 @@ export interface ArrayExpression extends NodeBase {
   elements: Expression[];
 }
 
+export interface ArrayPattern extends NodeBase {
+  type: "ArrayPattern";
+  elements: (Identifier | RestElement)[];
+}
+
 export interface NewExpression extends NodeBase {
   type: "NewExpression";
   arguments: Identifier[];
-  callee: MemberExpression | Identifier;
+  callee: MemberExpression | Identifier | CallExpression;
 }
 
 export interface SequenceExpression extends NodeBase {
@@ -110,18 +122,18 @@ export interface ThisExpression extends NodeBase {
   type: "ThisExpression";
 }
 
-interface ConditionalBase extends NodeBase {
+export interface ConditionalExpression extends NodeBase {
+  type: "ConditionalExpression";
   test: Expression;
   alternate: Expression;
   consequent: Expression;
 }
 
-export interface ConditionalExpression extends ConditionalBase {
-  type: "ConditionalExpression";
-}
-
-export interface IfStatement extends ConditionalBase {
+export interface IfStatement extends NodeBase {
   type: "IfStatement";
+  test: Expression;
+  alternate: Expression | ExpressionStatement;
+  consequent: Expression | ExpressionStatement;
 }
 
 export interface Property extends NodeBase {
@@ -151,7 +163,7 @@ export interface VariableDeclaration extends NodeBase {
 
 export interface VariableDeclarator extends NodeBase {
   type: "VariableDeclarator";
-  id: Identifier | ObjectPattern;
+  id: Identifier | ObjectPattern | ArrayPattern;
   init: Expression;
 }
 
@@ -194,16 +206,20 @@ export interface ReturnStatement extends NodeBase {
   argument?: Expression;
 }
 
+export interface BreakStatement extends NodeBase {
+  type: "BreakStatement";
+}
+
 export interface ForInStatement extends NodeBase {
   type: "ForInStatement";
-  left: Identifier;
+  left: Identifier | VariableDeclaration;
   right: Expression;
   body: Statement;
 }
 
 export interface ForOfStatement extends NodeBase {
   type: "ForOfStatement";
-  left: VariableDeclaration;
+  left: VariableDeclaration | Identifier;
   right: Expression;
   body: BlockStatement;
 }
@@ -232,7 +248,7 @@ export interface RestElement extends NodeBase {
 }
 
 interface FunctionParams {
-  params: (Identifier | RestElement | ObjectPattern)[];
+  params: (Identifier | RestElement | ObjectPattern | AssignmentPattern)[];
 }
 
 export interface FunctionExpression extends NodeBase, FunctionParams {
@@ -261,7 +277,7 @@ export interface MethodDefinition extends NodeBase {
 
 export interface ClassDeclaration extends NodeBase {
   type: "ClassDeclaration";
-  id?: Identifier;
+  id: Identifier;
   superClass: Identifier | null;
   body: ClassBody;
 }
@@ -309,12 +325,62 @@ export interface SpreadElement extends NodeBase {
   argument: Expression;
 }
 
-export interface ExportNamedDeclaration extends NodeBase {
-  type: "ExportNamedDeclaration";
-  declaration: VariableDeclaration | FunctionDeclaration;
+export interface AwaitExpression extends NodeBase {
+  type: "AwaitExpression";
+  argument: Expression;
 }
 
-type ModuleNode = ExportNamedDeclaration;
+export interface ExportNamedDeclaration extends NodeBase {
+  type: "ExportNamedDeclaration";
+  declaration: VariableDeclaration | FunctionDeclaration | ClassDeclaration;
+}
+
+export interface ExportDefaultDeclaration extends NodeBase {
+  type: "ExportDefaultDeclaration";
+  declaration: Expression;
+}
+
+export interface ImportDeclaration extends NodeBase {
+  type: "ImportDeclaration";
+  specifiers: (ImportSpecifier | ImportNamespaceSpecifier | ImportDefaultSpecifier)[];
+  source: Literal;
+}
+
+interface ImportDefaultSpecifier extends NodeBase {
+  type: "ImportDefaultSpecifier";
+  local: Identifier;
+}
+
+interface ImportNamespaceSpecifier extends NodeBase {
+  type: "ImportNamespaceSpecifier";
+  local: Identifier;
+}
+
+interface ImportSpecifier extends NodeBase {
+  type: "ImportSpecifier";
+  local: Identifier;
+  imported: Identifier;
+}
+
+export interface SwitchStatement extends NodeBase {
+  type: "SwitchStatement";
+  discriminant: Expression;
+  cases: SwitchCase[];
+}
+
+interface SwitchCase extends NodeBase {
+  type: "SwitchCase";
+  test: Expression;
+  consequent: Statement[];
+}
+
+export interface DoWhileStatement extends NodeBase {
+  type: "DoWhileStatement";
+  test: Expression;
+  body: ExpressionStatement | Expression;
+}
+
+type ModuleNode = ExportNamedDeclaration | ImportDeclaration;
 
 export type FunctionNode = FunctionExpression | FunctionDeclaration | ArrowFunctionExpression;
 
@@ -338,7 +404,9 @@ export type Statement =
   | ClassBody
   | Super
   | DebuggerStatement
-  | ModuleNode;
+  | ModuleNode
+  | SwitchStatement
+  | DoWhileStatement;
 
 type Expression =
   | Identifier
@@ -361,7 +429,11 @@ type Expression =
   | RestElement
   | TemplateLiteral
   | TaggedTemplateExpression
-  | SpreadElement;
+  | SpreadElement
+  | AwaitExpression
+  | ObjectPattern
+  | AssignmentPattern
+  | ArrayPattern;
 
 type Comment = Line;
 
@@ -371,9 +443,9 @@ export interface Line extends NodeBase {
 
 export interface Apply extends NodeBase {
   type: "Apply";
-  e: CallExpression;
+  e: CallExpression | TaggedTemplateExpression;
   fn: Function;
-  thisValue: any;
+  thisValue?: any;
   args: any[];
 }
 
@@ -393,6 +465,18 @@ export interface SetProperty extends NodeBase {
 
 type Base = Apply | GetProperty | SetProperty;
 
+export type SetValueT<T> = NodeBase & {
+  type: "SetValue";
+  name: string;
+  value: T;
+  isDeclaration: boolean;
+};
+
+export type GetValueT = NodeBase & {
+  type: "GetValue";
+  name: string;
+};
+
 export type JavaScriptASTNode =
   | Base
   | Expression
@@ -401,3 +485,5 @@ export type JavaScriptASTNode =
   | VariableDeclarator
   | Comment
   | MethodDefinition;
+
+export type EvalNode = JavaScriptASTNode | Apply | GetProperty | SetProperty | SetValueT<any> | GetValueT;

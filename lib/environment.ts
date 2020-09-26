@@ -1,4 +1,6 @@
-import { Continuation, ErrorContinuation, EnvironmentBase, Environment } from "./types";
+import { toException } from "./exceptions";
+import { GetValueT, SetValueT } from "./nodeTypes";
+import { Continuation, Environment, EnvironmentBase, PartialErrorContinuation } from "./types";
 
 export function toEnvironment(environment?: any | EnvironmentBase | Environment): Environment {
   return environment ? ("values" in environment ? environment : { values: environment }) : { values: {} };
@@ -16,19 +18,13 @@ export function getEnvironmentBy(env: Environment, condition: (env: Environment)
 }
 
 export function getEnvironmentForValue(env: Environment, name: string): Environment | null {
-  return getEnvironmentBy(env, env => name in env.values);
+  return getEnvironmentBy(env, (env) => name in env.values);
 }
 
-type SetValueT<T> = {
-  name: string;
-  value: T;
-  isDeclaration: boolean;
-};
-
 export function SetValue<T>(
-  { name, value, isDeclaration }: SetValueT<T>,
+  { name, value, isDeclaration }: Omit<SetValueT<T>, "type">,
   c: Continuation,
-  cerr: ErrorContinuation,
+  cerr: PartialErrorContinuation,
   env: Environment<T>
 ) {
   let writableEnv: Environment | undefined = env;
@@ -36,7 +32,7 @@ export function SetValue<T>(
     writableEnv = writableEnv.prev;
   }
   if (!writableEnv) {
-    return cerr(new Error(`Can't write to '${name}' value.`));
+    return cerr(toException(new Error(`Can't write to '${name}' value.`)));
   }
   if (isDeclaration) {
     c((writableEnv.values[name] = value));
@@ -45,15 +41,15 @@ export function SetValue<T>(
     if (_env) {
       c((_env.values[name] = value));
     } else {
-      cerr({ type: "ReferenceError", value: new ReferenceError(`'${name}' is not defined.`) });
+      cerr({ type: "Error", value: new ReferenceError(`'${name}' is not defined.`) });
     }
   }
 }
 
 export function GetValue<T>(
-  { name }: { name: string },
+  { name }: Omit<GetValueT, "type">,
   c: Continuation<T>,
-  cerr: ErrorContinuation,
+  cerr: PartialErrorContinuation,
   env: Environment<T>
 ) {
   let _env: Environment | undefined = env;
@@ -64,7 +60,7 @@ export function GetValue<T>(
   } while ((_env = _env.prev));
 
   cerr({
-    type: "ReferenceError",
+    type: "Error",
     value: new ReferenceError(`"${name}" is not defined.`)
   });
 }
