@@ -57,7 +57,7 @@ npm test
 
 ## Contribution
 
-Use GitHub [issues](http://github.com/metaes/metaes/issues) or [pull requests](https://github.com/metaes/metaes/pulls).
+Use GitHub [issues](https://github.com/metaes/metaes/issues) or [pull requests](https://github.com/metaes/metaes/pulls).
 
 ## License
 
