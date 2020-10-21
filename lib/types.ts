@@ -22,21 +22,23 @@ export type Script = {
 
 export type Source = string | ASTNode | Function;
 
+export type NoEvaluableParam = undefined | boolean | number | boolean | symbol | any[] | object;
+
+export type EvalParam = Script | Source | NoEvaluableParam;
+
 export type Evaluate<T = any> = (
-  input: Script | Source,
+  input: EvalParam,
   c?: Continuation<T> | null,
   cerr?: ErrorContinuation | null,
   environment?: Environment | object,
   config?: Partial<EvaluationConfig>
 ) => void;
 
-export type EvaluationValue = any | Reference;
-
 export type Phase = "enter" | "exit";
 
 export interface Evaluation {
   e: ASTNode;
-  value: EvaluationValue;
+  value: any;
   phase: Phase;
   config: EvaluationConfig;
   timestamp: number;
@@ -96,14 +98,8 @@ export type ASTNode = NodeBase & {
   [key: string]: any;
 };
 
-export interface Reference {
-  id?: string;
-  type?: string;
-}
-
 export interface EnvironmentBase<T = any> {
   values: { [key: string]: T };
-  refs?: { [key: string]: Reference };
 }
 
 export interface Environment<T = any> extends EnvironmentBase<T> {

@@ -1,7 +1,7 @@
-import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { toEnvironment } from "./environment";
 import { evaluate } from "./evaluate";
 import { ExportEnvironmentSymbol, ImportEnvironmentSymbol, modulesEnv } from "./interpreter/modules";
+import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
 import {
@@ -9,12 +9,14 @@ import {
   Continuation,
   Environment,
   ErrorContinuation,
+  EvalParam,
   Evaluate,
   EvaluationConfig,
+  NoEvaluableParam,
   Phase,
   Script,
-  Source,
-  ScriptType
+  ScriptType,
+  Source
 } from "./types";
 
 export interface Context {
@@ -25,26 +27,46 @@ let scriptIdsCounter = 0;
 
 export const nextScriptId = () => "" + scriptIdsCounter++;
 
-export function createScript(source: Source, cache?: ParseCache, type: ScriptType = "script"): Script {
-  const scriptId = nextScriptId();
+function isNoEvaluableValue(input: EvalParam): input is NoEvaluableParam {
+  return (
+    typeof input === "undefined" ||
+    input === "null" ||
+    typeof input === "boolean" ||
+    typeof input === "number" ||
+    typeof input === "symbol" ||
+    Array.isArray(input) ||
+    (typeof input === "object" && !("type" in input) && !isScript(input))
+  );
+}
 
-  if (typeof source === "object") {
-    return { source, ast: source, scriptId };
-  } else if (typeof source === "function") {
-    return { source, ast: parseFunction(source, cache), scriptId };
-  } else if (typeof source === "string") {
-    const script: Script = { source, ast: parse(source, {}, cache, type === "module"), scriptId };
-    if (type === "module") {
-      script.type = type;
-    }
-    return script;
+export function createScript(source: Script | Source, cache?: ParseCache, type: ScriptType = "script"): Script {
+  if (isScript(source)) {
+    return source;
   } else {
-    throw new Error(`Can't create script from ${source}.`);
+    const scriptId = nextScriptId();
+
+    if (typeof source === "object") {
+      return { source, ast: source, scriptId };
+    } else if (typeof source === "function") {
+      return { source, ast: parseFunction(source, cache), scriptId };
+    } else if (typeof source === "string") {
+      const script: Script = { source, ast: parse(source, {}, cache, type === "module"), scriptId };
+      if (type === "module") {
+        script.type = type;
+      }
+      return script;
+    } else {
+      throw new Error(`Can't create script from ${source}.`);
+    }
   }
 }
 
-export function toScript(input: Source | Script, cache?: ParseCache, type: ScriptType = "script") {
-  return isScript(input) ? input : createScript(input, cache, type);
+export function toScript(input: EvalParam, cache?: ParseCache, type: ScriptType = "script") {
+  if (isNoEvaluableValue(input)) {
+    throw new Error(`Can't create script from ${String(input)}.`);
+  } else {
+    return isScript(input) ? input : createScript(input, cache, type);
+  }
 }
 
 export function isScript(script: any): script is Script {
@@ -82,13 +104,15 @@ export const safeEvaluate: Evaluate = (
 };
 
 export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
-  safeEvaluate(
-    function inject() {
-      return { script: toScript(input), config: { ...BaseConfig, ...config }, env: toEnvironment(env) };
-    },
-    c,
-    cerr
-  );
+  isNoEvaluableValue(input)
+    ? c && c(input)
+    : safeEvaluate(
+        function inject() {
+          return { script: toScript(input), config: { ...BaseConfig, ...config }, env: toEnvironment(env) };
+        },
+        c,
+        cerr
+      );
 
 export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
   const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };

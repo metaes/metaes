@@ -19,7 +19,7 @@ describe("Meta2ES", function () {
 
   before(async function () {
     metaesEval = await getMeta2ESEval({
-      values: { Object, Error, ReferenceError, Symbol, Date, Set, undefined, console, Function }
+      values: { Object, Error, ReferenceError, Symbol, Date, Set, undefined, console, Function, Array }
     });
   });
 
@@ -59,7 +59,7 @@ describe("Meta2ES", function () {
   });
 
   it("throws ReferenceError for non-existing ReferenceError", async function () {
-    const metaesEval = await getMeta2ESEval({ values: { Object, Function } });
+    const metaesEval = await getMeta2ESEval({ values: { Object, Function, Array } });
     try {
       await evaluateHelperWithPrint(metaesEval, "a");
     } catch (e) {

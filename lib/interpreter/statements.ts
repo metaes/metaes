@@ -36,6 +36,7 @@ export const VariableDeclarator: Interpreter<NodeTypes.VariableDeclarator> = (e,
         evaluate(declare(e.id.name, rightValue), c, cerr, env, config);
         break;
       case "ObjectPattern":
+        // TODO: should support GetProperty internally
         evaluate(e.id, c, cerr, { values: rightValue, prev: env, internal: true }, config);
         break;
       case "ArrayPattern":
