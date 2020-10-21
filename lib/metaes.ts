@@ -39,14 +39,12 @@ export function createScript(source: Script | Source, cache?: ParseCache, type: 
   if (isScript(source)) {
     return source;
   } else {
-    const scriptId = nextScriptId();
-
     if (typeof source === "object") {
-      return { source, ast: source, scriptId };
+      return { source, ast: source, scriptId: nextScriptId() };
     } else if (typeof source === "function") {
-      return { source, ast: parseFunction(source, cache), scriptId };
+      return { source, ast: parseFunction(source, cache), scriptId: nextScriptId() };
     } else if (typeof source === "string") {
-      const script: Script = { source, ast: parse(source, {}, cache, type === "module"), scriptId };
+      const script: Script = { source, ast: parse(source, {}, cache, type === "module"), scriptId: nextScriptId() };
       if (type === "module") {
         script.type = type;
       }
@@ -57,12 +55,8 @@ export function createScript(source: Script | Source, cache?: ParseCache, type: 
   }
 }
 
-export function toScript(input: EvalParam, cache?: ParseCache, type: ScriptType = "script") {
-  if (isEvaluable(input)) {
-    return isScript(input) ? input : createScript(input, cache, type);
-  } else {
-    throw new Error(`Can't create script from ${String(input)}.`);
-  }
+export function toScript(input: Source | Script, cache?: ParseCache, type: ScriptType = "script") {
+  return isScript(input) ? input : createScript(input, cache, type);
 }
 
 export function isScript(script: any): script is Script {
@@ -114,17 +108,19 @@ export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = 
   const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };
   const exportsEnv = { prev: importsEnv, values: {}, [ExportEnvironmentSymbol]: true };
 
-  safeEvaluate(
-    function inject() {
-      return {
-        script: toScript(input, undefined, "module"),
-        config: { ...BaseConfig, interpreters: ModuleECMAScriptInterpreters, ...config },
-        env: { values: {}, prev: exportsEnv }
-      };
-    },
-    () => c && c(exportsEnv.values),
-    cerr
-  );
+  isEvaluable(input)
+    ? safeEvaluate(
+        function inject() {
+          return {
+            script: toScript(input, undefined, "module"),
+            config: { ...BaseConfig, interpreters: ModuleECMAScriptInterpreters, ...config },
+            env: { values: {}, prev: exportsEnv }
+          };
+        },
+        () => c && c(exportsEnv.values),
+        cerr
+      )
+    : c && c(input);
 };
 
 export class MetaesContext implements Context {
