@@ -12,7 +12,6 @@ import {
   EvalParam,
   Evaluate,
   EvaluationConfig,
-  NoEvaluableParam,
   Phase,
   Script,
   ScriptType,
@@ -27,15 +26,12 @@ let scriptIdsCounter = 0;
 
 export const nextScriptId = () => "" + scriptIdsCounter++;
 
-function isNoEvaluableValue(input: EvalParam): input is NoEvaluableParam {
+function isEvaluable(input: EvalParam): input is Script | Source {
   return (
-    typeof input === "undefined" ||
-    input === "null" ||
-    typeof input === "boolean" ||
-    typeof input === "number" ||
-    typeof input === "symbol" ||
-    Array.isArray(input) ||
-    (typeof input === "object" && !("type" in input) && !isScript(input))
+    typeof input === "string" ||
+    typeof input === "function" ||
+    isScript(input) ||
+    (typeof input === "object" && input && "type" in input)
   );
 }
 
@@ -62,10 +58,10 @@ export function createScript(source: Script | Source, cache?: ParseCache, type: 
 }
 
 export function toScript(input: EvalParam, cache?: ParseCache, type: ScriptType = "script") {
-  if (isNoEvaluableValue(input)) {
-    throw new Error(`Can't create script from ${String(input)}.`);
-  } else {
+  if (isEvaluable(input)) {
     return isScript(input) ? input : createScript(input, cache, type);
+  } else {
+    throw new Error(`Can't create script from ${String(input)}.`);
   }
 }
 
@@ -104,15 +100,15 @@ export const safeEvaluate: Evaluate = (
 };
 
 export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
-  isNoEvaluableValue(input)
-    ? c && c(input)
-    : safeEvaluate(
+  isEvaluable(input)
+    ? safeEvaluate(
         function inject() {
           return { script: toScript(input), config: { ...BaseConfig, ...config }, env: toEnvironment(env) };
         },
         c,
         cerr
-      );
+      )
+    : c && c(input);
 
 export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
   const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };

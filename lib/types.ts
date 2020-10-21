@@ -20,11 +20,11 @@ export type Script = {
   type?: ScriptType;
 };
 
+export type NonEvaluableValue = undefined | boolean | number | boolean | symbol | any[] | object;
+
 export type Source = string | ASTNode | Function;
 
-export type NoEvaluableParam = undefined | boolean | number | boolean | symbol | any[] | object;
-
-export type EvalParam = Script | Source | NoEvaluableParam;
+export type EvalParam = Script | Source | NonEvaluableValue;
 
 export type Evaluate<T = any> = (
   input: EvalParam,
