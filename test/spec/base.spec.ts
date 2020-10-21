@@ -53,6 +53,7 @@ describe("Base interpreters", () => {
           { type: "Non existing type" },
           (result) => assert.equal(result, 44),
           (e) => {
+            assert.equal(e.message, `"Non existing type" node type interpreter is not defined yet.`);
             throw e;
           }
         );
