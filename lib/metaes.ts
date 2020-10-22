@@ -1,7 +1,7 @@
-import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { toEnvironment } from "./environment";
 import { evaluate } from "./evaluate";
 import { ExportEnvironmentSymbol, ImportEnvironmentSymbol, modulesEnv } from "./interpreter/modules";
+import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
 import {
@@ -9,12 +9,13 @@ import {
   Continuation,
   Environment,
   ErrorContinuation,
+  EvalParam,
   Evaluate,
   EvaluationConfig,
   Phase,
   Script,
-  Source,
-  ScriptType
+  ScriptType,
+  Source
 } from "./types";
 
 export interface Context {
@@ -25,21 +26,32 @@ let scriptIdsCounter = 0;
 
 export const nextScriptId = () => "" + scriptIdsCounter++;
 
-export function createScript(source: Source, cache?: ParseCache, type: ScriptType = "script"): Script {
-  const scriptId = nextScriptId();
+function isEvaluable(input: EvalParam): input is Script | Source {
+  return (
+    typeof input === "string" ||
+    typeof input === "function" ||
+    isScript(input) ||
+    (typeof input === "object" && input && "type" in input)
+  );
+}
 
-  if (typeof source === "object") {
-    return { source, ast: source, scriptId };
-  } else if (typeof source === "function") {
-    return { source, ast: parseFunction(source, cache), scriptId };
-  } else if (typeof source === "string") {
-    const script: Script = { source, ast: parse(source, {}, cache, type === "module"), scriptId };
-    if (type === "module") {
-      script.type = type;
-    }
-    return script;
+export function createScript(source: Script | Source, cache?: ParseCache, type: ScriptType = "script"): Script {
+  if (isScript(source)) {
+    return source;
   } else {
-    throw new Error(`Can't create script from ${source}.`);
+    if (typeof source === "object") {
+      return { source, ast: source, scriptId: nextScriptId() };
+    } else if (typeof source === "function") {
+      return { source, ast: parseFunction(source, cache), scriptId: nextScriptId() };
+    } else if (typeof source === "string") {
+      const script: Script = { source, ast: parse(source, {}, cache, type === "module"), scriptId: nextScriptId() };
+      if (type === "module") {
+        script.type = type;
+      }
+      return script;
+    } else {
+      throw new Error(`Can't create script from ${source}.`);
+    }
   }
 }
 
@@ -55,23 +67,26 @@ export function noop() {}
 
 const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 
-export const safeEvaluate: Evaluate = (
-  inject: () => { script: Script; config: EvaluationConfig; env: Environment },
+const evaluateConditionally = (
+  input: EvalParam,
+  inject: (input: Script | Source) => { script: Script; config: Omit<EvaluationConfig, "script">; env: Environment },
   c?,
   cerr?
 ) => {
   try {
-    let { script, config, env } = inject();
-    // @ts-ignore
-    config = { script, ...config };
+    if (!isEvaluable(input)) {
+      c && c(input);
+    } else {
+      let { script, config, env } = inject(input);
 
-    evaluate(
-      script.ast,
-      (val) => c && c(val),
-      (exception) => cerr && cerr(exception),
-      env,
-      config
-    );
+      evaluate(
+        script.ast,
+        (val) => c && c(val),
+        (exception) => cerr && cerr(exception),
+        env,
+        { ...config, script }
+      );
+    }
   } catch (e) {
     if (cerr) {
       cerr(e);
@@ -82,10 +97,9 @@ export const safeEvaluate: Evaluate = (
 };
 
 export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
-  safeEvaluate(
-    function inject() {
-      return { script: toScript(input), config: { ...BaseConfig, ...config }, env: toEnvironment(env) };
-    },
+  evaluateConditionally(
+    input,
+    (input) => ({ script: toScript(input), config: { ...BaseConfig, ...config }, env: toEnvironment(env) }),
     c,
     cerr
   );
@@ -94,14 +108,13 @@ export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = 
   const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };
   const exportsEnv = { prev: importsEnv, values: {}, [ExportEnvironmentSymbol]: true };
 
-  safeEvaluate(
-    function inject() {
-      return {
-        script: toScript(input, undefined, "module"),
-        config: { ...BaseConfig, interpreters: ModuleECMAScriptInterpreters, ...config },
-        env: { values: {}, prev: exportsEnv }
-      };
-    },
+  evaluateConditionally(
+    input,
+    (input) => ({
+      script: toScript(input, undefined, "module"),
+      config: { ...BaseConfig, interpreters: ModuleECMAScriptInterpreters, ...config },
+      env: { values: {}, prev: exportsEnv }
+    }),
     () => c && c(exportsEnv.values),
     cerr
   );
