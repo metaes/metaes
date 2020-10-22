@@ -59,5 +59,22 @@ describe("Base interpreters", () => {
         );
       });
     });
+
+    it("throws on script with nonexisting AST node type", function () {
+      assert.throws(function () {
+        metaesEval({ scriptId: 0, source: {}, ast: { type: "Non existing type" } }, console.log, (e) => {
+          assert.equal(e.message, `"Non existing type" node type interpreter is not defined yet.`);
+          throw e;
+        });
+      });
+    });
+
+    it("throws on script with empty `ast` field", function () {
+      assert.throws(function () {
+        metaesEval({ scriptId: 0, source: {}, ast: null }, console.log, (e) => {
+          throw e;
+        });
+      });
+    });
   });
 });
