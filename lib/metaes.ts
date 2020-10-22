@@ -67,23 +67,26 @@ export function noop() {}
 
 const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 
-export const safeEvaluate: Evaluate = (
-  inject: () => { script: Script; config: EvaluationConfig; env: Environment },
+const evaluateConditionally = (
+  input: EvalParam,
+  inject: (input: Script | Source) => { script: Script; config: Omit<EvaluationConfig, "script">; env: Environment },
   c?,
   cerr?
 ) => {
   try {
-    let { script, config, env } = inject();
-    // @ts-ignore
-    config = { script, ...config };
+    if (!isEvaluable(input)) {
+      c && c(input);
+    } else {
+      let { script, config, env } = inject(input);
 
-    evaluate(
-      script.ast,
-      (val) => c && c(val),
-      (exception) => cerr && cerr(exception),
-      env,
-      config
-    );
+      evaluate(
+        script.ast,
+        (val) => c && c(val),
+        (exception) => cerr && cerr(exception),
+        env,
+        { ...config, script }
+      );
+    }
   } catch (e) {
     if (cerr) {
       cerr(e);
@@ -94,33 +97,27 @@ export const safeEvaluate: Evaluate = (
 };
 
 export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
-  isEvaluable(input)
-    ? safeEvaluate(
-        function inject() {
-          return { script: toScript(input), config: { ...BaseConfig, ...config }, env: toEnvironment(env) };
-        },
-        c,
-        cerr
-      )
-    : c && c(input);
+  evaluateConditionally(
+    input,
+    (input) => ({ script: toScript(input), config: { ...BaseConfig, ...config }, env: toEnvironment(env) }),
+    c,
+    cerr
+  );
 
 export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
   const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };
   const exportsEnv = { prev: importsEnv, values: {}, [ExportEnvironmentSymbol]: true };
 
-  isEvaluable(input)
-    ? safeEvaluate(
-        function inject() {
-          return {
-            script: toScript(input, undefined, "module"),
-            config: { ...BaseConfig, interpreters: ModuleECMAScriptInterpreters, ...config },
-            env: { values: {}, prev: exportsEnv }
-          };
-        },
-        () => c && c(exportsEnv.values),
-        cerr
-      )
-    : c && c(input);
+  evaluateConditionally(
+    input,
+    (input) => ({
+      script: toScript(input, undefined, "module"),
+      config: { ...BaseConfig, interpreters: ModuleECMAScriptInterpreters, ...config },
+      env: { values: {}, prev: exportsEnv }
+    }),
+    () => c && c(exportsEnv.values),
+    cerr
+  );
 };
 
 export class MetaesContext implements Context {
