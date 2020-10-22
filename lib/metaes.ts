@@ -121,46 +121,32 @@ export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = 
 };
 
 export class MetaesContext implements Context {
+  public environment: Environment;
+
   constructor(
     public c?: Continuation,
     public cerr?: ErrorContinuation,
-    public environment: Environment = { values: {} },
+    environment?: Environment | object,
     public defaultConfig: Partial<EvaluationConfig> = {},
     public cache?: ParseCache
-  ) {}
-
-  evaluate(
-    input: Script | Source,
-    c?: Continuation,
-    cerr?: ErrorContinuation,
-    environment?: Environment,
-    config?: Partial<EvaluationConfig>
   ) {
-    try {
-      input = toScript(input, this.cache);
-
-      let env = this.environment;
-
-      if (environment) {
-        env = environment.prev ? environment : { prev: this.environment, ...environment };
-        // env = { values: "values" in environment ? environment.values : environment, prev: this.environment };
-      }
-      if (!config) {
-        config = { ...this.defaultConfig, script: input };
-      }
-      if (!config.interceptor) {
-        config.interceptor = this.defaultConfig.interceptor || noop;
-      }
-
-      metaesEval(input, c || this.c, cerr || this.cerr, env, config);
-    } catch (e) {
-      if (cerr) {
-        cerr(e);
-      } else {
-        throw e;
-      }
-    }
+    this.environment = toEnvironment(environment);
   }
+
+  evaluate: Evaluate = (input, c, cerr, env, config) =>
+    evaluateConditionally(
+      input,
+      (input) => {
+        const environment = toEnvironment(env);
+        return {
+          script: createScript(input, this.cache),
+          env: "prev" in environment ? environment : { ...environment, prev: this.environment },
+          config: { ...BaseConfig, ...this.defaultConfig, ...config }
+        };
+      },
+      c || this.c,
+      cerr || this.cerr
+    );
 
   evalAsPromise(input: Script | Source, environment?: Environment) {
     return evalAsPromise(this, input, environment);

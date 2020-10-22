@@ -3,7 +3,11 @@ import { GetValueT, SetValueT } from "./nodeTypes";
 import { Continuation, Environment, EnvironmentBase, PartialErrorContinuation } from "./types";
 
 export function toEnvironment(environment?: any | EnvironmentBase | Environment): Environment {
-  return environment ? ("values" in environment ? environment : { values: environment }) : { values: {} };
+  return environment && typeof environment === "object"
+    ? "values" in environment
+      ? environment
+      : { values: environment }
+    : { values: {} };
 }
 
 export function getEnvironmentBy(env: Environment, condition: (env: Environment) => boolean): Environment | null {
