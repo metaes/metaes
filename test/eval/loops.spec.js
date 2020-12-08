@@ -77,3 +77,13 @@ for (let i in { a: 1, b: 2, c: 3 }) {
   result.push(i);
 }
 assert.deepEqual(result, ["a", "b", "c"]);
+
+// test: supports continue statement
+let i = 10;
+let counter = 0;
+while (--i) {
+  if (i % 2) continue;
+  counter++;
+}
+assert.equal(i, 0);
+assert.equal(counter, 4);

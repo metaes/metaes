@@ -238,6 +238,11 @@ export interface ForStatement extends NodeBase {
   body: BlockStatement;
 }
 
+export interface ContinueStatement extends NodeBase {
+  type: "ContinueStatement";
+  label: Identifier;
+}
+
 export interface EmptyStatement extends NodeBase {
   type: "EmptyStatement";
 }

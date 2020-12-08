@@ -292,7 +292,23 @@ export const WhileStatement: Interpreter<NodeTypes.WhileStatement> = (e, c, cerr
       e.test,
       (test) =>
         test
-          ? schedule(() => evaluate(e.body, loop, (ex) => (ex.type === "BreakStatement" ? c() : cerr(ex)), env, config))
+          ? schedule(() =>
+              evaluate(
+                e.body,
+                loop,
+                (ex) => {
+                  if (ex.type === "BreakStatement") {
+                    c();
+                  } else if (ex.type === "ContinueStatement") {
+                    loop();
+                  } else {
+                    cerr(ex);
+                  }
+                },
+                env,
+                config
+              )
+            )
           : c(),
       cerr,
       env,
@@ -330,6 +346,15 @@ export const ForStatement: Interpreter<NodeTypes.ForStatement> = (e, c, cerr, en
     evaluate(e.init, test, cerr, env, config);
   } else {
     test();
+  }
+};
+
+export const ContinueStatement: Interpreter<NodeTypes.ContinueStatement> = (e, _c, cerr, env, config) => {
+  const kontinue = (label?) => cerr({ type: "ContinueStatement", value: label });
+  if (e.label) {
+    evaluate(e.label, kontinue, cerr, env, config);
+  } else {
+    kontinue();
   }
 };
 
@@ -528,6 +553,7 @@ export default {
   ForStatement,
   ForOfStatement,
   WhileStatement,
+  ContinueStatement,
   EmptyStatement,
   ClassDeclaration,
   ClassBody,
