@@ -405,7 +405,13 @@ export const ForOfStatement: Interpreter<NodeTypes.ForOfStatement> = (e, c, cerr
 
 export const EmptyStatement: Interpreter<NodeTypes.EmptyStatement> = (_e, c) => c();
 
-export const ClassDeclaration: Interpreter<NodeTypes.ClassDeclaration> = (e, c, cerr, env, config) => {
+export const createClass: Interpreter<NodeTypes.ClassDeclaration | NodeTypes.ClassExpression> = (
+  e,
+  c,
+  cerr,
+  env,
+  config
+) => {
   function onSuperClass(superClass) {
     let klass = function () {};
     evaluate(
@@ -427,10 +433,7 @@ export const ClassDeclaration: Interpreter<NodeTypes.ClassDeclaration> = (e, c, 
               cerr(toException(e, e.body));
             }
           },
-          () =>
-            e.id
-              ? evaluate(declare(e.id.name, klass), c, cerr, env, config)
-              : cerr(NotImplementedException("Not implemented case")),
+          () => c(klass),
           cerr
         ),
       cerr,
@@ -444,6 +447,18 @@ export const ClassDeclaration: Interpreter<NodeTypes.ClassDeclaration> = (e, c, 
     onSuperClass(null);
   }
 };
+
+export const ClassDeclaration: Interpreter<NodeTypes.ClassDeclaration> = (e, c, cerr, env, config) =>
+  createClass(
+    e,
+    (klass) =>
+      e.id
+        ? evaluate(declare(e.id.name, klass), c, cerr, env, config)
+        : cerr(NotImplementedException("Not implemented case")),
+    cerr,
+    env,
+    config
+  );
 
 export const ClassBody: Interpreter<NodeTypes.ClassBody> = (e, c, cerr, env, config) =>
   evaluateArray(e.body, c, cerr, env, config);

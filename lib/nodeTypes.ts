@@ -282,6 +282,13 @@ export interface ClassDeclaration extends NodeBase {
   body: ClassBody;
 }
 
+export interface ClassExpression extends NodeBase {
+  type: "ClassExpression";
+  id: Identifier;
+  superClass: Identifier | null;
+  body: ClassBody;
+}
+
 export interface ClassBody extends NodeBase {
   type: "ClassBody";
   body: MethodDefinition[];

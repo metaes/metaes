@@ -5,6 +5,7 @@ import { LocatedException, NotImplementedException, toException } from "../excep
 import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Interpreter } from "../types";
+import { createClass } from "./statements";
 
 const concatSpreads = (all, next) => (next instanceof SpreadElementValue ? all.concat(next.value) : all.concat([next]));
 
@@ -622,6 +623,9 @@ export const AwaitExpression: Interpreter<NodeTypes.AwaitExpression> = (e, c, ce
     config
   );
 
+export const ClassExpression: Interpreter<NodeTypes.ClassExpression> = (e, c, cerr, env, config) =>
+  createClass(e, c, cerr, env, config);
+
 export default {
   CallExpression,
   MemberExpression,
@@ -642,5 +646,6 @@ export default {
   TemplateLiteral,
   TaggedTemplateExpression,
   SpreadElement,
-  AwaitExpression
+  AwaitExpression,
+  ClassExpression
 };
