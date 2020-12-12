@@ -47,3 +47,11 @@ try {
 }
 assert.instanceOf(e, TypeError);
 assert.equal(e.message, "Found non-callable @@iterator");
+
+// test: tagged template expression non-function call
+try {
+  ("+" || "-")`body`;
+} catch (e) {
+  assert.instanceOf(e, TypeError);
+  assert.equal(e.message, `Template expression tag is not a function`);
+}

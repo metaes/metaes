@@ -595,13 +595,15 @@ export const TaggedTemplateExpression: Interpreter<NodeTypes.TaggedTemplateExpre
   evaluate(
     e.tag,
     (tag) =>
-      evaluate(
-        e.quasi,
-        (quasi) => evaluate(at(e.quasi, apply(tag, undefined, [quasi], e)), c, cerr, env, config),
-        cerr,
-        env,
-        config
-      ),
+      typeof tag === "function"
+        ? evaluate(
+            e.quasi,
+            (quasi) => evaluate(at(e.quasi, apply(tag, undefined, [quasi], e)), c, cerr, env, config),
+            cerr,
+            env,
+            config
+          )
+        : cerr(toException(new TypeError(`Template expression tag is not a function`), e.tag)),
     cerr,
     env,
     config
