@@ -1,9 +1,10 @@
-import { GetValueSync } from "../environment";
+import { GetValue } from "../environment";
 import { at, declare, evaluate, evaluateArray, get, getTrampolineScheduler, set, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Environment, Interpreter, MetaesException } from "../types";
+import { bindArgs } from "./../metaes";
 
 const hoistDeclarations: Interpreter<NodeTypes.Statement[]> = (e, c, cerr, env, config) =>
   visitArray(
@@ -24,7 +25,7 @@ export const BlockStatement: Interpreter<NodeTypes.BlockStatement | NodeTypes.Pr
   );
 
 export const Program: Interpreter<NodeTypes.Program> = (e, c, cerr, env, config) =>
-  GetValueSync("BlockStatement", config.interpreters)!(e, c, cerr, env, config);
+  GetValue({ name: "BlockStatement" }, bindArgs(e, c, cerr, env, config), cerr, config.interpreters);
 
 export const VariableDeclaration: Interpreter<NodeTypes.VariableDeclaration> = (e, c, cerr, env, config) =>
   visitArray(e.declarations, (declarator, c, cerr) => evaluate(declarator, c, cerr, env, config), c, cerr);

@@ -12,6 +12,7 @@ import {
   EvalParam,
   Evaluate,
   EvaluationConfig,
+  PartialErrorContinuation,
   Phase,
   Script,
   ScriptType,
@@ -259,3 +260,45 @@ export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNo
     timestamp: Date.now(),
     env
   });
+
+/**
+ * Converts function from continuation passing style style back to normal return/throw style.
+ *
+ * It may not work if provided function `fn` doesn't use `c` or `cerr` callbacks immediately.
+ */
+export const uncps = <I, T, E, C>(
+  fn: (input: I, c: Continuation<T>, cerr: PartialErrorContinuation, env?: Environment<E>, config?: C) => void,
+  thisValue?: any
+) => (input?: I, env?: Environment<E>, config?: C): T => {
+  let _result, _exception;
+  fn.call(
+    thisValue,
+    input,
+    (result) => (_result = result),
+    (exception) => (_exception = exception),
+    env,
+    config
+  );
+  if (_exception) {
+    throw _exception;
+  } else {
+    return _result;
+  }
+};
+
+const isFn = <T>(value: any): value is (arg: T) => T => typeof value === "function";
+
+export type Upgradable<T> = T | ((arg: T) => T);
+
+export const upgraded = <T>(superArg: T, arg?: Upgradable<T>) => {
+  if (isFn(arg)) {
+    return arg(superArg);
+  } else {
+    return superArg;
+  }
+};
+
+/**
+ * Creates function which when called with a function will apply provided arguments.
+ */
+export const bindArgs = (...args) => (fn) => fn(...args);

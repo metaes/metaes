@@ -1,4 +1,4 @@
-import { GetValueSync } from "./environment";
+import { GetValue } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
 import { callInterceptor } from "./metaes";
 import { CallExpression, EvalNode, TaggedTemplateExpression } from "./nodeTypes";
@@ -66,47 +66,51 @@ export function getTrampolineScheduler() {
   };
 }
 
-export function evaluate(
+export const evaluate = (
   e: EvalNode,
   c: Continuation,
   cerr: ErrorContinuation,
   env: Environment,
   config: EvaluationConfig
-) {
-  const interpreter = GetValueSync(e.type, config.interpreters);
-  const schedule = config.schedule || defaultScheduler;
-  if (interpreter) {
-    callInterceptor("enter", config, e, env);
-    schedule(function run() {
-      interpreter(
-        e,
-        function _c(value) {
-          schedule(function exit() {
-            callInterceptor("exit", config, e, env, value);
-            c(value);
-          });
-        },
-        function _cerr(exception) {
-          exception = toException(exception);
-          if (!exception.location) {
-            exception.location = e;
-          }
-          if (!exception.script) {
-            exception.script = config.script;
-          }
-          callInterceptor("exit", config, e, env, exception);
-          cerr(<MetaesException>exception);
-        },
-        env,
-        config
-      );
-    });
-  } else {
-    const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
-    callInterceptor("exit", config, e, env, exception);
-    cerr(<MetaesException>exception);
-  }
-}
+) =>
+  GetValue(
+    { name: e.type },
+    function (interpreter) {
+      callInterceptor("enter", config, e, env);
+
+      const schedule = config.schedule || defaultScheduler;
+      schedule(function run() {
+        interpreter(
+          e,
+          function _c(value) {
+            schedule(function exit() {
+              callInterceptor("exit", config, e, env, value);
+              c(value);
+            });
+          },
+          function _cerr(exception) {
+            exception = toException(exception);
+            if (!exception.location) {
+              exception.location = e;
+            }
+            if (!exception.script) {
+              exception.script = config.script;
+            }
+            callInterceptor("exit", config, e, env, exception);
+            cerr(<MetaesException>exception);
+          },
+          env,
+          config
+        );
+      });
+    },
+    function () {
+      const exception = NotImplementedException(`"${e.type}" node type interpreter is not defined yet.`, e);
+      callInterceptor("exit", config, e, env, exception);
+      cerr(<MetaesException>exception);
+    },
+    config.interpreters
+  );
 
 type Visitor<T> = (element: T, c: Continuation, cerr: PartialErrorContinuation) => void;
 

@@ -1,10 +1,11 @@
 import { callcc } from "../callcc";
-import { getEnvironmentForValue, GetValueSync } from "../environment";
+import { getEnvironmentForValue, GetValue } from "../environment";
 import { apply, at, evaluate, evaluateArray, get, getProperty, set, setProperty, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
 import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Interpreter } from "../types";
+import { bindArgs } from "./../metaes";
 import { createClass } from "./statements";
 
 const concatSpreads = (all, next) => (next instanceof SpreadElementValue ? all.concat(next.value) : all.concat([next]));
@@ -203,14 +204,7 @@ export const AssignmentExpression: Interpreter<NodeTypes.AssignmentExpression> =
                   config
                 );
               } else if (property.type === "Identifier") {
-                evaluate(
-                  at(e, setProperty(object, property.name, right, e.operator)),
-
-                  c,
-                  cerr,
-                  env,
-                  config
-                );
+                evaluate(at(e, setProperty(object, property.name, right, e.operator)), c, cerr, env, config);
               } else {
                 cerr(NotImplementedException("This kind of assignment is not implemented yet.", property));
               }
@@ -365,7 +359,7 @@ export const NewExpression: Interpreter<NodeTypes.NewExpression> = (e, c, cerr, 
   evaluateArray(
     e.arguments,
     (args) => {
-      let calleeNode = e.callee;
+      const calleeNode = e.callee;
 
       switch (calleeNode.type) {
         case "MemberExpression":
@@ -572,7 +566,7 @@ export const ThisExpression: Interpreter<NodeTypes.ThisExpression> = (e, c, cerr
   evaluate(at(e, get("this")), c, cerr, env, config);
 
 export const ConditionalExpression: Interpreter<NodeTypes.ConditionalExpression> = (e, c, cerr, env, config) =>
-  GetValueSync("IfStatement", config.interpreters)!(e, c, cerr, env, config);
+  GetValue({ name: "IfStatement" }, bindArgs(e, c, cerr, env, config), cerr, config.interpreters);
 
 export const TemplateLiteral: Interpreter<NodeTypes.TemplateLiteral> = (e, c, cerr, env, config) => {
   if (e.quasis.length === 1 && e.expressions.length === 0) {
