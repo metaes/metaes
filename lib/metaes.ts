@@ -266,10 +266,10 @@ export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNo
  *
  * It may not work if provided function `fn` doesn't use `c` or `cerr` callbacks immediately.
  */
-export const uncps = <I, T, E, C>(
-  fn: (input: I, c: Continuation<T>, cerr: PartialErrorContinuation, env?: Environment<E>, config?: C) => void,
+export const uncps = <I, O, E, C>(
+  fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, env?: E, config?: C) => void,
   thisValue?: any
-) => (input?: I, env?: Environment<E>, config?: C): T => {
+) => (input?: I, env?: E, config?: C): O => {
   let _result, _exception;
   fn.call(
     thisValue,
