@@ -9,23 +9,11 @@ export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, c
 
 export const Literal: Interpreter<NodeTypes.Literal> = (e, c) => c(e.value);
 
-const { call, apply } = Function.prototype;
-
 export const Apply: Interpreter<NodeTypes.Apply> = ({ fn, thisValue, args }, c, cerr, _env, config) => {
   try {
     if (isMetaFunction(fn)) {
       evaluateMetaFunction(
         { metaFunction: getMetaFunction(fn), thisObject: thisValue, args },
-        c,
-        cerr,
-        undefined,
-        config
-      );
-    }
-    // TODO: add tests
-    else if (isMetaFunction(thisValue) && (fn === call || fn === apply)) {
-      evaluateMetaFunction(
-        { metaFunction: getMetaFunction(thisValue), thisObject: undefined, args },
         c,
         cerr,
         undefined,
