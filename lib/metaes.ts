@@ -286,6 +286,15 @@ export const uncps = <I, O, E, C>(
   }
 };
 
+/**
+ * Converts function from continuation passing style style back to normal return/throw style using Promise.
+ */
+export const uncpsp = <I, O, E, C>(
+  fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, env?: E, config?: C) => void,
+  thisValue?: any
+) => (input?: I, env?: E, config?: C) =>
+  new Promise<O>((resolve, reject) => fn.call(thisValue, input, resolve, reject, env, config));
+
 const isFn = <T>(value: any): value is (arg: T) => T => typeof value === "function";
 
 export type Upgradable<T> = T | ((arg: T) => T);
