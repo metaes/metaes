@@ -1,4 +1,4 @@
-import { toEnvironment } from "./environment";
+import { GetValue, toEnvironment } from "./environment";
 import { evaluate } from "./evaluate";
 import { ExportEnvironmentSymbol, ImportEnvironmentSymbol, modulesEnv } from "./interpreter/modules";
 import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
@@ -13,6 +13,7 @@ import {
   EvalParam,
   Evaluate,
   EvaluationConfig,
+  Interpreter,
   PartialErrorContinuation,
   Phase,
   Script,
@@ -180,18 +181,17 @@ export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNo
  *
  * It may not work if provided function `fn` doesn't use `c` or `cerr` callbacks immediately. Use `uncpsp` in this case.
  */
-export const uncps = <I, O, E, C>(
-  fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, env?: E, config?: C) => void,
+export const uncps = <I, O, R extends any[]>(
+  fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, ...rest: R) => void,
   thisValue?: any
-) => (input?: I, env?: E, config?: C): O => {
+) => (input?: I, ...rest: R): O => {
   let _result, _exception;
   fn.call(
     thisValue,
     input,
     (result) => (_result = result),
     (exception) => (_exception = exception),
-    env,
-    config
+    ...rest
   );
   if (_exception) {
     throw _exception;
@@ -203,11 +203,11 @@ export const uncps = <I, O, E, C>(
 /**
  * Converts function from continuation passing style style back to normal return/throw style using Promise.
  */
-export const uncpsp = <I, O, E, C>(
-  fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, env?: E, config?: C) => void,
+export const uncpsp = <I, O, R extends any[]>(
+  fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, ...rest: R) => void,
   thisValue?: any
-) => (input?: I, env?: E, config?: C) =>
-  new Promise<O>((resolve, reject) => fn.call(thisValue, input, resolve, reject, env, config));
+) => (input?: I, ...rest: R) =>
+  new Promise<O>((resolve, reject) => fn.call(thisValue, input, resolve, reject, ...rest));
 
 const isFn = <T>(value: any): value is (arg: T) => T => typeof value === "function";
 
@@ -225,3 +225,10 @@ export const upgraded = <T>(superArg: T, arg?: Upgradable<T>) => {
  * Creates function which when called with a function will apply provided arguments.
  */
 export const bindArgs = (...args) => (fn) => fn(...args);
+
+export const getInterpreter = (
+  name: string,
+  c: Continuation<Interpreter<any>>,
+  cerr: ErrorContinuation,
+  config: EvaluationConfig
+) => GetValue({ name }, c, cerr, config.interpreters);

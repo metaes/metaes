@@ -2,7 +2,7 @@ import { assert } from "chai";
 import { before, beforeEach, describe, it } from "mocha";
 import { Apply, GetProperty, SetProperty } from "../../lib/interpreter/base";
 import { ECMAScriptInterpreters } from "../../lib/interpreters";
-import { evalFnBody, MetaesContext } from "../../lib/metaes";
+import { evalFnBody, MetaesContext, metaesEval, uncps } from "../../lib/metaes";
 import { uncpsp } from "./../../lib/metaes";
 
 describe("Interpreters", () => {
@@ -34,6 +34,22 @@ describe("Interpreters", () => {
 
   it("should support custom GetValue", async () => {
     assert.deepEqual(await evalFnBodyAsPromise((me) => [me.firstName, me.lastName]), [1, 2]);
+  });
+
+  it("supports custom GetProperty in ObjectPattern", function () {
+    const config = {
+      interpreters: {
+        values: {
+          GetProperty(_, c) {
+            c(2);
+          }
+        },
+        prev: ECMAScriptInterpreters
+      }
+    };
+    const env = { a: { b: 1 } };
+    assert.equal(uncps(metaesEval)("a.b", env, config), 2, "works outside of ObjectPattern");
+    assert.equal(uncps(metaesEval)("const {b}=a; b;", env, config), 2, "works inside of ObjectPattern");
   });
 });
 
