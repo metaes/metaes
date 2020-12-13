@@ -1,7 +1,8 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
 import { presentException } from "../../lib/exceptions";
-import { createScript, metaesEvalModule } from "../../lib/metaes";
+import { metaesEvalModule } from "../../lib/metaes";
+import { createScript } from "../../lib/script";
 
 const tests = {
   identifier: {

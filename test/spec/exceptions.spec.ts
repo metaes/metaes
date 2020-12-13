@@ -1,9 +1,11 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
 import { ECMAScriptInterpreters } from "../../lib/interpreters";
-import { evalFnBodyAsPromise, MetaesContext, metaesEval, noop } from "../../lib/metaes";
+import { evalFnBody, metaesEval, noop, uncpsp } from "../../lib/metaes";
 
 describe("Exceptions", () => {
+  const evalFnBodyAsPromise = uncpsp(evalFnBody(metaesEval));
+
   it("should throw on AwaitExpression use", () =>
     new Promise((resolve, reject) => {
       metaesEval(
@@ -22,7 +24,7 @@ describe("Exceptions", () => {
     }));
 
   it("should throw ReferenceError", () =>
-    new Promise((resolve, _reject) => {
+    new Promise<void>((resolve, _reject) => {
       metaesEval("a", noop, function (error) {
         assert.equal(error.value.message, `"a" is not defined.`);
         assert.equal(error.type, "Error");
@@ -33,11 +35,8 @@ describe("Exceptions", () => {
   describe("From blocks", () => {
     it("should exit block statement", async () => {
       try {
-        await evalFnBodyAsPromise({
-          context: new MetaesContext(),
-          source: function () {
-            throw 1;
-          }
+        await evalFnBodyAsPromise(function () {
+          throw 1;
         });
         throw new Error("Didn't throw");
       } catch (e) {
@@ -47,13 +46,10 @@ describe("Exceptions", () => {
 
     it("should exit block statement when throwing from nested function", async () => {
       try {
-        await evalFnBodyAsPromise({
-          context: new MetaesContext(),
-          source: function () {
-            (() => {
-              throw 1;
-            })();
-          }
+        await evalFnBodyAsPromise(function () {
+          (() => {
+            throw 1;
+          })();
         });
       } catch (e) {
         assert.equal(e.type, "Error");
@@ -62,18 +58,15 @@ describe("Exceptions", () => {
 
     it("should continue after try/catch block", async () => {
       assert.equal(
-        await evalFnBodyAsPromise({
-          context: new MetaesContext(),
-          source: function () {
-            try {
-              (async () => {
-                throw 1;
-              })();
-            } catch (e) {
-              // ignore
-            }
-            "hello";
+        await evalFnBodyAsPromise(function () {
+          try {
+            (async () => {
+              throw 1;
+            })();
+          } catch (e) {
+            // ignore
           }
+          ("hello");
         }),
         "hello"
       );
@@ -81,18 +74,15 @@ describe("Exceptions", () => {
 
     it("should catch any error in try statement", async () => {
       assert.instanceOf(
-        await evalFnBodyAsPromise({
-          context: new MetaesContext(),
-          source: function () {
-            let error;
-            try {
-              // @ts-ignore
-              a;
-            } catch (e) {
-              error = e;
-            }
-            error;
+        await evalFnBodyAsPromise(function () {
+          let error;
+          try {
+            // @ts-ignore
+            a;
+          } catch (e) {
+            error = e;
           }
+          error;
         }),
         ReferenceError
       );

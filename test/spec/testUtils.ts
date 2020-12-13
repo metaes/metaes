@@ -8,7 +8,7 @@ import { callcc } from "../../lib/callcc";
 import { getEnvironmentBy } from "../../lib/environment";
 import { presentException } from "../../lib/exceptions";
 import { ExportEnvironmentSymbol } from "../../lib/interpreter/modules";
-import { createScript } from "../../lib/metaes";
+import { createScript } from "../../lib/script";
 import { Environment, Evaluate } from "../../lib/types";
 
 export const evaluateHelper = (
