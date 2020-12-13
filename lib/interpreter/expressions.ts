@@ -371,11 +371,10 @@ export const NewExpression: Interpreter<NodeTypes.NewExpression> = (e, c, cerr, 
               if (isMetaFunction(callee)) {
                 const newThis = Object.create(callee.prototype);
                 evaluateMetaFunction(
-                  getMetaFunction(callee),
+                  { metaFunction: getMetaFunction(callee), thisObject: newThis, args },
                   (value) => c(typeof value === "object" ? value : newThis),
                   cerr,
-                  newThis,
-                  args,
+                  undefined,
                   config
                 );
               } else {

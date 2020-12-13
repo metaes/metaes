@@ -14,11 +14,23 @@ const { call, apply } = Function.prototype;
 export const Apply: Interpreter<NodeTypes.Apply> = ({ fn, thisValue, args }, c, cerr, _env, config) => {
   try {
     if (isMetaFunction(fn)) {
-      evaluateMetaFunction(getMetaFunction(fn), c, cerr, thisValue, args, config);
+      evaluateMetaFunction(
+        { metaFunction: getMetaFunction(fn), thisObject: thisValue, args },
+        c,
+        cerr,
+        undefined,
+        config
+      );
     }
     // TODO: add tests
     else if (isMetaFunction(thisValue) && (fn === call || fn === apply)) {
-      evaluateMetaFunction(getMetaFunction(thisValue), c, cerr, undefined, args, config);
+      evaluateMetaFunction(
+        { metaFunction: getMetaFunction(thisValue), thisObject: undefined, args },
+        c,
+        cerr,
+        undefined,
+        config
+      );
     } else {
       c(fn.apply(thisValue, args));
     }

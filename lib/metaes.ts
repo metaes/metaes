@@ -130,8 +130,8 @@ export const createScriptFromFnBody = (source: Function, cache?: ParseCache) => 
 
 export const evalFn = (evaluate: Evaluate) => <T extends any[]>(
   { source, args }: { source: (...T) => void; args?: T },
-  c?: Continuation,
-  cerr?: ErrorContinuation,
+  c: Continuation,
+  cerr: ErrorContinuation,
   environment?: Environment,
   config?: Partial<EvaluationConfig>
 ) =>
@@ -139,16 +139,9 @@ export const evalFn = (evaluate: Evaluate) => <T extends any[]>(
     source,
     (fn) => {
       try {
-        const result = fn.apply(null, args);
-        if (c) {
-          c(result);
-        }
+        c(fn.apply(null, args));
       } catch (e) {
-        if (cerr) {
-          cerr(e);
-        } else {
-          throw e;
-        }
+        cerr(e);
       }
     },
     cerr,
@@ -158,8 +151,8 @@ export const evalFn = (evaluate: Evaluate) => <T extends any[]>(
 
 export const evalFnBody = (evaluate: Evaluate) => (
   source: Function,
-  c?: Continuation,
-  cerr?: ErrorContinuation,
+  c: Continuation,
+  cerr: ErrorContinuation,
   environment?: Environment,
   config?: Partial<EvaluationConfig>
 ) => evaluate(createScriptFromFnBody(source), c, cerr, environment, config);
@@ -185,7 +178,7 @@ export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNo
 /**
  * Converts function from continuation passing style style back to normal return/throw style.
  *
- * It may not work if provided function `fn` doesn't use `c` or `cerr` callbacks immediately.
+ * It may not work if provided function `fn` doesn't use `c` or `cerr` callbacks immediately. Use `uncpsp` in this case.
  */
 export const uncps = <I, O, E, C>(
   fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, env?: E, config?: C) => void,
