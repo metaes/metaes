@@ -1,6 +1,7 @@
 import { getEnvironmentBy } from "../environment";
 import { declare, evaluate, get, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException } from "../exceptions";
+import { bindArgs } from "../metaes";
 import * as NodeTypes from "../nodeTypes";
 import { Environment, Interpreter, Interpreters } from "../types";
 
@@ -14,7 +15,7 @@ export const modulesEnv: Interpreters = {
   [GetBindingValueName](value: ImportBinding, c, cerr, env, config) {
     evaluate(
       get(ImportModuleName),
-      (importModule) => importModule(value.modulePath, (mod) => c(mod[value.name]), cerr),
+      bindArgs(value.modulePath, (mod) => c(mod[value.name]), cerr),
       cerr,
       env,
       config
@@ -40,13 +41,7 @@ export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, c
     get(e.name),
     (value) =>
       value instanceof ImportBinding
-        ? evaluate(
-            get(GetBindingValueName),
-            (getBindingValue) => getBindingValue(value, c, cerr, env, config),
-            cerr,
-            env,
-            config
-          )
+        ? evaluate(get(GetBindingValueName), bindArgs(value, c, cerr, env, config), cerr, env, config)
         : c(value),
     (exception) => {
       exception.location = e;
@@ -102,7 +97,7 @@ export const ExportNamedDeclaration: Interpreter<NodeTypes.ExportNamedDeclaratio
       }
       evaluate(
         get(ExportBindingName),
-        (exportBinding) => exportBinding({ name, value: toExport, e: e.declaration }, c, cerr, env, config),
+        bindArgs({ name, value: toExport, e: e.declaration }, c, cerr, env, config),
         cerr,
         env,
         config
@@ -119,7 +114,7 @@ export const ExportDefaultDeclaration: Interpreter<NodeTypes.ExportDefaultDeclar
     (value) =>
       evaluate(
         get(ExportBindingName),
-        (exportBinding) => exportBinding({ name: "default", value, e: e.declaration }, c, cerr, env, config),
+        bindArgs({ name: "default", value, e: e.declaration }, c, cerr, env, config),
         cerr,
         env,
         config
