@@ -12,7 +12,6 @@ export const evaluateMetaFunction = (
   { metaFunction, thisObject, args }: { metaFunction: MetaesFunction; thisObject: any; args: any[] },
   c: Continuation,
   cerr: ErrorContinuation,
-  _env?: Environment,
   executionTimeConfig?: Partial<EvaluationConfig> // TODO: use 'Upgradable'
 ) => {
   const { e, closure, config } = metaFunction;
@@ -74,9 +73,12 @@ export const evaluateMetaFunction = (
 export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
   const fn = function (this: any, ...args) {
     try {
-      return uncps(evaluateMetaFunction)({ metaFunction, thisObject: this, args }, undefined, {
-        schedule: getTrampolineScheduler()
-      });
+      return uncps(evaluateMetaFunction)(
+        { metaFunction, thisObject: this, args },
+        {
+          schedule: getTrampolineScheduler()
+        }
+      );
     } catch (exception) {
       throw exception.value;
     }
