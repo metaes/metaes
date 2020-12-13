@@ -149,10 +149,6 @@ export class MetaesContext implements Context {
       cerr || this.cerr
     );
 
-  evalAsPromise(input: Script | Source, environment?: Environment) {
-    return evalAsPromise(this, input, environment);
-  }
-
   evalFnBody(
     source: Function,
     c?: Continuation,
@@ -170,13 +166,6 @@ export class MetaesContext implements Context {
 
 export const parseFunction = (fn: Function, cache?: ParseCache) =>
   parse("(" + fn.toString() + ")", { loc: false, range: false }, cache);
-
-export const evalAsPromise = (
-  context: Context,
-  input: Script | Source,
-  environment?: Environment,
-  config?: Partial<EvaluationConfig>
-) => new Promise<any>((resolve, reject) => context.evaluate(input, resolve, reject, environment, config));
 
 export const createScriptFromFnBody = (source: Function, cache?: ParseCache) => ({
   ast: (((parseFunction(source, cache) as Program).body[0] as ExpressionStatement).expression as FunctionNode)
