@@ -1,6 +1,5 @@
-import { GetValue } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
-import { callInterceptor } from "./metaes";
+import { callInterceptor, getInterpreter } from "./metaes";
 import { CallExpression, EvalNode, TaggedTemplateExpression } from "./nodeTypes";
 import {
   ASTNode,
@@ -73,8 +72,8 @@ export const evaluate = (
   env: Environment,
   config: EvaluationConfig
 ) =>
-  GetValue(
-    { name: e.type },
+  getInterpreter(
+    e.type,
     function (interpreter) {
       callInterceptor("enter", config, e, env);
 
@@ -109,7 +108,7 @@ export const evaluate = (
       callInterceptor("exit", config, e, env, exception);
       cerr(<MetaesException>exception);
     },
-    config.interpreters
+    config
   );
 
 type Visitor<T> = (element: T, c: Continuation, cerr: PartialErrorContinuation) => void;

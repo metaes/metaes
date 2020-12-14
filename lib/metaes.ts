@@ -224,7 +224,7 @@ export const upgraded = <T>(superArg: T, arg?: Upgradable<T>) => {
 /**
  * Creates function which when called with a function will apply provided arguments.
  */
-export const bindArgs = (...args) => (fn) => fn(...args);
+export const bindArgs = <T extends any[]>(...args: T) => (fn: (...args: T) => unknown) => fn(...args);
 
 export const getInterpreter = (
   name: string,
