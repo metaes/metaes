@@ -1,8 +1,7 @@
 import { evaluate, getTrampolineScheduler, visitArray } from "./evaluate";
 import { NotImplementedException } from "./exceptions";
 import { uncps, Upgradable, upgraded } from "./metaes";
-import { FunctionNode } from "./nodeTypes";
-import { Continuation, Environment, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
+import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
 
 const MetaFunction = Symbol.for("[[MetaFunction]]");
 export const isMetaFunction = (fn?: Function) => fn && !!fn[MetaFunction];
@@ -91,10 +90,3 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
   fn[MetaFunction] = metaFunction;
   return fn;
 };
-
-export const createMetaFunction = (e: FunctionNode, closure: Environment, config: EvaluationConfig) =>
-  createMetaFunctionWrapper({
-    e,
-    closure,
-    config
-  });

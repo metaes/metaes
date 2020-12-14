@@ -2,7 +2,7 @@ import { callcc } from "../callcc";
 import { getEnvironmentForValue } from "../environment";
 import { apply, at, evaluate, evaluateArray, get, getProperty, set, setProperty, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
-import { createMetaFunction, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
+import { createMetaFunctionWrapper, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Interpreter } from "../types";
 import { bindArgs, getInterpreter } from "./../metaes";
@@ -169,7 +169,7 @@ const _createMetaFunction: Interpreter<NodeTypes.ArrowFunctionExpression | NodeT
   config
 ) => {
   try {
-    c(createMetaFunction(e, env, config));
+    c(createMetaFunctionWrapper({ e, closure: env, config }));
   } catch (error) {
     cerr(LocatedException(error, e));
   }

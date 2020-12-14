@@ -1,6 +1,6 @@
 import { at, declare, evaluate, evaluateArray, get, getTrampolineScheduler, set, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
-import { createMetaFunction } from "../metafunction";
+import { createMetaFunctionWrapper } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Environment, Interpreter, MetaesException } from "../types";
 import { bindArgs, getInterpreter } from "./../metaes";
@@ -222,7 +222,7 @@ export const BreakStatement: Interpreter<NodeTypes.BreakStatement> = (_e, _c, ce
 
 export const FunctionDeclaration: Interpreter<NodeTypes.FunctionDeclaration> = (e, c, cerr, env, config) => {
   try {
-    c(createMetaFunction(e, env, config));
+    c(createMetaFunctionWrapper({ e, closure: env, config }));
   } catch (error) {
     cerr(LocatedException(error, e));
   }
