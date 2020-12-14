@@ -1,6 +1,6 @@
 import { evaluate, getTrampolineScheduler, visitArray } from "./evaluate";
 import { NotImplementedException } from "./exceptions";
-import { uncps } from "./metaes";
+import { uncps, Upgradable, upgraded } from "./metaes";
 import { FunctionNode } from "./nodeTypes";
 import { Continuation, Environment, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
 
@@ -12,7 +12,7 @@ export const evaluateMetaFunction = (
   { metaFunction, thisObject, args }: { metaFunction: MetaesFunction; thisObject: any; args: any[] },
   c: Continuation,
   cerr: ErrorContinuation,
-  executionTimeConfig?: Partial<EvaluationConfig> // TODO: use 'Upgradable'
+  executionTimeConfig?: Upgradable<EvaluationConfig>
 ) => {
   const { e, closure, config } = metaFunction;
   const env = {
@@ -64,7 +64,7 @@ export const evaluateMetaFunction = (
           }
         },
         env,
-        { ...config, schedule: executionTimeConfig?.schedule || config.schedule }
+        upgraded(config, executionTimeConfig)
       ),
     cerr
   );
@@ -73,12 +73,10 @@ export const evaluateMetaFunction = (
 export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
   const fn = function (this: any, ...args) {
     try {
-      return uncps(evaluateMetaFunction)(
-        { metaFunction, thisObject: this, args },
-        {
-          schedule: getTrampolineScheduler()
-        }
-      );
+      return uncps(evaluateMetaFunction)({ metaFunction, thisObject: this, args }, (superConfig) => ({
+        ...superConfig,
+        schedule: getTrampolineScheduler()
+      }));
     } catch (exception) {
       throw exception.value;
     }

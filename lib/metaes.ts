@@ -217,7 +217,7 @@ export const upgraded = <T>(superArg: T, arg?: Upgradable<T>) => {
   if (isFn(arg)) {
     return arg(superArg);
   } else {
-    return superArg;
+    return arg || superArg;
   }
 };
 
