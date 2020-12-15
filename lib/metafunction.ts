@@ -1,5 +1,6 @@
 import { evaluate, getTrampolineScheduler, visitArray } from "./evaluate";
 import { NotImplementedException } from "./exceptions";
+import { ObjectPatternTarget } from "./interpreter/statements";
 import { uncps, Upgradable, upgraded } from "./metaes";
 import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
 
@@ -31,7 +32,7 @@ export const evaluateMetaFunction = (
           c((env.values[param.argument.name] = args.slice(i++)));
           break;
         case "ObjectPattern":
-          evaluate(param, c, cerr, { values: args[i++], prev: env, internal: true }, config);
+          evaluate(param, c, cerr, { values: { [ObjectPatternTarget]: args[i++] }, prev: env, internal: true }, config);
           break;
         case "AssignmentPattern":
           const arg = args[i++];
