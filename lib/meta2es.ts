@@ -84,7 +84,7 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
   return importTSModule;
 }
 
-export const getMeta2ESEval = async (globalEnv: Environment = { values: {} }) =>
+export const getMeta2ESEval = (globalEnv: Environment = { values: {} }) =>
   getMeta2ES(globalEnv).then((mod: any) => mod.metaesEval);
 
 export const getModule2 = (path: string, globalEnv: Environment = { values: {} }) =>
