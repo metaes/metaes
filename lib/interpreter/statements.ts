@@ -3,6 +3,7 @@ import { LocatedException, NotImplementedException, toException } from "../excep
 import { createMetaFunctionWrapper } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Environment, Interpreter, MetaesException } from "../types";
+import { createInternalEnv } from "./../environment";
 import { getProperty } from "./../evaluate";
 import { bindArgs, getInterpreter } from "./../metaes";
 
@@ -39,7 +40,7 @@ export const VariableDeclarator: Interpreter<NodeTypes.VariableDeclarator> = (e,
         evaluate(declare(e.id.name, rightValue), c, cerr, env, config);
         break;
       case "ObjectPattern":
-        evaluate(e.id, c, cerr, { values: { [ObjectPatternTarget]: rightValue }, prev: env, internal: true }, config);
+        evaluate(e.id, c, cerr, createInternalEnv({ [ObjectPatternTarget]: rightValue }, env), config);
         break;
       case "ArrayPattern":
         let index = 0;
@@ -99,7 +100,7 @@ export const ObjectPattern: Interpreter<NodeTypes.ObjectPattern> = (e, c, cerr, 
                           property.value,
                           c,
                           cerr,
-                          { values: { [ObjectPatternTarget]: value }, prev: env, internal: true },
+                          createInternalEnv({ [ObjectPatternTarget]: value }, env),
                           config
                         );
                       } else {
@@ -422,7 +423,7 @@ export const ForOfStatement: Interpreter<NodeTypes.ForOfStatement> = (e, c, cerr
                 visitArray(
                   right,
                   function (rightValue, c, cerr) {
-                    const bodyEnv = { values: { [ObjectPatternTarget]: rightValue }, prev: env, internal: true };
+                    const bodyEnv = createInternalEnv({ [ObjectPatternTarget]: rightValue }, env);
                     evaluate(declaration0.id, () => evaluate(e.body, c, cerr, bodyEnv, config), cerr, bodyEnv, config);
                   },
                   c,

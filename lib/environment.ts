@@ -68,3 +68,5 @@ export function GetValue<T>(
     value: new ReferenceError(`"${name}" is not defined.`)
   });
 }
+
+export const createInternalEnv = (values: object, prev?: Environment) => <const>{ values, prev, internal: true };

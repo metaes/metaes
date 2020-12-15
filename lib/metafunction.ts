@@ -1,3 +1,4 @@
+import { createInternalEnv } from "./environment";
 import { evaluate, getTrampolineScheduler, visitArray } from "./evaluate";
 import { NotImplementedException } from "./exceptions";
 import { ObjectPatternTarget } from "./interpreter/statements";
@@ -32,7 +33,7 @@ export const evaluateMetaFunction = (
           c((env.values[param.argument.name] = args.slice(i++)));
           break;
         case "ObjectPattern":
-          evaluate(param, c, cerr, { values: { [ObjectPatternTarget]: args[i++] }, prev: env, internal: true }, config);
+          evaluate(param, c, cerr, createInternalEnv({ [ObjectPatternTarget]: args[i++] }, env), config);
           break;
         case "AssignmentPattern":
           const arg = args[i++];
