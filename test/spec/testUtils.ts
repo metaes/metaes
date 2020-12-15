@@ -8,20 +8,21 @@ import { callcc } from "../../lib/callcc";
 import { getEnvironmentBy } from "../../lib/environment";
 import { presentException } from "../../lib/exceptions";
 import { ExportEnvironmentSymbol } from "../../lib/interpreter/modules";
-import { createScript } from "../../lib/metaes";
+import { createScript } from "../../lib/script";
 import { Environment, Evaluate } from "../../lib/types";
+import { uncpsp } from "./../../lib/metaes";
 
+// TODO: simplify
 export const evaluateHelper = (
-  evalFn: Evaluate,
+  evaluate: Evaluate,
   input: string,
   name = "anonymous",
   env: Environment = { values: {} }
-) =>
-  new Promise((resolve, reject) => {
-    const script = createScript(input);
-    script.url = name;
-    evalFn(script, resolve, reject, env);
-  });
+) => {
+  const script = createScript(input);
+  script.url = name;
+  return uncpsp(evaluate)(script, env);
+};
 
 const globalEnv = {
   values: {

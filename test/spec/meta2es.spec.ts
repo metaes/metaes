@@ -5,6 +5,7 @@ import { presentException } from "../../lib/exceptions";
 import { getMeta2ESEval } from "../../lib/meta2es";
 import { evaluateHelper } from "./testUtils";
 
+// TODO: simplify
 async function evaluateHelperWithPrint(evalFn, input, name?, env = { values: {} }) {
   try {
     return await evaluateHelper(evalFn, input, name, env);

@@ -2,8 +2,9 @@ import { assert, expect } from "chai";
 import { describe, it } from "mocha";
 import { callcc, lifted, liftedAll } from "../../lib/callcc";
 import { Apply } from "../../lib/interpreter/base";
-import { evalFnAsPromise, evalFnBodyAsPromise, MetaesContext, metaesEval } from "../../lib/metaes";
+import { MetaesContext, metaesEval } from "../../lib/metaes";
 import { evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../../lib/metafunction";
+import { evalFn, evalFnBody, uncpsp } from "./../../lib/metaes";
 
 describe("Callcc", () => {
   it("should return current env", () => {
@@ -14,7 +15,7 @@ describe("Callcc", () => {
     metaesEval(
       "var answer=42; callcc(receiver)",
       console.log,
-      e => {
+      (e) => {
         throw e;
       },
       { callcc, receiver }
@@ -25,6 +26,7 @@ describe("Callcc", () => {
     const context = new MetaesContext(undefined, undefined, {
       values: { callcc, receiver }
     });
+    const evalFnBodyAsPromise = uncpsp(evalFnBody(context.evaluate));
 
     let env;
     function receiver(_, cc, _cerr, environment) {
@@ -34,10 +36,7 @@ describe("Callcc", () => {
       setTimeout(cc, 0, 21);
     }
 
-    const result = await evalFnBodyAsPromise({
-      context,
-      source: callcc => 2 * callcc(receiver)
-    });
+    const result = await evalFnBodyAsPromise((callcc) => 2 * callcc(receiver));
     assert.equal(result, 42);
     assert.containsAllKeys(env, ["values"]);
   });
@@ -47,17 +46,15 @@ describe("Callcc", () => {
     const context = new MetaesContext(undefined, undefined, {
       values: { callcc, receiver, result }
     });
+    const evalFnBodyAsPromise = uncpsp(evalFnBody(context.evaluate));
     let cc;
     function receiver(_, _cc) {
       cc = _cc;
       cc([1, 2, 3]);
     }
-    await evalFnBodyAsPromise({
-      context,
-      source: (callcc, result, receiver) => {
-        for (let x of callcc(receiver)) {
-          result.push(x);
-        }
+    await evalFnBodyAsPromise((callcc, result, receiver) => {
+      for (let x of callcc(receiver)) {
+        result.push(x);
       }
     });
     assert.deepEqual(result, [1, 2, 3]);
@@ -71,18 +68,17 @@ describe("Callcc", () => {
     const context = new MetaesContext(undefined, undefined, {
       values: { callcc, receiver, result }
     });
+    const evalFnBodyAsPromise = uncpsp(evalFnBody(context.evaluate));
+
     let cc;
     function receiver(value, _cc, _cerr) {
       cc = _cc;
       cc(value);
     }
-    await evalFnBodyAsPromise({
-      context,
-      source: (callcc, result, receiver) => {
-        const bind = value => callcc(receiver, value);
-        for (let x of bind([1, 2, 3])) {
-          result.push(x);
-        }
+    await evalFnBodyAsPromise((callcc, result, receiver) => {
+      const bind = (value) => callcc(receiver, value);
+      for (let x of bind([1, 2, 3])) {
+        result.push(x);
       }
     });
     assert.deepEqual(result, [1, 2, 3]);
@@ -95,14 +91,14 @@ describe("Callcc", () => {
     const context = new MetaesContext(undefined, undefined, {
       values: { callcc, console }
     });
+    const evalFnAsPromise = uncpsp(evalFn(context.evaluate));
 
     const i = await evalFnAsPromise({
-      context,
-      source: callcc => {
+      source: (callcc) => {
         let evilGoTo;
         let i = 0;
 
-        callcc(function(_, cc) {
+        callcc(function (_, cc) {
           evilGoTo = cc;
           evilGoTo();
         });
@@ -121,13 +117,13 @@ describe("Callcc", () => {
     const context = new MetaesContext(undefined, undefined, {
       values: { callcc, console }
     });
+    const evalFnAsPromise = uncpsp(evalFn(context.evaluate));
 
     function receiver(_, _cc, cerr) {
       cerr({ value: new Error("Continuation error") });
     }
 
     const error = await evalFnAsPromise({
-      context,
       source: (callcc, receiver) => {
         try {
           callcc(receiver);
@@ -144,77 +140,75 @@ describe("Callcc", () => {
     const context = new MetaesContext(undefined, undefined, {
       values: { callcc, console, isMetaFunction, Apply }
     });
+    const evalFnBodyAsPromise = uncpsp(evalFnBody(context.evaluate));
 
-    const result = await evalFnBodyAsPromise({
-      context,
-      source: (callcc, isMetaFunction, Apply) => {
-        function receiver(value, cc, ccerr) {
-          ccerr({ type: "NextIteration", value: { value, cc } });
-        }
-        function getIterator(fn) {
-          if (!isMetaFunction(fn)) {
-            throw "Creating iterator from native function not supported yet";
-          }
-          let continuation;
-          let value;
-          let done = false;
-          let error;
-          function start() {
-            Apply(
-              { fn, args: [] },
-              () => {
-                done = true;
-              },
-              e => {
-                if (e.type === "NextIteration") {
-                  value = e.value.value;
-                  continuation = e.value.cc;
-                } else {
-                  error = e.value;
-                }
-              }
-            );
-          }
-
-          return {
-            next() {
-              if (done) {
-                return { value: void 0, done: true };
-              }
-              if (continuation) {
-                continuation();
-              } else {
-                start();
-              }
-              if (error) {
-                throw error;
-              }
-              if (done) {
-                return this.next();
-              }
-              return { value, done };
-            }
-          };
-        }
-        const yield_ = value => callcc(receiver, value);
-
-        function generatorLikeFunction() {
-          for (let i of [1, 2, 3]) {
-            yield_(i);
-          }
-          yield_("another one");
-        }
-        const iterator = getIterator(generatorLikeFunction);
-        const results: any[] = [];
-
-        results.push(iterator.next());
-        results.push(iterator.next());
-        results.push(iterator.next());
-        results.push(iterator.next());
-        results.push(iterator.next());
-
-        results;
+    const result = await evalFnBodyAsPromise((callcc, isMetaFunction, Apply) => {
+      function receiver(value, cc, ccerr) {
+        ccerr({ type: "NextIteration", value: { value, cc } });
       }
+      function getIterator(fn) {
+        if (!isMetaFunction(fn)) {
+          throw "Creating iterator from native function not supported yet";
+        }
+        let continuation;
+        let value;
+        let done = false;
+        let error;
+        function start() {
+          Apply(
+            { fn, args: [] },
+            () => {
+              done = true;
+            },
+            (e) => {
+              if (e.type === "NextIteration") {
+                value = e.value.value;
+                continuation = e.value.cc;
+              } else {
+                error = e.value;
+              }
+            }
+          );
+        }
+
+        return {
+          next() {
+            if (done) {
+              return { value: void 0, done: true };
+            }
+            if (continuation) {
+              continuation();
+            } else {
+              start();
+            }
+            if (error) {
+              throw error;
+            }
+            if (done) {
+              return this.next();
+            }
+            return { value, done };
+          }
+        };
+      }
+      const yield_ = (value) => callcc(receiver, value);
+
+      function generatorLikeFunction() {
+        for (let i of [1, 2, 3]) {
+          yield_(i);
+        }
+        yield_("another one");
+      }
+      const iterator = getIterator(generatorLikeFunction);
+      const results: any[] = [];
+
+      results.push(iterator.next());
+      results.push(iterator.next());
+      results.push(iterator.next());
+      results.push(iterator.next());
+      results.push(iterator.next());
+
+      results;
     });
     expect(result).deep.eq([
       { value: 1, done: false },
@@ -236,10 +230,11 @@ describe("Callcc", () => {
         evaluateMetaFunction
       }
     });
+    const evalFnBodyAsPromise = uncpsp(evalFnBody(context.evaluate));
 
     function awaitReceiver_(value, cc, cerr) {
       if (value instanceof Promise) {
-        value.then(cc).catch(e => cerr({ value: e }));
+        value.then(cc).catch((e) => cerr({ value: e }));
       } else {
         cc(value);
       }
@@ -249,24 +244,21 @@ describe("Callcc", () => {
     const errorMessage = "Can't load data";
 
     const result = await evalFnBodyAsPromise(
-      {
-        context,
-        source: (awaitReceiver_, callcc, loadData, loadFailingData) => {
-          const await_ = (target?) => callcc(awaitReceiver_, target);
+      (awaitReceiver_, callcc, loadData, loadFailingData) => {
+        const await_ = (target?) => callcc(awaitReceiver_, target);
 
-          const results: any[] = [];
-          try {
-            await_(loadFailingData());
-          } catch (e) {
-            results.push(e.message);
-          }
-          results.concat([await_(1), 5, await_(loadData())]);
+        const results: any[] = [];
+        try {
+          await_(loadFailingData());
+        } catch (e) {
+          results.push(e.message);
         }
+        results.concat([await_(1), 5, await_(loadData())]);
       },
       {
         values: {
           loadFailingData: () => new Promise((_, reject) => setTimeout(reject, 0, new Error(errorMessage))),
-          loadData: () => new Promise(resolve => setTimeout(resolve, 10, serverData))
+          loadData: () => new Promise((resolve) => setTimeout(resolve, 10, serverData))
         }
       }
     );
@@ -294,14 +286,13 @@ describe("Callcc", () => {
     const context = new MetaesContext(undefined, console.error, {
       values: { console, pack, setTimeout, assert, ...liftedAll({ socket }) }
     });
-    await evalFnBodyAsPromise({
-      context,
-      source: assert => {
-        const pack3 = pack(3);
-        const pack2 = pack(2);
-        // @ts-ignore
-        assert.deepEqual(pack2(pack3(socket(80))), [[[["80:0", "80:1", "80:2"]], [["80:3", "80:4", "80:5"]]]]);
-      }
+    const evalFnBodyAsPromise = uncpsp(evalFnBody(context.evaluate));
+    
+    await evalFnBodyAsPromise((assert) => {
+      const pack3 = pack(3);
+      const pack2 = pack(2);
+      // @ts-ignore
+      assert.deepEqual(pack2(pack3(socket(80))), [[[["80:0", "80:1", "80:2"]], [["80:3", "80:4", "80:5"]]]]);
     });
   });
 });

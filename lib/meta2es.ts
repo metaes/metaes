@@ -4,7 +4,8 @@ import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 import { getTrampolineScheduler } from "./evaluate";
 import { presentException } from "./exceptions";
 import { ImportModuleName } from "./interpreter/modules";
-import { createScript, metaesEvalModule } from "./metaes";
+import { metaesEvalModule, uncpsp } from "./metaes";
+import { createScript } from "./script";
 import { Continuation, Environment, ErrorContinuation } from "./types";
 
 function createScriptFromTS(url) {
@@ -83,10 +84,10 @@ function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
   return importTSModule;
 }
 
-export const getMeta2ESEval = async (globalEnv: Environment = { values: {} }) =>
+export const getMeta2ESEval = (globalEnv: Environment = { values: {} }) =>
   getMeta2ES(globalEnv).then((mod: any) => mod.metaesEval);
 
 export const getModule2 = (path: string, globalEnv: Environment = { values: {} }) =>
-  new Promise((resolve, reject) => createTSModulesImporter(globalEnv)(path, resolve, reject));
+  uncpsp(createTSModulesImporter(globalEnv))(path);
 
 export const getMeta2ES = (globalEnv: Environment = { values: {} }) => getModule2("./lib/metaes.ts", globalEnv);

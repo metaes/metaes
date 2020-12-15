@@ -238,6 +238,11 @@ export interface ForStatement extends NodeBase {
   body: BlockStatement;
 }
 
+export interface ContinueStatement extends NodeBase {
+  type: "ContinueStatement";
+  label: Identifier;
+}
+
 export interface EmptyStatement extends NodeBase {
   type: "EmptyStatement";
 }
@@ -277,6 +282,13 @@ export interface MethodDefinition extends NodeBase {
 
 export interface ClassDeclaration extends NodeBase {
   type: "ClassDeclaration";
+  id: Identifier;
+  superClass: Identifier | null;
+  body: ClassBody;
+}
+
+export interface ClassExpression extends NodeBase {
+  type: "ClassExpression";
   id: Identifier;
   superClass: Identifier | null;
   body: ClassBody;

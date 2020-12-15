@@ -1,9 +1,10 @@
-import { toEnvironment } from "./environment";
+import { GetValue, toEnvironment } from "./environment";
 import { evaluate } from "./evaluate";
 import { ExportEnvironmentSymbol, ImportEnvironmentSymbol, modulesEnv } from "./interpreter/modules";
 import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
+import { createScript, isScript, nextScriptId, toScript } from "./script";
 import {
   ASTNode,
   Continuation,
@@ -12,9 +13,10 @@ import {
   EvalParam,
   Evaluate,
   EvaluationConfig,
+  Interpreter,
+  PartialErrorContinuation,
   Phase,
   Script,
-  ScriptType,
   Source
 } from "./types";
 
@@ -22,11 +24,11 @@ export interface Context {
   evaluate: Evaluate;
 }
 
-let scriptIdsCounter = 0;
+export function noop() {}
 
-export const nextScriptId = () => "" + scriptIdsCounter++;
+const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 
-function isEvaluable(input: EvalParam): input is Script | Source {
+export function isEvaluable(input: EvalParam): input is Script | Source {
   return (
     typeof input === "string" ||
     typeof input === "function" ||
@@ -34,38 +36,6 @@ function isEvaluable(input: EvalParam): input is Script | Source {
     (typeof input === "object" && input && "type" in input)
   );
 }
-
-export function createScript(source: Script | Source, cache?: ParseCache, type: ScriptType = "script"): Script {
-  if (isScript(source)) {
-    return source;
-  } else {
-    if (typeof source === "object") {
-      return { source, ast: source, scriptId: nextScriptId() };
-    } else if (typeof source === "function") {
-      return { source, ast: parseFunction(source, cache), scriptId: nextScriptId() };
-    } else if (typeof source === "string") {
-      const script: Script = { source, ast: parse(source, {}, cache, type === "module"), scriptId: nextScriptId() };
-      if (type === "module") {
-        script.type = type;
-      }
-      return script;
-    } else {
-      throw new Error(`Can't create script from ${source}.`);
-    }
-  }
-}
-
-export function toScript(input: Source | Script, cache?: ParseCache, type: ScriptType = "script") {
-  return isScript(input) ? input : createScript(input, cache, type);
-}
-
-export function isScript(script: any): script is Script {
-  return typeof script === "object" && "source" in script && "ast" in script && "scriptId" in script;
-}
-
-export function noop() {}
-
-const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
 
 const evaluateConditionally = (
   input: EvalParam,
@@ -147,35 +117,10 @@ export class MetaesContext implements Context {
       c || this.c,
       cerr || this.cerr
     );
-
-  evalAsPromise(input: Script | Source, environment?: Environment) {
-    return evalAsPromise(this, input, environment);
-  }
-
-  evalFnBody(
-    source: Function,
-    c?: Continuation,
-    cerr?: ErrorContinuation,
-    environment?: Environment,
-    config?: EvaluationConfig
-  ) {
-    evalFnBody({ context: this, source }, c, cerr, environment, config);
-  }
-
-  evalFn(source: (...rest) => void, ...args: any[]) {
-    return evalFn({ context: this, source, args });
-  }
 }
 
 export const parseFunction = (fn: Function, cache?: ParseCache) =>
   parse("(" + fn.toString() + ")", { loc: false, range: false }, cache);
-
-export const evalAsPromise = (
-  context: Context,
-  input: Script | Source,
-  environment?: Environment,
-  config?: Partial<EvaluationConfig>
-) => new Promise<any>((resolve, reject) => context.evaluate(input, resolve, reject, environment, config));
 
 export const createScriptFromFnBody = (source: Function, cache?: ParseCache) => ({
   ast: (((parseFunction(source, cache) as Program).body[0] as ExpressionStatement).expression as FunctionNode)
@@ -184,63 +129,34 @@ export const createScriptFromFnBody = (source: Function, cache?: ParseCache) => 
   source
 });
 
-export const evalFnBody = (
-  { context, source }: { context: Context; source: Function },
-  c?: Continuation,
-  cerr?: ErrorContinuation,
+export const evalFn = (evaluate: Evaluate) => <T extends any[]>(
+  { source, args }: { source: (...T) => void; args?: T },
+  c: Continuation,
+  cerr: ErrorContinuation,
   environment?: Environment,
   config?: Partial<EvaluationConfig>
 ) =>
-  context.evaluate(
-    createScriptFromFnBody(source, context instanceof MetaesContext ? context.cache : void 0),
-    c,
-    cerr,
-    environment,
-    config
-  );
-
-export const evalFnBodyAsPromise = (
-  { context, source }: { context: Context; source: Function },
-  environment?: Environment,
-  config?: Partial<EvaluationConfig>
-) => new Promise<any>((resolve, reject) => evalFnBody({ context, source }, resolve, reject, environment, config));
-
-export function evalFn<T extends any[]>(
-  { context, source, args }: { context: MetaesContext; source: (...T) => void; args?: T },
-  c?: Continuation,
-  cerr?: ErrorContinuation,
-  environment?: Environment,
-  config?: Partial<EvaluationConfig>
-) {
-  context.evaluate(
+  evaluate(
     source,
     (fn) => {
       try {
-        const result = fn.apply(null, args);
-        if (c) {
-          c(result);
-        }
+        c(fn.apply(null, args));
       } catch (e) {
-        if (cerr) {
-          cerr(e);
-        } else {
-          throw e;
-        }
+        cerr(e);
       }
     },
     cerr,
     environment,
     config
   );
-}
 
-export function evalFnAsPromise<T extends any[]>(
-  { context, source, args }: { context: MetaesContext; source: (...T) => void; args?: T },
+export const evalFnBody = (evaluate: Evaluate) => (
+  source: Function,
+  c: Continuation,
+  cerr: ErrorContinuation,
   environment?: Environment,
   config?: Partial<EvaluationConfig>
-): Promise<any> {
-  return new Promise<any>((resolve, reject) => evalFn({ context, source, args }, resolve, reject, environment, config));
-}
+) => evaluate(createScriptFromFnBody(source), c, cerr, environment, config);
 
 export const consoleLoggingMetaesContext = (environment: Environment = { values: {} }) =>
   new MetaesContext(console.log, console.error, environment, {
@@ -259,3 +175,60 @@ export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNo
     timestamp: Date.now(),
     env
   });
+
+/**
+ * Converts function from continuation passing style style back to normal return/throw style.
+ *
+ * It may not work if provided function `fn` doesn't use `c` or `cerr` callbacks immediately. Use `uncpsp` in this case.
+ */
+export const uncps = <I, O, R extends any[]>(
+  fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, ...rest: R) => void,
+  thisValue?: any
+) => (input?: I, ...rest: R): O => {
+  let _result, _exception;
+  fn.call(
+    thisValue,
+    input,
+    (result) => (_result = result),
+    (exception) => (_exception = exception),
+    ...rest
+  );
+  if (_exception) {
+    throw _exception;
+  } else {
+    return _result;
+  }
+};
+
+/**
+ * Converts function from continuation passing style style back to normal return/throw style using Promise.
+ */
+export const uncpsp = <I, O, R extends any[]>(
+  fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, ...rest: R) => void,
+  thisValue?: any
+) => (input?: I, ...rest: R) =>
+  new Promise<O>((resolve, reject) => fn.call(thisValue, input, resolve, reject, ...rest));
+
+const isFn = <T>(value: any): value is (arg: T) => T => typeof value === "function";
+
+export type Upgradable<T> = T | ((arg: T) => T);
+
+export const upgraded = <T>(superArg: T, arg?: Upgradable<T>) => {
+  if (isFn(arg)) {
+    return arg(superArg);
+  } else {
+    return arg || superArg;
+  }
+};
+
+/**
+ * Creates function which when called with a function will apply provided arguments.
+ */
+export const bindArgs = <T extends any[]>(...args: T) => (fn: (...args: T) => unknown) => fn(...args);
+
+export const getInterpreter = (
+  name: string,
+  c: Continuation<Interpreter<any>>,
+  cerr: ErrorContinuation,
+  config: EvaluationConfig
+) => GetValue({ name }, c, cerr, config.interpreters);

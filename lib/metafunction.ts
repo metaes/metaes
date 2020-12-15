@@ -1,20 +1,19 @@
+import { createInternalEnv } from "./environment";
 import { evaluate, getTrampolineScheduler, visitArray } from "./evaluate";
 import { NotImplementedException } from "./exceptions";
-import { FunctionNode } from "./nodeTypes";
-import { Continuation, Environment, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
+import { ObjectPatternTarget } from "./interpreter/statements";
+import { uncps, Upgradable, upgraded } from "./metaes";
+import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
 
 const MetaFunction = Symbol.for("[[MetaFunction]]");
 export const isMetaFunction = (fn?: Function) => fn && !!fn[MetaFunction];
 export const getMetaFunction = (fn: Function): MetaesFunction => fn[MetaFunction];
 
-// TODO: move to interpreter style
 export const evaluateMetaFunction = (
-  metaFunction: MetaesFunction,
+  { metaFunction, thisObject, args }: { metaFunction: MetaesFunction; thisObject: any; args: any[] },
   c: Continuation,
   cerr: ErrorContinuation,
-  thisObject: any,
-  args: any[],
-  executionTimeConfig?: Partial<EvaluationConfig>
+  executionTimeConfig?: Upgradable<EvaluationConfig>
 ) => {
   const { e, closure, config } = metaFunction;
   const env = {
@@ -34,7 +33,7 @@ export const evaluateMetaFunction = (
           c((env.values[param.argument.name] = args.slice(i++)));
           break;
         case "ObjectPattern":
-          evaluate(param, c, cerr, { values: args[i++], prev: env, internal: true }, config);
+          evaluate(param, c, cerr, createInternalEnv({ [ObjectPatternTarget]: args[i++] }, env), config);
           break;
         case "AssignmentPattern":
           const arg = args[i++];
@@ -62,13 +61,11 @@ export const evaluateMetaFunction = (
           if (exception.type === "ReturnStatement") {
             c(exception.value);
           } else {
-            // TODO: add test
-            // cerr({ value: exception, type: "Error", script: config.script });
             cerr(exception);
           }
         },
         env,
-        { ...config, schedule: executionTimeConfig?.schedule || config.schedule }
+        upgraded(config, executionTimeConfig)
       ),
     cerr
   );
@@ -76,24 +73,14 @@ export const evaluateMetaFunction = (
 
 export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
   const fn = function (this: any, ...args) {
-    let result;
-    let exception;
-    evaluateMetaFunction(
-      metaFunction,
-      (r) => (result = r),
-      (ex) => (exception = ex),
-      this,
-      args,
-      { schedule: getTrampolineScheduler() }
-    );
-    if (exception) {
-      // let value = exception.value;
-      // while (value.value) {
-      //   value = value.value;
-      // }
+    try {
+      return uncps(evaluateMetaFunction)({ metaFunction, thisObject: this, args }, (superConfig) => ({
+        ...superConfig,
+        schedule: getTrampolineScheduler()
+      }));
+    } catch (exception) {
       throw exception.value;
     }
-    return result;
   };
 
   if (metaFunction.e.type === "FunctionExpression" && metaFunction.e.id) {
@@ -105,10 +92,3 @@ export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
   fn[MetaFunction] = metaFunction;
   return fn;
 };
-
-export const createMetaFunction = (e: FunctionNode, closure: Environment, config: EvaluationConfig) =>
-  createMetaFunctionWrapper({
-    e,
-    closure,
-    config
-  });

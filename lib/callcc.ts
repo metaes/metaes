@@ -1,14 +1,15 @@
-import { createScript, metaesEval } from "./metaes";
+import { metaesEval, uncps } from "./metaes";
+import { createScript } from "./script";
 import { Continuation, Environment, ErrorContinuation, EvaluationConfig } from "./types";
 
 /**
- * callcc gives away control from interpreter core to another function named here _receiver.
+ * callcc passes control from interpreter core to another function named here `_receiver`.
  * _receiver is in charge to resume evaluation usinc passed `c` and `cerr` continuations.
  * _receiver is any valid JavaScript function.
  *
  * callcc is never called as a function, it's a special value recognized by intereter to bypass normal flow.
  *
- * @param _receiver C
+ * @param _receiver
  * @param _value
  */
 export function callcc<T, U>(
@@ -33,14 +34,10 @@ export function lifted(fn: Function) {
       (...args) => callcc(fn, args)
     );
   }
-  let result, error;
-  metaesEval(script, r => (result = r), e => (error = e), {
+
+  return uncps(metaesEval)(script, {
     values: { callcc, fn }
   });
-  if (error) {
-    throw error;
-  }
-  return result;
 }
 
 export function liftedAll(fns: { [k: string]: Function }) {

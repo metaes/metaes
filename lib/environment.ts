@@ -69,13 +69,4 @@ export function GetValue<T>(
   });
 }
 
-export function GetValueSync<T>(name: string, env: Environment<T>): T | null {
-  let _env: Environment | undefined = env;
-  while (_env && _env.values) {
-    if (Object.hasOwnProperty.call(_env.values, name)) {
-      return _env.values[name];
-    }
-    _env = _env.prev;
-  }
-  return null;
-}
+export const createInternalEnv = (values: object, prev?: Environment) => <const>{ values, prev, internal: true };

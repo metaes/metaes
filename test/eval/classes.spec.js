@@ -64,3 +64,13 @@ class Derived extends Base {
 }
 
 assert.equal(new Derived("test").value, "test");
+
+// test: supports class expressions
+const klass = class Foo {
+  foo() {
+    return "bar";
+  }
+};
+
+assert.equal(typeof Foo, "undefined");
+assert.equal(new klass().foo(), "bar");
