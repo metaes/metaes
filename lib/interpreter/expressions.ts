@@ -270,7 +270,7 @@ export const Property: Interpreter<NodeTypes.Property> = (e, c, cerr, env, confi
 export const BinaryExpression: Interpreter<NodeTypes.BinaryExpression> = (e, c, cerr, env, config) =>
   evaluate(
     e.left,
-    (left) => {
+    (left) =>
       evaluate(
         e.right,
         (right) => {
@@ -345,8 +345,7 @@ export const BinaryExpression: Interpreter<NodeTypes.BinaryExpression> = (e, c, 
         cerr,
         env,
         config
-      );
-    },
+      ),
     cerr,
     env,
     config

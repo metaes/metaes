@@ -8,21 +8,8 @@ import { callcc } from "../../lib/callcc";
 import { getEnvironmentBy } from "../../lib/environment";
 import { presentException } from "../../lib/exceptions";
 import { ExportEnvironmentSymbol } from "../../lib/interpreter/modules";
-import { createScript } from "../../lib/script";
-import { Environment, Evaluate } from "../../lib/types";
+import { Evaluate } from "../../lib/types";
 import { uncpsp } from "./../../lib/metaes";
-
-// TODO: simplify
-export const evaluateHelper = (
-  evaluate: Evaluate,
-  input: string,
-  name = "anonymous",
-  env: Environment = { values: {} }
-) => {
-  const script = createScript(input);
-  script.url = name;
-  return uncpsp(evaluate)(script, env);
-};
 
 const globalEnv = {
   values: {
@@ -47,7 +34,6 @@ export function buildTests(folder: string, evalFn: Evaluate, testNamePrefix = ""
       contents: (await fs.readFile(file)).toString()
     }));
     return (await Promise.all(files)).forEach(({ contents, name }) => {
-      const fileName = name;
       const testNames = contents.match(/\/\/ test: [^\n]+\n/g);
       const tests = contents.split(/\/\/ test: .+\n/).filter((line) => line.length);
       const suiteName = name.substring(name.lastIndexOf("/") + 1);
@@ -60,7 +46,7 @@ export function buildTests(folder: string, evalFn: Evaluate, testNamePrefix = ""
           const testName = `${testNamePrefix} ${name.replace("// test:", "").trim()}`;
           it(testName, async () => {
             try {
-              await evaluateHelper(evalFn, value, fileName, { values: {}, prev: globalEnv });
+              await uncpsp(evalFn)(value, { values: {}, prev: globalEnv });
             } catch (e) {
               if (logError) {
                 console.log(e);

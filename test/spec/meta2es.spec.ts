@@ -1,14 +1,13 @@
 import { assert } from "chai";
-import { Evaluate } from "lib/types";
 import { before, describe, it } from "mocha";
 import { presentException } from "../../lib/exceptions";
 import { getMeta2ESEval } from "../../lib/meta2es";
-import { evaluateHelper } from "./testUtils";
+import { uncpsp } from "./../../lib/metaes";
+import { Evaluate } from "./../../lib/types";
 
-// TODO: simplify
-async function evaluateHelperWithPrint(evalFn, input, name?, env = { values: {} }) {
+async function evaluateHelperWithPrint(evalFn: Evaluate, input, env = { values: {} }) {
   try {
-    return await evaluateHelper(evalFn, input, name, env);
+    return await uncpsp(evalFn)(input, env);
   } catch (e) {
     console.log(presentException(e));
     throw e;
@@ -33,7 +32,6 @@ describe("Meta2ES", function () {
       await evaluateHelperWithPrint(
         metaesEval,
         "const f = d=>{ console.log({d}); return d>1}; globalThis.f=f; [1, 2].filter(d=>{ console.log({d}); return d>1})",
-        null,
         { values: { globalThis, console } }
       ),
       [2]
@@ -60,7 +58,7 @@ describe("Meta2ES", function () {
   });
 
   it("throws ReferenceError for non-existing ReferenceError", async function () {
-    const metaesEval = await getMeta2ESEval({ values: { Object, Function } });
+    const metaesEval = await getMeta2ESEval({ values: { Object, Function, Error } });
     try {
       await evaluateHelperWithPrint(metaesEval, "a");
     } catch (e) {
