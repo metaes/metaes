@@ -10,3 +10,4 @@ build
 .vscode
 
 !test/eval/**/*.js
+!test/eval_module/**/*.js

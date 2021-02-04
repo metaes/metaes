@@ -27,7 +27,7 @@ const globalEnv = {
   prev: { values: global }
 };
 
-export function buildTests(folder: string, evalFn: Evaluate, testNamePrefix = "", logError = true) {
+export function buildTests(folder: string, evalFn: Evaluate, testNamePrefix = "") {
   before(async () => {
     const files = (await pify(glob)(`${folder}/*.spec.js`)).map(async (file) => ({
       name: file,
@@ -35,22 +35,19 @@ export function buildTests(folder: string, evalFn: Evaluate, testNamePrefix = ""
     }));
     return (await Promise.all(files)).forEach(({ contents, name }) => {
       const testNames = contents.match(/\/\/ test: [^\n]+\n/g);
-      const tests = contents.split(/\/\/ test: .+\n/).filter((line) => line.length);
+      const testsSources = contents.split(/\/\/ test: .+\n/).filter((line) => line.length);
       const suiteName = name.substring(name.lastIndexOf("/") + 1);
 
       describe(`${testNamePrefix} ${suiteName}`, () => {
-        zip(testNames, tests).forEach(([name, value]) => {
+        zip(testNames, testsSources).forEach(([name, source]) => {
           if (name.includes(":skip")) {
             return;
           }
           const testName = `${testNamePrefix} ${name.replace("// test:", "").trim()}`;
           it(testName, async () => {
             try {
-              await uncpsp(evalFn)(value, { values: {}, prev: globalEnv });
+              await uncpsp(evalFn)(source, { values: {}, prev: globalEnv });
             } catch (e) {
-              if (logError) {
-                console.log(e);
-              }
               const message = presentException(e);
               console.log(message);
               throw new Error(message);

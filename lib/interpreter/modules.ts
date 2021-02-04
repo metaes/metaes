@@ -132,16 +132,21 @@ export const ImportDeclaration: Interpreter<NodeTypes.ImportDeclaration> = (e, c
   visitArray(
     e.specifiers,
     (specifier, c, cerr) => {
-      const name = specifier.local.name;
       const modulePath = <string>e.source.value;
 
       switch (specifier.type) {
         case "ImportNamespaceSpecifier":
         case "ImportDefaultSpecifier":
-          evaluate(declare(name, new ImportBinding("default", modulePath)), c, cerr, env, config);
+          evaluate(declare(specifier.local.name, new ImportBinding("default", modulePath)), c, cerr, env, config);
           break;
         case "ImportSpecifier":
-          evaluate(declare(name, new ImportBinding(name, modulePath)), c, cerr, env, config);
+          evaluate(
+            declare(specifier.local.name, new ImportBinding(specifier.imported.name, modulePath)),
+            c,
+            cerr,
+            env,
+            config
+          );
           break;
         default:
           cerr(NotImplementedException(`${specifier["type"]} import specifier is not supported yet.`, specifier));
