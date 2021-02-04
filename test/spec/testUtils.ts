@@ -8,21 +8,8 @@ import { callcc } from "../../lib/callcc";
 import { getEnvironmentBy } from "../../lib/environment";
 import { presentException } from "../../lib/exceptions";
 import { ExportEnvironmentSymbol } from "../../lib/interpreter/modules";
-import { createScript } from "../../lib/script";
-import { Environment, Evaluate } from "../../lib/types";
+import { Evaluate } from "../../lib/types";
 import { uncpsp } from "./../../lib/metaes";
-
-// TODO: simplify
-export const evaluateHelper = (
-  evaluate: Evaluate,
-  input: string,
-  name = "anonymous",
-  env: Environment = { values: {} }
-) => {
-  const script = createScript(input);
-  script.url = name;
-  return uncpsp(evaluate)(script, env);
-};
 
 const globalEnv = {
   values: {
@@ -40,31 +27,27 @@ const globalEnv = {
   prev: { values: global }
 };
 
-export function buildTests(folder: string, evalFn: Evaluate, testNamePrefix = "", logError = true) {
+export function buildTests(folder: string, evalFn: Evaluate, testNamePrefix = "") {
   before(async () => {
     const files = (await pify(glob)(`${folder}/*.spec.js`)).map(async (file) => ({
       name: file,
       contents: (await fs.readFile(file)).toString()
     }));
     return (await Promise.all(files)).forEach(({ contents, name }) => {
-      const fileName = name;
       const testNames = contents.match(/\/\/ test: [^\n]+\n/g);
-      const tests = contents.split(/\/\/ test: .+\n/).filter((line) => line.length);
+      const testsSources = contents.split(/\/\/ test: .+\n/).filter((line) => line.length);
       const suiteName = name.substring(name.lastIndexOf("/") + 1);
 
       describe(`${testNamePrefix} ${suiteName}`, () => {
-        zip(testNames, tests).forEach(([name, value]) => {
+        zip(testNames, testsSources).forEach(([name, source]) => {
           if (name.includes(":skip")) {
             return;
           }
           const testName = `${testNamePrefix} ${name.replace("// test:", "").trim()}`;
           it(testName, async () => {
             try {
-              await evaluateHelper(evalFn, value, fileName, { values: {}, prev: globalEnv });
+              await uncpsp(evalFn)(source, { values: {}, prev: globalEnv });
             } catch (e) {
-              if (logError) {
-                console.log(e);
-              }
               const message = presentException(e);
               console.log(message);
               throw new Error(message);
