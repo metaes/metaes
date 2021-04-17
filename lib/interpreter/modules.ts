@@ -127,7 +127,8 @@ export const ExportDefaultDeclaration: Interpreter<NodeTypes.ExportDefaultDeclar
   );
 
 export class ImportBinding implements ASTNode {
-  type: "ImportBinding";
+  type = "ImportBinding";
+
   loc?: NodeLoc;
   range?: [number, number];
 
