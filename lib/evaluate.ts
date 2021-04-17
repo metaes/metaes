@@ -1,5 +1,5 @@
 import { NotImplementedException, toException } from "./exceptions";
-import { callInterceptor, getInterpreter } from "./metaes";
+import { bindArgs, callInterceptor, getInterpreter } from "./metaes";
 import { CallExpression, EvalNode, TaggedTemplateExpression } from "./nodeTypes";
 import {
   ASTNode,
@@ -37,6 +37,19 @@ export const setProperty = (object: any, property: any, value: any, operator: st
     value,
     operator
   };
+
+const applyDynamic = (
+  { name, args }: { name: string; args: any },
+  c: Continuation,
+  cerr: ErrorContinuation,
+  env: Environment,
+  config: EvaluationConfig
+) => evaluate(get(name), bindArgs(args, c, cerr), cerr, env, config);
+
+export const createDynamicApplication = (name: string) => (args, ...rest) => applyDynamic({ name, args }, ...rest);
+
+export const super_ = (name) => (e, c, cerr, env, config) =>
+  getInterpreter(name, bindArgs(e, c, cerr, env, config), cerr, { ...config, interpreters: config.interpreters.prev });
 
 export function defaultScheduler(fn) {
   fn();
