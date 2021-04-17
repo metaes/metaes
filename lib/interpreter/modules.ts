@@ -1,5 +1,6 @@
+import { ASTNode, NodeLoc } from "./../types";
 import { getEnvironmentBy } from "../environment";
-import { declare, evaluate, get, visitArray } from "../evaluate";
+import { at, declare, evaluate, get, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException } from "../exceptions";
 import { bindArgs } from "../metaes";
 import * as NodeTypes from "../nodeTypes";
@@ -14,7 +15,7 @@ export const ExportBindingName = "[[ExportBinding]]";
 export const modulesEnv: Interpreters = {
   [GetBindingValueName](value: ImportBinding, c, cerr, env, config) {
     evaluate(
-      get(ImportModuleName),
+      at(value, get(ImportModuleName)),
       bindArgs(value.modulePath, (mod) => c(mod[value.name]), cerr),
       cerr,
       env,
@@ -38,10 +39,11 @@ export const modulesEnv: Interpreters = {
 
 export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, config) =>
   evaluate(
+    // TODO: refer to "super" Identifier instead
     get(e.name),
     (value) =>
       value instanceof ImportBinding
-        ? evaluate(get(GetBindingValueName), bindArgs(value, c, cerr, env, config), cerr, env, config)
+        ? evaluate(at(e, get(GetBindingValueName)), bindArgs(value, c, cerr, env, config), cerr, env, config)
         : c(value),
     (exception) => {
       exception.location = e;
@@ -124,8 +126,17 @@ export const ExportDefaultDeclaration: Interpreter<NodeTypes.ExportDefaultDeclar
     config
   );
 
-export class ImportBinding {
-  constructor(public name: string, public modulePath: string) {}
+export class ImportBinding implements ASTNode {
+  type: "ImportBinding";
+  loc?: NodeLoc;
+  range?: [number, number];
+
+  constructor(public name: string, public modulePath: string, location?: ASTNode) {
+    if (location) {
+      const { loc, range } = location;
+      Object.assign(this, { loc, range });
+    }
+  }
 }
 
 export const ImportDeclaration: Interpreter<NodeTypes.ImportDeclaration> = (e, c, cerr, env, config) =>
@@ -137,11 +148,17 @@ export const ImportDeclaration: Interpreter<NodeTypes.ImportDeclaration> = (e, c
       switch (specifier.type) {
         case "ImportNamespaceSpecifier":
         case "ImportDefaultSpecifier":
-          evaluate(declare(specifier.local.name, new ImportBinding("default", modulePath)), c, cerr, env, config);
+          evaluate(
+            declare(specifier.local.name, new ImportBinding("default", modulePath, specifier)),
+            c,
+            cerr,
+            env,
+            config
+          );
           break;
         case "ImportSpecifier":
           evaluate(
-            declare(specifier.local.name, new ImportBinding(specifier.imported.name, modulePath)),
+            declare(specifier.local.name, new ImportBinding(specifier.imported.name, modulePath, specifier)),
             c,
             cerr,
             env,
