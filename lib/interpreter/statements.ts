@@ -192,20 +192,22 @@ export const ExpressionStatement: Interpreter<NodeTypes.ExpressionStatement> = (
 
 export const ExceptionName = "[[CatchClauseException]]";
 
-export const TryStatement: Interpreter<NodeTypes.TryStatement> = (e, c, cerr, env, config) =>
+export const TryStatement: Interpreter<NodeTypes.TryStatement> = (e, c, cerr, env, config) => {
+  const evalFinalizer = () => (e.finalizer ? evaluate(e.finalizer, c, cerr, env, config) : c());
+
   evaluate(
     e.block,
     c,
-    (exception) =>
-      exception.type === "ReturnStatement"
-        ? cerr(exception)
+    (ex) =>
+      ex.type === "ReturnStatement"
+        ? cerr(ex)
         : evaluate(
             e.handler,
-            () => (e.finalizer ? evaluate(e.finalizer, c, cerr, env, config) : c()),
-            cerr,
+            evalFinalizer,
+            (ex) => (ex.type === "ReturnStatement" ? cerr(ex) : evalFinalizer()),
             {
               values: {
-                [ExceptionName]: exception
+                [ExceptionName]: ex
               },
               prev: env
             },
@@ -214,6 +216,7 @@ export const TryStatement: Interpreter<NodeTypes.TryStatement> = (e, c, cerr, en
     env,
     config
   );
+};
 
 export const ThrowStatement: Interpreter<NodeTypes.ThrowStatement> = (e, _c, cerr, env, config) =>
   evaluate(e.argument, (value) => cerr(value), cerr, env, config);
@@ -227,9 +230,11 @@ export const CatchClause: Interpreter<NodeTypes.CatchClause> = (e, c, cerr, env,
         c,
         cerr,
         {
-          values: {
-            [e.param.name]: error.value
-          },
+          values: e.param
+            ? {
+                [e.param.name]: error.value
+              }
+            : {},
           prev: env
         },
         config
