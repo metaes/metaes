@@ -6,6 +6,7 @@ import {
   Continuation,
   Environment,
   ErrorContinuation,
+  Evaluate,
   EvaluationConfig,
   MetaesException,
   PartialErrorContinuation
@@ -38,15 +39,13 @@ export const setProperty = (object: any, property: any, value: any, operator: st
     operator
   };
 
-const applyDynamic = (
-  { name, args }: { name: string; args: any },
-  c: Continuation,
-  cerr: ErrorContinuation,
-  env: Environment,
-  config: EvaluationConfig
-) => evaluate(get(name), bindArgs(args, c, cerr), cerr, env, config);
+const applyDynamic: Evaluate<any, { name: string; args: any }> = ({ name, args }, c, cerr, env, config) =>
+  evaluate(get(name), bindArgs(args, c, cerr), cerr, env, config);
 
-export const createDynamicApplication = (name: string) => (args, ...rest) => applyDynamic({ name, args }, ...rest);
+export const createDynamicApplication: <T = any>(name: string) => Evaluate<T> =
+  (name: string) =>
+  (args, ...rest) =>
+    applyDynamic({ name, args }, ...rest);
 
 export const super_ = (name) => (e, c, cerr, env, config) =>
   getInterpreter(name, bindArgs(e, c, cerr, env, config), cerr, { ...config, interpreters: config.interpreters.prev });
@@ -78,13 +77,7 @@ export function getTrampolineScheduler() {
   };
 }
 
-export const evaluate = (
-  e: EvalNode,
-  c: Continuation,
-  cerr: ErrorContinuation,
-  env: Environment,
-  config: EvaluationConfig
-) =>
+export const evaluate: Evaluate<any, EvalNode> = (e, c, cerr, env, config) =>
   getInterpreter(
     e.type,
     function (interpreter) {

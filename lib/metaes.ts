@@ -1,5 +1,5 @@
 import { GetValue, toEnvironment } from "./environment";
-import { evaluate } from "./evaluate";
+import { defaultScheduler, evaluate } from "./evaluate";
 import { ExportEnvironmentSymbol, ImportEnvironmentSymbol, modulesEnv } from "./interpreter/modules";
 import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
@@ -12,6 +12,8 @@ import {
   ErrorContinuation,
   EvalParam,
   Evaluate,
+  EvaluateBase,
+  EvaluateMid,
   EvaluationConfig,
   Interpreter,
   PartialErrorContinuation,
@@ -24,9 +26,7 @@ export interface Context {
   evaluate: Evaluate;
 }
 
-export function noop() {}
-
-const BaseConfig = { interpreters: ECMAScriptInterpreters, interceptor: noop };
+const BaseConfig = { interpreters: ECMAScriptInterpreters, schedule: defaultScheduler };
 
 export function isEvaluable(input: EvalParam): input is Script | Source {
   return (
@@ -66,7 +66,7 @@ const evaluateConditionally = (
   }
 };
 
-export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
+export const metaesEval: EvaluateBase = (input, c, cerr, env = {}, config = {}) =>
   evaluateConditionally(
     input,
     (input) => ({ script: toScript(input), config: { ...BaseConfig, ...config }, env: toEnvironment(env) }),
@@ -74,7 +74,7 @@ export const metaesEval: Evaluate = (input, c?, cerr?, env = {}, config = {}) =>
     cerr
   );
 
-export const metaesEvalModule: Evaluate = (input, c?, cerr?, env = {}, config = {}) => {
+export const metaesEvalModule: EvaluateBase = (input, c, cerr, env = {}, config = {}) => {
   const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };
   const exportsEnv = { prev: importsEnv, values: {}, [ExportEnvironmentSymbol]: true };
 
@@ -103,7 +103,7 @@ export class MetaesContext implements Context {
     this.environment = toEnvironment(environment);
   }
 
-  evaluate: Evaluate = (input, c, cerr, env, config) =>
+  evaluate: EvaluateBase = (input, c, cerr, env, config) =>
     evaluateConditionally(
       input,
       (input) => {
@@ -129,34 +129,27 @@ export const createScriptFromFnBody = (source: Function, cache?: ParseCache) => 
   source
 });
 
-export const evalFn = (evaluate: Evaluate) => <T extends any[]>(
-  { source, args }: { source: (...T) => void; args?: T },
-  c: Continuation,
-  cerr: ErrorContinuation,
-  environment?: Environment,
-  config?: Partial<EvaluationConfig>
-) =>
-  evaluate(
-    source,
-    (fn) => {
-      try {
-        c(fn.apply(null, args));
-      } catch (e) {
-        cerr(e);
-      }
-    },
-    cerr,
-    environment,
-    config
-  );
+export const evalFn =
+  <T extends any[]>(evaluate: EvaluateMid): EvaluateMid<any, { source: (...T) => void; args?: T }> =>
+  ({ source, args }, c, cerr, environment, config) =>
+    evaluate(
+      source,
+      (fn) => {
+        try {
+          c(fn.apply(null, args));
+        } catch (e) {
+          cerr(e);
+        }
+      },
+      cerr,
+      environment,
+      config
+    );
 
-export const evalFnBody = (evaluate: Evaluate) => (
-  source: Function,
-  c: Continuation,
-  cerr: ErrorContinuation,
-  environment?: Environment,
-  config?: Partial<EvaluationConfig>
-) => evaluate(createScriptFromFnBody(source), c, cerr, environment, config);
+export const evalFnBody =
+  (evaluate: EvaluateBase): EvaluateBase<any, Function> =>
+  (source, c, cerr, env, config) =>
+    evaluate(createScriptFromFnBody(source), c, cerr, env, config);
 
 export const consoleLoggingMetaesContext = (environment: Environment = { values: {} }) =>
   new MetaesContext(console.log, console.error, environment, {
@@ -165,8 +158,8 @@ export const consoleLoggingMetaesContext = (environment: Environment = { values:
     }
   });
 
-export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNode, env?: Environment, value?) =>
-  config.interceptor !== noop &&
+export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNode, env: Environment, value?) =>
+  config.interceptor &&
   config.interceptor({
     config,
     e,
@@ -181,33 +174,37 @@ export const callInterceptor = (phase: Phase, config: EvaluationConfig, e: ASTNo
  *
  * It may not work if provided function `fn` doesn't use `c` or `cerr` callbacks immediately. Use `uncpsp` in this case.
  */
-export const uncps = <I, O, R extends any[]>(
-  fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, ...rest: R) => void,
-  thisValue?: any
-) => (input?: I, ...rest: R): O => {
-  let _result, _exception;
-  fn.call(
-    thisValue,
-    input,
-    (result) => (_result = result),
-    (exception) => (_exception = exception),
-    ...rest
-  );
-  if (_exception) {
-    throw _exception;
-  } else {
-    return _result;
-  }
-};
+export const uncps =
+  <I, O, R extends any[]>(
+    fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, ...rest: R) => void,
+    thisValue?: any
+  ) =>
+  (input?: I, ...rest: R): O => {
+    let _result, _exception;
+    fn.call(
+      thisValue,
+      input,
+      (result) => (_result = result),
+      (exception) => (_exception = exception),
+      ...rest
+    );
+    if (_exception) {
+      throw _exception;
+    } else {
+      return _result;
+    }
+  };
 
 /**
  * Converts function from continuation passing style style back to normal return/throw style using Promise.
  */
-export const uncpsp = <I, O, R extends any[]>(
-  fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, ...rest: R) => void,
-  thisValue?: any
-) => (input?: I, ...rest: R) =>
-  new Promise<O>((resolve, reject) => fn.call(thisValue, input, resolve, reject, ...rest));
+export const uncpsp =
+  <I, O, R extends any[]>(
+    fn: (input: I, c: Continuation<O>, cerr: PartialErrorContinuation, ...rest: R) => void,
+    thisValue?: any
+  ) =>
+  (input?: I, ...rest: R) =>
+    new Promise<O>((resolve, reject) => fn.call(thisValue, input, resolve, reject, ...rest));
 
 const isFn = <T>(value: any): value is (arg: T) => T => typeof value === "function";
 
@@ -224,7 +221,10 @@ export const upgraded = <T>(superArg: T, arg?: Upgradable<T>) => {
 /**
  * Creates function which when called with a function will apply provided arguments.
  */
-export const bindArgs = <T extends any[]>(...args: T) => (fn: (...args: T) => unknown) => fn(...args);
+export const bindArgs =
+  <T extends any[]>(...args: T) =>
+  (fn: (...args: T) => unknown) =>
+    fn(...args);
 
 export const getInterpreter = (
   name: string,

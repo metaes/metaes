@@ -1,7 +1,9 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
 import { ECMAScriptInterpreters } from "../../lib/interpreters";
-import { evalFnBody, metaesEval, noop, uncpsp } from "../../lib/metaes";
+import { evalFnBody, metaesEval, uncpsp } from "../../lib/metaes";
+
+function noop() {}
 
 describe("Exceptions", () => {
   const evalFnBodyAsPromise = uncpsp(evalFnBody(metaesEval));
