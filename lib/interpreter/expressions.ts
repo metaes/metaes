@@ -373,6 +373,7 @@ export const NewExpression: Interpreter<NodeTypes.NewExpression> = (e, c, cerr, 
                   { metaFunction: getMetaFunction(callee), thisObject: newThis, args },
                   (value) => c(typeof value === "object" ? value : newThis),
                   cerr,
+                  undefined,
                   config
                 );
               } else {

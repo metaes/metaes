@@ -210,13 +210,10 @@ const isFn = <T>(value: any): value is (arg: T) => T => typeof value === "functi
 
 export type Upgradable<T> = T | ((arg: T) => T);
 
-export const upgraded = <T>(superArg: T, arg?: Upgradable<T>) => {
-  if (isFn(arg)) {
-    return arg(superArg);
-  } else {
-    return arg || superArg;
-  }
-};
+export const upgraded = <T>(superArg: T, update?: Upgradable<Partial<T>>) => ({
+  ...superArg,
+  ...(isFn(update) ? update(superArg) : update)
+});
 
 /**
  * Creates function which when called with a function will apply provided arguments.

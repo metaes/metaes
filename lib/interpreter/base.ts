@@ -12,7 +12,13 @@ export const Literal: Interpreter<NodeTypes.Literal> = (e, c) => c(e.value);
 export const Apply: Interpreter<NodeTypes.Apply> = ({ fn, thisValue, args }, c, cerr, _env, config) => {
   try {
     if (isMetaFunction(fn)) {
-      evaluateMetaFunction({ metaFunction: getMetaFunction(fn), thisObject: thisValue, args }, c, cerr, config);
+      evaluateMetaFunction(
+        { metaFunction: getMetaFunction(fn), thisObject: thisValue, args },
+        c,
+        cerr,
+        undefined,
+        config
+      );
     } else {
       c(fn.apply(thisValue, args));
     }

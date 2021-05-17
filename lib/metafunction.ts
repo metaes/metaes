@@ -1,23 +1,28 @@
-import { createInternalEnv } from "./environment";
+import { createInternalEnv, toEnvironment } from "./environment";
 import { evaluate, getTrampolineScheduler, visitArray } from "./evaluate";
 import { NotImplementedException } from "./exceptions";
 import { ObjectPatternTarget } from "./interpreter/statements";
-import { uncps, Upgradable, upgraded } from "./metaes";
-import { Continuation, ErrorContinuation, EvaluationConfig, MetaesFunction } from "./types";
+import { uncps, upgraded } from "./metaes";
+import { EvaluateMid, MetaesFunction } from "./types";
 
 const MetaFunction = Symbol.for("[[MetaFunction]]");
 export const isMetaFunction = (fn?: Function) => fn && !!fn[MetaFunction];
 export const getMetaFunction = (fn: Function): MetaesFunction => fn[MetaFunction];
 
-export const evaluateMetaFunction = (
-  { metaFunction, thisObject, args }: { metaFunction: MetaesFunction; thisObject: any; args: any[] },
-  c: Continuation,
-  cerr: ErrorContinuation,
-  executionTimeConfig?: Upgradable<EvaluationConfig>
+type I = { metaFunction: MetaesFunction; thisObject: any; args: any[] };
+
+/**
+ * @param extraEnv Passing environment param cancells out function's closure.
+ */
+export const evaluateMetaFunction: EvaluateMid<any, I> = (
+  { metaFunction: { e, closure, config }, thisObject, args },
+  c,
+  cerr,
+  extraEnv,
+  configUpdate
 ) => {
-  const { e, closure, config } = metaFunction;
   const env = {
-    prev: closure,
+    prev: toEnvironment(extraEnv || closure),
     values: { this: thisObject, arguments: args }
   };
 
@@ -65,7 +70,7 @@ export const evaluateMetaFunction = (
           }
         },
         env,
-        upgraded(config, executionTimeConfig)
+        upgraded(config, configUpdate)
       ),
     cerr
   );
@@ -74,10 +79,9 @@ export const evaluateMetaFunction = (
 export const createMetaFunctionWrapper = (metaFunction: MetaesFunction) => {
   const fn = function (this: any, ...args) {
     try {
-      return uncps(evaluateMetaFunction)({ metaFunction, thisObject: this, args }, (superConfig) => ({
-        ...superConfig,
+      return uncps(evaluateMetaFunction)({ metaFunction, thisObject: this, args }, undefined, {
         schedule: getTrampolineScheduler()
-      }));
+      });
     } catch (exception) {
       throw exception.value;
     }
