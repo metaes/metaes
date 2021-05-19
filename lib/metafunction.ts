@@ -9,12 +9,12 @@ const MetaFunction = Symbol.for("[[MetaFunction]]");
 export const isMetaFunction = (fn?: Function) => fn && !!fn[MetaFunction];
 export const getMetaFunction = (fn: Function): MetaesFunction => fn[MetaFunction];
 
-type I = { metaFunction: MetaesFunction; thisObject: any; args: any[] };
+type I = { metaFunction: MetaesFunction; thisObject?: any; args: any[] };
 
 /**
  * @param extraEnv Passing environment param cancells out function's closure.
  */
-export const evaluateMetaFunction: EvaluateMid<any, I> = (
+export const evaluateMetaFunction: EvaluateMid<any, I, true> = (
   { metaFunction: { e, closure, config }, thisObject, args },
   c,
   cerr,

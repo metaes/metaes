@@ -26,7 +26,10 @@ export type Source = string | ASTNode | Function;
 export type EvalParam = Script | Source | NonEvaluableValue;
 
 type Continuations<C = any, E = ErrorContinuation> = [Continuation<C>, E];
-type Rest<C = Upgradable<Partial<EvaluationConfig>>> = [Environment | EnvironmentBase | object, C];
+type Rest<U = false, C = Partial<EvaluationConfig>> = [
+  Environment | EnvironmentBase | object,
+  U extends true ? Upgradable<C> : C
+];
 type Builder<I, C extends any[], R extends any[]> = [I, ...C, ...R];
 
 /**
@@ -39,20 +42,22 @@ export type Evaluate<C = any, I = EvalParam> = (
 /**
  * Only input is required.
  */
-export type EvaluateBase<C = any, I = EvalParam> = (
-  ...args: Builder<I, Partial<Continuations<C>>, Partial<Rest>>
+export type EvaluateBase<C = any, I = EvalParam, U = false> = (
+  ...args: Builder<I, Partial<Continuations<C>>, Partial<Rest<U>>>
 ) => void;
 
 /**
  * Environment and config are optional.
  */
-export type EvaluateMid<C = any, I = EvalParam> = (...args: Builder<I, Continuations<C>, Partial<Rest>>) => void;
+export type EvaluateMid<C = any, I = EvalParam, U = false> = (
+  ...args: Builder<I, Continuations<C>, Partial<Rest<U>>>
+) => void;
 
 /**
  * Used in client code, config param accepts upgrade function.
  */
-export type EvaluateClient<C = any, I = EvalParam> = (
-  ...args: Builder<I, Continuations<C>, Partial<Rest<Upgradable<Partial<EvaluationConfig>>>>>
+export type EvaluateClient<C = any, I = EvalParam, U = false> = (
+  ...args: Builder<I, Continuations<C>, Partial<Rest<U>>>
 ) => void;
 export type Phase = "enter" | "exit";
 
