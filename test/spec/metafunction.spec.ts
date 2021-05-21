@@ -54,12 +54,8 @@ describe("Meta functions", () => {
     let fn;
     metaesEval(
       () => thrower(),
-      (result) => {
-        fn = result;
-      },
-      (e) => {
-        console.log("error", e);
-      },
+      (result) => (fn = result),
+      (e) => console.log("error", e),
       { thrower }
     );
     try {
