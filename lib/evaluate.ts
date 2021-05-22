@@ -45,6 +45,20 @@ export const applyDynamic: Evaluate<any, { name: string; args: any }> = ({ name,
 export const getDynamic: Evaluate<any, { name: string }> = ({ name }, c, cerr, env, config) =>
   evaluate(get(name), c, cerr, env, config);
 
+export const getDynamicMany: <T = any>() => Evaluate<T, string[]> = () => (names, c, cerr, env, config) =>
+  visitArray(
+    names,
+    (name, c, cerr) => getDynamic({ name }, c, cerr, env, config),
+    (values) =>
+      c(
+        values.reduce(function (previous, current, index) {
+          previous[names[index]] = current;
+          return previous;
+        }, {})
+      ),
+    cerr
+  );
+
 export const createDynamicApplication: <T = any>(name: string) => Evaluate<T> =
   (name: string) =>
   (args, ...rest) =>
