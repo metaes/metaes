@@ -26,7 +26,7 @@ export interface Context {
   evaluate: Evaluate;
 }
 
-const BaseConfig = { interpreters: ECMAScriptInterpreters, schedule: defaultScheduler };
+export const BaseConfig = { interpreters: ECMAScriptInterpreters, schedule: defaultScheduler };
 
 export function isEvaluable(input: EvalParam): input is Script | Source {
   return (

@@ -39,8 +39,11 @@ export const setProperty = (object: any, property: any, value: any, operator: st
     operator
   };
 
-const applyDynamic: Evaluate<any, { name: string; args: any }> = ({ name, args }, c, cerr, env, config) =>
+export const applyDynamic: Evaluate<any, { name: string; args: any }> = ({ name, args }, c, cerr, env, config) =>
   evaluate(get(name), bindArgs(args, c, cerr), cerr, env, config);
+
+export const getDynamic: Evaluate<any, { name: string }> = ({ name }, c, cerr, env, config) =>
+  evaluate(get(name), c, cerr, env, config);
 
 export const createDynamicApplication: <T = any>(name: string) => Evaluate<T> =
   (name: string) =>
