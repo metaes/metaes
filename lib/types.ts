@@ -81,7 +81,7 @@ export interface EvaluationConfig {
   schedule: Schedule;
 }
 
-export type Continuation<T = any> = (value: T) => void;
+export type Continuation<T = any> = (value?: T) => void;
 export type ErrorContinuation = (error: MetaesException) => void;
 export type PartialErrorContinuation = (error: Pick<MetaesException, "type"> & Partial<MetaesException>) => void;
 

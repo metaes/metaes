@@ -102,7 +102,7 @@ export const evaluate: Evaluate<any, EvalNode> = (e, c, cerr, env, config) =>
 
       const schedule = config.schedule || defaultScheduler;
       schedule(function run() {
-        interpreter(
+        interpreter!(
           e,
           function _c(value) {
             schedule(function exit() {
