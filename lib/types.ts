@@ -81,7 +81,13 @@ export interface EvaluationConfig {
   schedule: Schedule;
 }
 
-export type Continuation<T = any> = (value?: T) => void;
+export type Optional<T> = { boxed: T };
+export type Continuation<T = any> = T extends undefined
+  ? () => void
+  : T extends Optional<infer I>
+  ? (value?: I) => void
+  : (value: T) => void;
+
 export type ErrorContinuation = (error: MetaesException) => void;
 export type PartialErrorContinuation = (error: Pick<MetaesException, "type"> & Partial<MetaesException>) => void;
 
