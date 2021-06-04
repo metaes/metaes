@@ -3,9 +3,9 @@ import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
   type: "Error" | "ReturnStatement" | "BreakStatement" | "ContinueStatement";
-  message: string;
-  location: ASTNode;
-  script: Script;
+  message?: string;
+  location?: ASTNode;
+  script?: Script;
   value?: Error | any | MetaesException;
 };
 
