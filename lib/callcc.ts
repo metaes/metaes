@@ -27,7 +27,8 @@ export function callcc<T, U>(
 
 let script;
 
-export function lifted<R, T>(fn: Evaluate<R, T>): R {
+// TODO: add tests to closure
+export function lifted<R, T>(fn: Evaluate<R, T>, closure?: Environment): R {
   if (!script) {
     script = createScript(
       // @ts-ignore
@@ -36,14 +37,15 @@ export function lifted<R, T>(fn: Evaluate<R, T>): R {
   }
 
   return uncps(metaesEval)(script, {
-    values: { callcc, fn }
+    values: { callcc, fn },
+    prev: closure
   });
 }
 
-export function liftedAll(fns: { [k: string]: Evaluate }) {
+export function liftedAll(fns: { [k: string]: Evaluate }, closure?: Environment) {
   const result = {};
   for (let k in fns) {
-    result[k] = lifted(fns[k]);
+    result[k] = lifted(fns[k], closure);
   }
   return result;
 }

@@ -46,7 +46,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
                       const [receiver, _arguments] = args;
                       receiver(_arguments, c, cerr, env, config);
                     } catch (e) {
-                      cerr({ type: "Error", value: e, message: "Error in continuation receiver." });
+                      cerr(toException(e));
                     }
                   } else {
                     evaluate(at(e, apply(callee, undefined, args, e)), c, cerr, env, config);
