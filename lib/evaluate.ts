@@ -45,17 +45,13 @@ export const applyDynamic: Evaluate<any, { name: string; args: any }> = ({ name,
 export const getDynamic: Evaluate<any, { name: string }> = ({ name }, c, cerr, env, config) =>
   evaluate(get(name), c, cerr, env, config);
 
+const setHelper = (object: { [key: string]: any }, key: string, value: any) => ((object[key] = value), object);
+
 export const getDynamicMany: <T = any>() => Evaluate<T, string[]> = () => (names, c, cerr, env, config) =>
   visitArray(
     names,
     (name, c, cerr) => getDynamic({ name }, c, cerr, env, config),
-    (values) =>
-      c(
-        values.reduce(function (previous, current, index) {
-          previous[names[index]] = current;
-          return previous;
-        }, {})
-      ),
+    (values) => c(values.reduce((previous, current, index) => setHelper(previous, names[index], current), {})),
     cerr
   );
 

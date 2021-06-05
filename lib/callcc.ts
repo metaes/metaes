@@ -1,6 +1,6 @@
 import { metaesEval, uncps } from "./metaes";
 import { createScript } from "./script";
-import { Continuation, Environment, ErrorContinuation, EvaluationConfig } from "./types";
+import { Continuation, Environment, ErrorContinuation, Evaluate, EvaluationConfig } from "./types";
 
 /**
  * callcc passes control from interpreter core to another function named here `_receiver`.
@@ -27,7 +27,7 @@ export function callcc<T, U>(
 
 let script;
 
-export function lifted(fn: Function) {
+export function lifted<R, T>(fn: Evaluate<R, T>): R {
   if (!script) {
     script = createScript(
       // @ts-ignore
@@ -40,7 +40,7 @@ export function lifted(fn: Function) {
   });
 }
 
-export function liftedAll(fns: { [k: string]: Function }) {
+export function liftedAll(fns: { [k: string]: Evaluate }) {
   const result = {};
   for (let k in fns) {
     result[k] = lifted(fns[k]);
