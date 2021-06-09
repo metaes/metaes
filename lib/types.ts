@@ -32,6 +32,8 @@ type Rest<U = false, C = Partial<EvaluationConfig>> = [
 ];
 type Builder<I, C extends any[], R extends any[]> = [I, ...C, ...R];
 
+// TODO: rename Evaluate* type names to CPS/CSPify?
+
 /**
  * All params are required.
  */
