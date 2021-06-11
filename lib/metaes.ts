@@ -206,6 +206,16 @@ export const uncpsp =
   (input?: I, ...rest: R) =>
     new Promise<O>((resolve, reject) => fn.call(thisValue, input, resolve, reject, ...rest));
 
+export const cpsify =
+  <I, O>(fn: (input: I, env: Environment, config: EvaluationConfig) => O): Evaluate<O, I> =>
+  (i, c, cerr, env, config) => {
+    try {
+      c(fn(i, env, config));
+    } catch (e) {
+      cerr(e);
+    }
+  };
+
 const isFn = <T>(value: any): value is (arg: T) => T => typeof value === "function";
 
 export type Upgradable<T> = T | ((arg: T) => T);
