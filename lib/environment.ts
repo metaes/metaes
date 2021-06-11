@@ -75,4 +75,5 @@ export function GetValue<T>(
   });
 }
 
-export const createInternalEnv = (values: object, prev?: Environment) => <const>{ values, prev, internal: true };
+export const createInternalEnv = (values: object, prev?: Environment) =>
+  <const>{ ...createEnvironment(values, prev), internal: true };
