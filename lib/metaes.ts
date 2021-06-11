@@ -207,10 +207,10 @@ export const uncpsp =
     new Promise<O>((resolve, reject) => fn.call(thisValue, input, resolve, reject, ...rest));
 
 export const cpsify =
-  <I, O>(fn: (input: I, env: Environment, config: EvaluationConfig) => O): Evaluate<O, I> =>
+  <I, O>(fn: (input: I, env?: Environment, config?: Partial<EvaluationConfig>) => O): EvaluateMid<O, I> =>
   (i, c, cerr, env, config) => {
     try {
-      c(fn(i, env, config));
+      c(fn(i, toEnvironment(env), config));
     } catch (e) {
       cerr(e);
     }
