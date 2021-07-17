@@ -1,5 +1,6 @@
+import { getEnvironmentForValue, GetValue } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
-import { bindArgs, callInterceptor, getInterpreter } from "./metaes";
+import { bindArgs, callInterceptor } from "./metaes";
 import { CallExpression, EvalNode, TaggedTemplateExpression } from "./nodeTypes";
 import {
   ASTNode,
@@ -60,8 +61,13 @@ export const createDynamicApplication: <T = any>(name: string) => Evaluate<T> =
   (args, ...rest) =>
     applyDynamic({ name, args }, ...rest);
 
-export const super_ = (name) => (e, c, cerr, env, config) =>
-  getInterpreter(name, bindArgs(e, c, cerr, env, config), cerr, { ...config, interpreters: config.interpreters.prev });
+const getSuperEnv = (name: string, closestEnv: Environment) => getEnvironmentForValue(closestEnv, name)?.prev;
+
+export const supere: (string) => Evaluate = (name) => (e, c, cerr, env, config) =>
+  evaluate(get(name), bindArgs(e, c, cerr, env, config), cerr, getSuperEnv(name, env)!, config);
+
+export const superi: (string) => Evaluate = (name) => (e, c, cerr, env, config) =>
+  GetValue({ name }, bindArgs(e, c, cerr, env, config), cerr, getSuperEnv(name, config.interpreters)!);
 
 export function defaultScheduler(fn) {
   fn();
@@ -91,8 +97,8 @@ export function getTrampolineScheduler() {
 }
 
 export const evaluate: Evaluate<any, EvalNode> = (e, c, cerr, env, config) =>
-  getInterpreter(
-    e.type,
+  GetValue(
+    { name: e.type },
     function (interpreter) {
       callInterceptor("enter", config, e, env);
 
@@ -127,7 +133,7 @@ export const evaluate: Evaluate<any, EvalNode> = (e, c, cerr, env, config) =>
       callInterceptor("exit", config, e, env, exception);
       cerr(<MetaesException>exception);
     },
-    config
+    config.interpreters
   );
 
 type Visitor<T> = (element: T, c: Continuation, cerr: PartialErrorContinuation) => void;

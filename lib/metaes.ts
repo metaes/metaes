@@ -1,4 +1,4 @@
-import { GetValue, toEnvironment } from "./environment";
+import { toEnvironment } from "./environment";
 import { defaultScheduler, evaluate } from "./evaluate";
 import { ExportEnvironmentSymbol, ImportEnvironmentSymbol, modulesEnv } from "./interpreter/modules";
 import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
@@ -15,7 +15,6 @@ import {
   EvaluateBase,
   EvaluateMid,
   EvaluationConfig,
-  Interpreter,
   PartialErrorContinuation,
   Phase,
   Script,
@@ -232,10 +231,3 @@ export const bindArgs =
   <T extends any[]>(...args: T) =>
   (fn: (...args: T) => unknown) =>
     fn(...args);
-
-export const getInterpreter = (
-  name: string,
-  c: Continuation<Interpreter<any>>,
-  cerr: ErrorContinuation,
-  config: EvaluationConfig
-) => GetValue({ name }, c, cerr, config.interpreters);

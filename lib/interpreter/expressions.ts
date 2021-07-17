@@ -1,11 +1,11 @@
 import { callcc } from "../callcc";
-import { getEnvironmentForValue } from "../environment";
+import { getEnvironmentForValue, GetValue } from "../environment";
 import { apply, at, evaluate, evaluateArray, get, getProperty, set, setProperty, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
+import { bindArgs } from "../metaes";
 import { createMetaFunctionWrapper, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Interpreter } from "../types";
-import { bindArgs, getInterpreter } from "./../metaes";
 import { createClass } from "./statements";
 
 const concatSpreads = (all, next) => (next instanceof SpreadElementValue ? all.concat(next.value) : all.concat([next]));
@@ -564,7 +564,7 @@ export const ThisExpression: Interpreter<NodeTypes.ThisExpression> = (e, c, cerr
   evaluate(at(e, get("this")), c, cerr, env, config);
 
 export const ConditionalExpression: Interpreter<NodeTypes.ConditionalExpression> = (e, c, cerr, env, config) =>
-  getInterpreter("IfStatement", bindArgs(e, c, cerr, env, config), cerr, config);
+  GetValue({ name: "IfStatement" }, bindArgs(e, c, cerr, env, config), cerr, config.interpreters);
 
 export const TemplateLiteral: Interpreter<NodeTypes.TemplateLiteral> = (e, c, cerr, env, config) => {
   if (e.quasis.length === 1 && e.expressions.length === 0) {

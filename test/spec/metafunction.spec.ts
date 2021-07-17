@@ -1,5 +1,5 @@
 import { assert, expect } from "chai";
-import { super_ } from "../../lib/evaluate";
+import { superi } from "../../lib/evaluate";
 import { describe, it } from "mocha";
 import { metaesEval, uncps } from "../../lib/metaes";
 import { evaluateMetaFunction, getMetaFunction } from "./../../lib/metafunction";
@@ -81,7 +81,7 @@ describe("Meta functions", () => {
         values: {
           Identifier(...args) {
             identifiers.push(args[0].name);
-            super_("Identifier")(...args);
+            superi("Identifier")(...args);
           }
         },
         prev: cfg.interpreters
