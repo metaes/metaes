@@ -116,29 +116,34 @@ type Visitor<T> = (element: T, c: Continuation, cerr: PartialErrorContinuation) 
 export const visitArray = <T>(items: T[], fn: Visitor<T>, c: Continuation, cerr: PartialErrorContinuation) => {
   if (items.length === 0) {
     c([]);
-  } else if (items.length === 1) {
-    fn(items[0], (value) => c([value]), cerr);
   } else {
     const schedule = getTrampolineScheduler();
     const visited = new Set();
 
     function loop(index, accumulated: T[]) {
       if (index < items.length) {
-        fn(
-          items[index],
-          function onNextItem(value) {
-            // If true, it means currently may be happening for example a reevaluation of items
-            // from certain index using call/cc. Copy accumulated previously results and ignore their tail
-            // after given index as this reevalution may happen in the middle of an array.
-            if (visited.has(index)) {
-              accumulated = accumulated.slice(0, index);
-            }
-            accumulated.push(value);
-            visited.add(index);
-            schedule(() => loop(index + 1, accumulated));
-          },
-          cerr
-        );
+          //If true, it means an empty item like `[,]`
+          if(items[index] === null){
+              accumulated.length += 1;
+              visited.add(index);
+              schedule(() => loop(index + 1, accumulated));
+          }else{
+              fn(
+                  items[index],
+                  function onNextItem(value) {
+                      // If true, it means currently may be happening for example a reevaluation of items
+                      // from certain index using call/cc. Copy accumulated previously results and ignore their tail
+                      // after given index as this reevalution may happen in the middle of an array.
+                      if (visited.has(index)) {
+                          accumulated = accumulated.slice(0, index);
+                      }
+                      accumulated.push(value);
+                      visited.add(index);
+                      schedule(() => loop(index + 1, accumulated));
+                  },
+                  cerr
+              );
+          }
       } else {
         c(accumulated);
       }

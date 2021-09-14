@@ -22,6 +22,14 @@ describe("Evaluation", () => {
       assert.equal(await evalFnBodyAsPromise((a) => a * 2, { values: { a: i } }), i * 2)
     );
   });
+
+  it("should correctly process a special array [,]", async () => {
+    assert.deepEqual(uncps(metaesEval)("[,]"), [,]);
+  });
+
+  it("should correctly process a special array [1,,...[2,,3],,5]", async () => {
+    assert.deepEqual(uncps(metaesEval)("[1,,...[2,,3],,5]"), [1,,...[2,,3],,5]);
+  });
 });
 
 describe("transforms cps-style function into return/throw one", function () {

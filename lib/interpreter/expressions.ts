@@ -8,13 +8,30 @@ import { Interpreter } from "../types";
 import { bindArgs, getInterpreter } from "./../metaes";
 import { createClass } from "./statements";
 
-const concatSpreads = (all, next) => (next instanceof SpreadElementValue ? all.concat(next.value) : all.concat([next]));
+const processSpreads = (array) => {
+  const result: any = [];
+  for(let i = 0; i < array.length; i++){
+    //empty array item, like [0,,2] index of 1
+    if(!array.hasOwnProperty(i)){
+      result.length += 1;
+      continue;
+    }
+    if(array[i] instanceof SpreadElementValue){
+      for(let j = 0; j < (array[i] as SpreadElementValue).value.length; j++){
+          result.push(array[i].value[j]);
+      }
+    }else{
+      result.push(array[i]);
+    }
+  }
+  return result;
+};
 
 export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr, env, config) =>
   evaluateArray(
     e.arguments,
     (args) => {
-      args = args.reduce(concatSpreads, []);
+      args = processSpreads(args);
       switch (e.callee.type) {
         case "Super":
           evaluate(
@@ -352,7 +369,7 @@ export const BinaryExpression: Interpreter<NodeTypes.BinaryExpression> = (e, c, 
   );
 
 export const ArrayExpression: Interpreter<NodeTypes.ArrayExpression> = (e, c, cerr, env, config) =>
-  evaluateArray(e.elements, (values) => c(values.reduce(concatSpreads, [])), cerr, env, config);
+  evaluateArray(e.elements, (values) => c(processSpreads(values)), cerr, env, config);
 
 export const NewExpression: Interpreter<NodeTypes.NewExpression> = (e, c, cerr, env, config) =>
   evaluateArray(
