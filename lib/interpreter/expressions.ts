@@ -1,6 +1,7 @@
+import { ASTNode } from "./../types";
 import { callcc } from "../callcc";
 import { getEnvironmentForValue, GetValue } from "../environment";
-import { apply, at, evaluate, evaluateArray, get, getProperty, set, setProperty, visitArray } from "../evaluate";
+import { apply, at, evaluate, evaluateArray, get, getProperty, setProperty, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
 import { bindArgs } from "../metaes";
 import { createMetaFunctionWrapper, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
@@ -364,8 +365,30 @@ export const BinaryExpression: Interpreter<NodeTypes.BinaryExpression> = (e, c, 
     config
   );
 
+const nullValueInstance = {};
+
+export const NullValue: Interpreter<{ type: "NullValue" }> = (_, c) => c(nullValueInstance);
+
+const nullToASTNode = (value: ASTNode | null) => (value === null ? { type: "NullValue" } : value);
+
+function deleteNullValues(array: any[]) {
+  let i = array.length;
+  while (i-- >= 0) {
+    if (array[i] === nullValueInstance) {
+      delete array[i];
+    }
+  }
+  return array;
+}
+
 export const ArrayExpression: Interpreter<NodeTypes.ArrayExpression> = (e, c, cerr, env, config) =>
-  evaluateArray(e.elements, (values) => c(values.reduce(concatSpreads, [])), cerr, env, config);
+  evaluateArray(
+    e.elements.map(nullToASTNode),
+    (values) => c(deleteNullValues(values.reduce(concatSpreads, []))),
+    cerr,
+    env,
+    config
+  );
 
 export const NewExpression: Interpreter<NodeTypes.NewExpression> = (e, c, cerr, env, config) =>
   evaluateArray(
@@ -643,6 +666,7 @@ export default {
   Property,
   BinaryExpression,
   ArrayExpression,
+  NullValue,
   NewExpression,
   SequenceExpression,
   LogicalExpression,

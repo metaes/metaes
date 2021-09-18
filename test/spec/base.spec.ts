@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
-import { metaesEval } from "../../lib/metaes";
+import { metaesEval, uncps } from "../../lib/metaes";
 
 describe("Base interpreters", () => {
   describe("Apply", () => {
@@ -75,6 +75,13 @@ describe("Base interpreters", () => {
           throw e;
         });
       });
+    });
+  });
+
+  describe("ArrayExpression", function () {
+    it("evaluates array with holes", async () => {
+      assert.deepEqual(uncps(metaesEval)("[,]"), [,]);
+      assert.deepEqual(uncps(metaesEval)("[1,,...[2,,3],,4]"), [1, , ...[2, , 3], , 4]);
     });
   });
 });
