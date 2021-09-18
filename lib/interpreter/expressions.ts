@@ -188,7 +188,20 @@ export const AssignmentExpression: Interpreter<NodeTypes.AssignmentExpression> =
       const e_left = e.left;
       switch (e_left.type) {
         case "Identifier":
-          evaluate(at(e_left, set(e_left.name, right)), c, cerr, env, config);
+          evaluate(
+            at(e_left, get(e_left.name)), // first, try to find variable in a scope to make sure it exists
+            () =>
+              evaluate(
+                setProperty(getEnvironmentForValue(env, e_left.name)?.values, e_left.name, right, e.operator),
+                c,
+                cerr,
+                env,
+                config
+              ),
+            cerr,
+            env,
+            config
+          );
           break;
         case "MemberExpression":
           evaluate(

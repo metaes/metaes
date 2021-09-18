@@ -390,6 +390,7 @@ export const ContinueStatement: Interpreter<NodeTypes.ContinueStatement> = (e, _
   }
 };
 
+// TODO: check let/const scoping
 export const ForOfStatement: Interpreter<NodeTypes.ForOfStatement> = (e, c, cerr, env, config) =>
   evaluate(
     e.right,

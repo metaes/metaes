@@ -93,6 +93,7 @@ export type Continuation<T = any> = T extends undefined
 export type ErrorContinuation = (error: MetaesException) => void;
 export type PartialErrorContinuation = (error: Pick<MetaesException, "type"> & Partial<MetaesException>) => void;
 
+// TODO: Interpreter also could define return value in `c` continuation, just like Evaluate type
 export type Interpreter<T extends ASTNode | ASTNode[] | object> = (
   ...args: Builder<T, [(value?: any) => void, PartialErrorContinuation], [Environment, EvaluationConfig]>
 ) => void;
