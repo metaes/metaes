@@ -1,10 +1,10 @@
-import { ASTNode, NodeLoc } from "./../types";
 import { getEnvironmentBy } from "../environment";
 import { at, declare, evaluate, get, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException } from "../exceptions";
 import { bindArgs } from "../metaes";
 import * as NodeTypes from "../nodeTypes";
 import { Environment, Interpreter, Interpreters } from "../types";
+import { ASTNode, NodeLoc } from "./../types";
 
 export const ImportEnvironmentSymbol = "[[isImportModule]]";
 export const ExportEnvironmentSymbol = "[[isExportModule]]";
@@ -39,7 +39,7 @@ export const modulesEnv: Interpreters = {
 
 export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, config) =>
   evaluate(
-    // TODO: refer to "super" Identifier instead
+    // TODO: use `superi` for Identifier once bug in meta2 is solved.
     get(e.name),
     (value) =>
       value instanceof ImportBinding
