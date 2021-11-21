@@ -61,7 +61,15 @@ export const createDynamicApplication: <T = any>(name: string) => Evaluate<T> =
   (args, ...rest) =>
     applyDynamic({ name, args }, ...rest);
 
-const getSuperEnv = (name: string, closestEnv: Environment) => getEnvironmentForValue(closestEnv, name)?.prev;
+const getSuperEnv = (name: string, closestEnv: Environment) => {
+  const { prev } = closestEnv;
+
+  if (prev) {
+    return getEnvironmentForValue(prev, name);
+  } else {
+    throw new Error("Provided environment doesn't have outer (prev) environment to search in.");
+  }
+};
 
 export const supere: (string) => Evaluate = (name) => (e, c, cerr, env, config) =>
   evaluate(get(name), bindArgs(e, c, cerr, env, config), cerr, getSuperEnv(name, env)!, config);
