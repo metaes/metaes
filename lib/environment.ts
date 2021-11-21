@@ -27,7 +27,7 @@ export function getEnvironmentBy(env: Environment, condition: (env: Environment)
   return null;
 }
 
-export function getEnvironmentForValue(env: Environment, name: string): Environment | null {
+export function getEnvironmentForValue(env: Environment, name: string) {
   return getEnvironmentBy(env, (env) => name in env.values);
 }
 

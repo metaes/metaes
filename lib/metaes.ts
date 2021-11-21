@@ -225,7 +225,7 @@ export const upgraded = <T>(superArg: T, update?: Upgradable<Partial<T>>) => ({
 });
 
 /**
- * Creates function which when called with a function will apply provided arguments.
+ * Creates list of arguments waiting to be applied to a function.
  */
 export const bindArgs =
   <T extends any[]>(...args: T) =>

@@ -61,7 +61,7 @@ export const createDynamicApplication: <T = any>(name: string) => Evaluate<T> =
   (args, ...rest) =>
     applyDynamic({ name, args }, ...rest);
 
-const getSuperEnv = (name: string, closestEnv: Environment) => {
+export const getSuperEnv = (name: string, closestEnv: Environment) => {
   const { prev } = closestEnv;
 
   if (prev) {

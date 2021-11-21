@@ -3,7 +3,7 @@ import { describe, it } from "mocha";
 import { toEnvironment } from "../../lib/environment";
 import { createScript } from "../../lib/script";
 import { Environment, EvaluationConfig } from "../../lib/types";
-import { createDynamicApplication, getDynamic, getDynamicMany } from "./../../lib/evaluate";
+import { createDynamicApplication, getDynamic, getDynamicMany, getSuperEnv } from "./../../lib/evaluate";
 import { BaseConfig, uncps } from "./../../lib/metaes";
 
 describe("Evaluate helpers", () => {
@@ -37,5 +37,12 @@ describe("Evaluate helpers", () => {
 
     const result = foo([1, 2], env, config);
     assert.equal(result, 3);
+  });
+
+  describe("getSuperEnv", function () {
+    it("finds parent env", function () {
+      const env: Environment = { values: { name: "a" }, prev: { values: {}, prev: { values: { name: "b" } } } };
+      assert.equal(getSuperEnv("name", env)!.values.name, "b");
+    });
   });
 });
