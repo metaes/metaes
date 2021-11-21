@@ -33,7 +33,7 @@
   },
   "main": "metaes",
   "license": "MIT",
-  "version": "4.5.0",
+  "version": "4.6.0",
   "devDependencies": {
     "@types/chai": "^4.2.0",
     "@types/node": "^8.10.52",
