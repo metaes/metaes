@@ -25,3 +25,25 @@ function b() {
   }
 }
 assert.equal(b(), 44);
+
+// test: runs finally even if catch block throws again
+let called = false;
+try {
+  try {
+    throw "error";
+  } catch (e) {
+    throw e;
+  } finally {
+    called = true;
+  }
+} catch (e) {}
+assert.equal(called, true);
+
+// test: supports catch block without argument
+let called = false;
+try {
+  throw 1;
+} catch {
+  called = true;
+}
+assert.equal(called, true);

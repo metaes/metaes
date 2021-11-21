@@ -1,8 +1,8 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
 import { presentException } from "../../lib/exceptions";
-import { metaesEvalModule } from "../../lib/metaes";
 import { createScript } from "../../lib/script";
+import { metaesEval } from "./../../lib/metaes";
 
 const tests = {
   identifier: {
@@ -65,7 +65,7 @@ describe("Exceptions printing", function () {
       const script = createScript(source);
 
       let exception;
-      metaesEvalModule(script, console.log, (_ex) => (exception = _ex));
+      metaesEval(script, console.log, (_ex) => (exception = _ex));
       const result = presentException(exception, false);
       try {
         assert.equal(result, expected.trim());

@@ -1,6 +1,8 @@
 import { assert, expect } from "chai";
+import { superi } from "../../lib/evaluate";
 import { describe, it } from "mocha";
-import { metaesEval } from "../../lib/metaes";
+import { metaesEval, uncps } from "../../lib/metaes";
+import { evaluateMetaFunction, getMetaFunction } from "./../../lib/metafunction";
 
 describe("Meta functions", () => {
   it("should return correct value in simple case", () => {
@@ -52,12 +54,8 @@ describe("Meta functions", () => {
     let fn;
     metaesEval(
       () => thrower(),
-      (result) => {
-        fn = result;
-      },
-      (e) => {
-        console.log("error", e);
-      },
+      (result) => (fn = result),
+      (e) => console.log("error", e),
       { thrower }
     );
     try {
@@ -66,5 +64,31 @@ describe("Meta functions", () => {
       assert.equal(e.message, message);
       assert.instanceOf(e, errorConstructor);
     }
+  });
+
+  it("evaluateMetaFunction supports upgradable config", () => {
+    const _ = uncps(metaesEval);
+
+    const fn = _(function (this: number, x, y) {
+      return x + y * this;
+    });
+
+    const metaFunction = getMetaFunction(fn);
+    const identifiers: string[] = [];
+    const result = uncps(evaluateMetaFunction)({ metaFunction, args: [1, 2], thisObject: 3 }, {}, (cfg) => ({
+      ...cfg,
+      interpreters: {
+        values: {
+          Identifier(...args) {
+            identifiers.push(args[0].name);
+            superi("Identifier")(...args);
+          }
+        },
+        prev: cfg.interpreters
+      }
+    }));
+
+    assert.equal(result, 7);
+    assert.deepEqual(identifiers, ["x", "y"]);
   });
 });

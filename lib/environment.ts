@@ -2,12 +2,18 @@ import { toException } from "./exceptions";
 import { GetValueT, SetValueT } from "./nodeTypes";
 import { Continuation, Environment, EnvironmentBase, PartialErrorContinuation } from "./types";
 
-export function toEnvironment(environment?: any | EnvironmentBase | Environment): Environment {
-  return environment && typeof environment === "object"
-    ? "values" in environment
-      ? environment
-      : { values: environment }
-    : { values: {} };
+type EnvironmentLike = EnvironmentBase | Environment | any;
+
+export function isEnvironment(env: EnvironmentLike): env is Environment {
+  return typeof env === "object" && "values" in env;
+}
+
+export function toEnvironment(environment?: EnvironmentLike): Environment {
+  return environment ? (isEnvironment(environment) ? environment : { values: environment }) : { values: {} };
+}
+
+export function createEnvironment(environmentLike: EnvironmentLike, prev?: EnvironmentLike) {
+  return { ...toEnvironment(environmentLike), ...{ prev: prev && toEnvironment(prev) } };
 }
 
 export function getEnvironmentBy(env: Environment, condition: (env: Environment) => boolean): Environment | null {
@@ -21,7 +27,7 @@ export function getEnvironmentBy(env: Environment, condition: (env: Environment)
   return null;
 }
 
-export function getEnvironmentForValue(env: Environment, name: string): Environment | null {
+export function getEnvironmentForValue(env: Environment, name: string) {
   return getEnvironmentBy(env, (env) => name in env.values);
 }
 
@@ -69,4 +75,5 @@ export function GetValue<T>(
   });
 }
 
-export const createInternalEnv = (values: object, prev?: Environment) => <const>{ values, prev, internal: true };
+export const createInternalEnv = (values: object, prev?: Environment) =>
+  <const>{ ...createEnvironment(values, prev), internal: true };

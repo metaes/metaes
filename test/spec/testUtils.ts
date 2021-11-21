@@ -8,7 +8,7 @@ import { callcc } from "../../lib/callcc";
 import { getEnvironmentBy } from "../../lib/environment";
 import { presentException } from "../../lib/exceptions";
 import { ExportEnvironmentSymbol } from "../../lib/interpreter/modules";
-import { Evaluate } from "../../lib/types";
+import { EvaluateBase } from "../../lib/types";
 import { uncpsp } from "./../../lib/metaes";
 
 const globalEnv = {
@@ -27,7 +27,7 @@ const globalEnv = {
   prev: { values: global }
 };
 
-export function buildTests(folder: string, evalFn: Evaluate, testNamePrefix = "") {
+export function buildTests(folder: string, evalFn: EvaluateBase, testNamePrefix = "") {
   before(async () => {
     const files = (await pify(glob)(`${folder}/*.spec.js`)).map(async (file) => ({
       name: file,

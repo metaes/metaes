@@ -1,10 +1,11 @@
+import { Upgradable } from "./metaes";
 import { FunctionNode } from "./nodeTypes";
 
 export type MetaesException = {
   type: "Error" | "ReturnStatement" | "BreakStatement" | "ContinueStatement";
-  message: string;
-  location: ASTNode;
-  script: Script;
+  message?: string;
+  location?: ASTNode;
+  script?: Script;
   value?: Error | any | MetaesException;
 };
 
@@ -21,19 +22,45 @@ export type Script = {
 };
 
 export type NonEvaluableValue = undefined | boolean | number | boolean | symbol | any[] | object;
-
 export type Source = string | ASTNode | Function;
-
 export type EvalParam = Script | Source | NonEvaluableValue;
 
-export type Evaluate<T = any> = (
-  input: EvalParam,
-  c?: Continuation<T> | null,
-  cerr?: ErrorContinuation | null,
-  environment?: Environment | object,
-  config?: Partial<EvaluationConfig>
+type Continuations<C = any, E = ErrorContinuation> = [Continuation<C>, E];
+type Rest<U = false, C = Partial<EvaluationConfig>> = [
+  Environment | EnvironmentBase | object,
+  U extends true ? Upgradable<C> : C
+];
+type Builder<I, C extends any[], R extends any[]> = [I, ...C, ...R];
+
+// TODO: rename Evaluate* type names to CPS/CSPify?
+
+/**
+ * All params are required.
+ */
+export type Evaluate<C = any, I = EvalParam> = (
+  ...args: Builder<I, Continuations<C>, [Environment, EvaluationConfig]>
 ) => void;
 
+/**
+ * Only input is required.
+ */
+export type EvaluateBase<C = any, I = EvalParam, U = false> = (
+  ...args: Builder<I, Partial<Continuations<C>>, Partial<Rest<U>>>
+) => void;
+
+/**
+ * Environment and config are optional.
+ */
+export type EvaluateMid<C = any, I = EvalParam, U = false> = (
+  ...args: Builder<I, Continuations<C>, Partial<Rest<U>>>
+) => void;
+
+/**
+ * Used in client code, config param accepts upgrade function.
+ */
+export type EvaluateClient<C = any, I = EvalParam, U = false> = (
+  ...args: Builder<I, Continuations<C>, Partial<Rest<U>>>
+) => void;
 export type Phase = "enter" | "exit";
 
 export interface Evaluation {
@@ -42,7 +69,7 @@ export interface Evaluation {
   phase: Phase;
   config: EvaluationConfig;
   timestamp: number;
-  env?: Environment;
+  env: Environment;
 }
 
 export type Interceptor = (evaluation: Evaluation) => void;
@@ -50,22 +77,25 @@ export type Interceptor = (evaluation: Evaluation) => void;
 type Schedule = (task: () => void) => void;
 
 export interface EvaluationConfig {
-  interceptor: Interceptor;
+  interceptor?: Interceptor;
   interpreters: Environment<Interpreter<any>>;
   script: Script;
-  schedule?: Schedule;
+  schedule: Schedule;
 }
 
-export type Continuation<T = any> = (value: T) => void;
-export type ErrorContinuation = (error: MetaesException) => void;
-export type PartialErrorContinuation = (error: Partial<MetaesException> & { type: MetaesException["type"] }) => void;
+export type Optional<T> = { boxed: T };
+export type Continuation<T = any> = T extends undefined
+  ? () => void
+  : T extends Optional<infer I>
+  ? (value?: I) => void
+  : (value: T) => void;
 
+export type ErrorContinuation = (error: MetaesException) => void;
+export type PartialErrorContinuation = (error: Pick<MetaesException, "type"> & Partial<MetaesException>) => void;
+
+// TODO: Interpreter also could define return value in `c` continuation, just like Evaluate type
 export type Interpreter<T extends ASTNode | ASTNode[] | object> = (
-  e: T,
-  c: (value?: any) => void,
-  cerr: PartialErrorContinuation,
-  env: Environment,
-  config: EvaluationConfig
+  ...args: Builder<T, [(value?: any) => void, PartialErrorContinuation], [Environment, EvaluationConfig]>
 ) => void;
 
 export type Interpreters = {

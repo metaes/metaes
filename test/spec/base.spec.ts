@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
-import { metaesEval } from "../../lib/metaes";
+import { metaesEval, uncps } from "../../lib/metaes";
 
 describe("Base interpreters", () => {
   describe("Apply", () => {
@@ -9,7 +9,7 @@ describe("Base interpreters", () => {
       function foo(...args) {
         acceptedArgs = args;
       }
-      metaesEval({ type: "Apply", fn: foo, args: [1, 2] }, null, console.error);
+      metaesEval({ type: "Apply", fn: foo, args: [1, 2] }, undefined, console.error);
       assert.deepEqual(acceptedArgs, [1, 2]);
     });
 
@@ -20,7 +20,7 @@ describe("Base interpreters", () => {
           acceptedArgs = args;
         }
       };
-      metaesEval({ type: "Apply", fn: object.method, thisValue: object, args: [1, 2] }, null, console.error);
+      metaesEval({ type: "Apply", fn: object.method, thisValue: object, args: [1, 2] }, undefined, console.error);
       assert.deepEqual(acceptedArgs, [1, 2]);
     });
 
@@ -75,6 +75,13 @@ describe("Base interpreters", () => {
           throw e;
         });
       });
+    });
+  });
+
+  describe("ArrayExpression", function () {
+    it("evaluates array with holes", async () => {
+      assert.deepEqual(uncps(metaesEval)("[,]"), [,]);
+      assert.deepEqual(uncps(metaesEval)("[1,,...[2,,3],,4]"), [1, , ...[2, , 3], , 4]);
     });
   });
 });

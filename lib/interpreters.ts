@@ -9,5 +9,6 @@ export const ECMAScriptInterpreters = {
 };
 
 export const ModuleECMAScriptInterpreters = {
-  values: { ...ECMAScriptInterpreters.values, ...ModuleInterpreters }
+  values: ModuleInterpreters,
+  prev: ECMAScriptInterpreters
 };

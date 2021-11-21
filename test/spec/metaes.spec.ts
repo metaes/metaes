@@ -7,7 +7,7 @@ describe("Evaluation", () => {
 
   it("success continuation should be called", () => new Promise((resolve) => metaesEval("2", resolve)));
 
-  it("error continuation should be called", () => new Promise((resolve) => metaesEval("throw 1;", null, resolve)));
+  it("error continuation should be called", () => new Promise((resolve) => metaesEval("throw 1;", undefined, resolve)));
 
   it("should not throw in current callstack", () => {
     expect(() => metaesEval("throw 1;")).to.not.throw();

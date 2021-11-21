@@ -1,11 +1,12 @@
+import { ASTNode } from "./../types";
 import { callcc } from "../callcc";
-import { getEnvironmentForValue } from "../environment";
-import { apply, at, evaluate, evaluateArray, get, getProperty, set, setProperty, visitArray } from "../evaluate";
+import { getEnvironmentForValue, GetValue } from "../environment";
+import { apply, at, evaluate, evaluateArray, get, getProperty, setProperty, visitArray } from "../evaluate";
 import { LocatedException, NotImplementedException, toException } from "../exceptions";
+import { bindArgs } from "../metaes";
 import { createMetaFunctionWrapper, evaluateMetaFunction, getMetaFunction, isMetaFunction } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Interpreter } from "../types";
-import { bindArgs, getInterpreter } from "./../metaes";
 import { createClass } from "./statements";
 
 const concatSpreads = (all, next) => (next instanceof SpreadElementValue ? all.concat(next.value) : all.concat([next]));
@@ -46,7 +47,7 @@ export const CallExpression: Interpreter<NodeTypes.CallExpression> = (e, c, cerr
                       const [receiver, _arguments] = args;
                       receiver(_arguments, c, cerr, env, config);
                     } catch (e) {
-                      cerr({ type: "Error", value: e, message: "Error in continuation receiver." });
+                      cerr(toException(e));
                     }
                   } else {
                     evaluate(at(e, apply(callee, undefined, args, e)), c, cerr, env, config);
@@ -188,7 +189,20 @@ export const AssignmentExpression: Interpreter<NodeTypes.AssignmentExpression> =
       const e_left = e.left;
       switch (e_left.type) {
         case "Identifier":
-          evaluate(at(e_left, set(e_left.name, right)), c, cerr, env, config);
+          evaluate(
+            at(e_left, get(e_left.name)), // first, try to find variable in a scope to make sure it exists
+            () =>
+              evaluate(
+                setProperty(getEnvironmentForValue(env, e_left.name)?.values, e_left.name, right, e.operator),
+                c,
+                cerr,
+                env,
+                config
+              ),
+            cerr,
+            env,
+            config
+          );
           break;
         case "MemberExpression":
           evaluate(
@@ -351,8 +365,30 @@ export const BinaryExpression: Interpreter<NodeTypes.BinaryExpression> = (e, c, 
     config
   );
 
+const nullValueInstance = {};
+
+export const NullValue: Interpreter<{ type: "NullValue" }> = (_, c) => c(nullValueInstance);
+
+const nullToASTNode = (value: ASTNode | null) => (value === null ? { type: "NullValue" } : value);
+
+function deleteNullValues(array: any[]) {
+  let i = array.length;
+  while (i-- >= 0) {
+    if (array[i] === nullValueInstance) {
+      delete array[i];
+    }
+  }
+  return array;
+}
+
 export const ArrayExpression: Interpreter<NodeTypes.ArrayExpression> = (e, c, cerr, env, config) =>
-  evaluateArray(e.elements, (values) => c(values.reduce(concatSpreads, [])), cerr, env, config);
+  evaluateArray(
+    e.elements.map(nullToASTNode),
+    (values) => c(deleteNullValues(values.reduce(concatSpreads, []))),
+    cerr,
+    env,
+    config
+  );
 
 export const NewExpression: Interpreter<NodeTypes.NewExpression> = (e, c, cerr, env, config) =>
   evaluateArray(
@@ -373,6 +409,7 @@ export const NewExpression: Interpreter<NodeTypes.NewExpression> = (e, c, cerr, 
                   { metaFunction: getMetaFunction(callee), thisObject: newThis, args },
                   (value) => c(typeof value === "object" ? value : newThis),
                   cerr,
+                  undefined,
                   config
                 );
               } else {
@@ -563,7 +600,7 @@ export const ThisExpression: Interpreter<NodeTypes.ThisExpression> = (e, c, cerr
   evaluate(at(e, get("this")), c, cerr, env, config);
 
 export const ConditionalExpression: Interpreter<NodeTypes.ConditionalExpression> = (e, c, cerr, env, config) =>
-  getInterpreter("IfStatement", bindArgs(e, c, cerr, env, config), cerr, config);
+  GetValue({ name: "IfStatement" }, bindArgs(e, c, cerr, env, config), cerr, config.interpreters);
 
 export const TemplateLiteral: Interpreter<NodeTypes.TemplateLiteral> = (e, c, cerr, env, config) => {
   if (e.quasis.length === 1 && e.expressions.length === 0) {
@@ -629,6 +666,7 @@ export default {
   Property,
   BinaryExpression,
   ArrayExpression,
+  NullValue,
   NewExpression,
   SequenceExpression,
   LogicalExpression,

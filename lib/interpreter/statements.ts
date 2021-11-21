@@ -3,9 +3,9 @@ import { LocatedException, NotImplementedException, toException } from "../excep
 import { createMetaFunctionWrapper } from "../metafunction";
 import * as NodeTypes from "../nodeTypes";
 import { Environment, Interpreter, MetaesException } from "../types";
-import { createInternalEnv } from "./../environment";
+import { createInternalEnv, GetValue } from "./../environment";
 import { getProperty } from "./../evaluate";
-import { bindArgs, getInterpreter } from "./../metaes";
+import { bindArgs } from "./../metaes";
 
 const hoistDeclarations: Interpreter<NodeTypes.Statement[]> = (e, c, cerr, env, config) =>
   visitArray(
@@ -26,7 +26,7 @@ export const BlockStatement: Interpreter<NodeTypes.BlockStatement | NodeTypes.Pr
   );
 
 export const Program: Interpreter<NodeTypes.Program> = (e, c, cerr, env, config) =>
-  getInterpreter("BlockStatement", bindArgs(e, c, cerr, env, config), cerr, config);
+  GetValue({ name: "BlockStatement" }, bindArgs(e, c, cerr, env, config), cerr, config.interpreters);
 
 export const VariableDeclaration: Interpreter<NodeTypes.VariableDeclaration> = (e, c, cerr, env, config) =>
   visitArray(e.declarations, (declarator, c, cerr) => evaluate(declarator, c, cerr, env, config), c, cerr);
@@ -192,20 +192,22 @@ export const ExpressionStatement: Interpreter<NodeTypes.ExpressionStatement> = (
 
 export const ExceptionName = "[[CatchClauseException]]";
 
-export const TryStatement: Interpreter<NodeTypes.TryStatement> = (e, c, cerr, env, config) =>
+export const TryStatement: Interpreter<NodeTypes.TryStatement> = (e, c, cerr, env, config) => {
+  const evalFinalizer = () => (e.finalizer ? evaluate(e.finalizer, c, cerr, env, config) : c());
+
   evaluate(
     e.block,
     c,
-    (exception) =>
-      exception.type === "ReturnStatement"
-        ? cerr(exception)
+    (ex) =>
+      ex.type === "ReturnStatement"
+        ? cerr(ex)
         : evaluate(
             e.handler,
-            () => (e.finalizer ? evaluate(e.finalizer, c, cerr, env, config) : c()),
-            cerr,
+            evalFinalizer,
+            (ex) => (ex.type === "ReturnStatement" ? cerr(ex) : evalFinalizer()),
             {
               values: {
-                [ExceptionName]: exception
+                [ExceptionName]: ex
               },
               prev: env
             },
@@ -214,6 +216,7 @@ export const TryStatement: Interpreter<NodeTypes.TryStatement> = (e, c, cerr, en
     env,
     config
   );
+};
 
 export const ThrowStatement: Interpreter<NodeTypes.ThrowStatement> = (e, _c, cerr, env, config) =>
   evaluate(e.argument, (value) => cerr(value), cerr, env, config);
@@ -227,9 +230,11 @@ export const CatchClause: Interpreter<NodeTypes.CatchClause> = (e, c, cerr, env,
         c,
         cerr,
         {
-          values: {
-            [e.param.name]: error.value
-          },
+          values: e.param
+            ? {
+                [e.param.name]: error.value
+              }
+            : {},
           prev: env
         },
         config
@@ -385,6 +390,7 @@ export const ContinueStatement: Interpreter<NodeTypes.ContinueStatement> = (e, _
   }
 };
 
+// TODO: check let/const scoping
 export const ForOfStatement: Interpreter<NodeTypes.ForOfStatement> = (e, c, cerr, env, config) =>
   evaluate(
     e.right,

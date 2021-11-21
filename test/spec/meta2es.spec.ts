@@ -3,9 +3,9 @@ import { before, describe, it } from "mocha";
 import { presentException } from "../../lib/exceptions";
 import { getMeta2ESEval } from "../../lib/meta2es";
 import { uncpsp } from "./../../lib/metaes";
-import { Evaluate } from "./../../lib/types";
+import { Evaluate, EvaluateBase } from "./../../lib/types";
 
-async function evaluateHelperWithPrint(evalFn: Evaluate, input, env = { values: {} }) {
+async function evaluateHelperWithPrint(evalFn: EvaluateBase, input, env = { values: {} }) {
   try {
     return await uncpsp(evalFn)(input, env);
   } catch (e) {

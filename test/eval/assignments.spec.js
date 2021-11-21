@@ -74,3 +74,13 @@ assert.deepEqual([a, b, c], [1, 2, [3, 4]]);
 // test: array pattern - holes
 let [a, b, ...c] = [1];
 assert.deepEqual([a, b, c], [1, undefined, []]);
+
+// test: supports update assignment with identifier on left side
+let a = 2;
+a += 2;
+assert.equal(a, 4);
+
+// test: supports update assignment with member expression on left side
+let a = { b: 2 };
+a.b += 2;
+assert.equal(a.b, 4);

@@ -32,15 +32,15 @@ export function presentException({ location, value, message, script }: MetaesExc
   }
   if (location) {
     const styled = useStyles ? withStyle : (value) => value;
-    const source = typeof script.source === "function" ? script.source.toString() : script.source;
-    const url = script.url ?? "anonymous";
+    const source = typeof script?.source === "function" ? script.source.toString() : script?.source;
+    const url = script?.url ?? "anonymous";
     const startLine = location.loc?.start.line!;
     const startColumn = location.loc?.start.column!;
     const nodeLength = location.range ? location.range[1] - location.range[0] : 1;
     const sourceLocation = `${url}:${startLine}:${startColumn} - ${
       (isException(value) ? message : value) || message
     }\n\n`;
-    const lines = source.split("\n");
+    const lines = source?.split("\n") || [];
     const line = lines[startLine - 1];
     const lineNumber = styled(startLine + "|", dim);
     const lineValue = styled(line, highlight);

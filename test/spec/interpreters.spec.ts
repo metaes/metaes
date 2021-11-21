@@ -1,6 +1,7 @@
+import { Environment } from "./../../build/lib/types.d";
+import { superi } from "./../../lib/evaluate";
 import { assert } from "chai";
 import { before, beforeEach, describe, it } from "mocha";
-import { Apply, GetProperty, SetProperty } from "../../lib/interpreter/base";
 import { ECMAScriptInterpreters } from "../../lib/interpreters";
 import { evalFnBody, MetaesContext, metaesEval, uncps } from "../../lib/metaes";
 import { uncpsp } from "./../../lib/metaes";
@@ -21,8 +22,7 @@ describe("Interpreters", () => {
             // Intentionally delay
             setTimeout(() => c(iterator++));
           } else {
-            // make the `super` call
-            GetProperty.apply(null, arguments);
+            superi("GetProperty").apply(null, arguments);
           }
         }
       },
@@ -49,7 +49,7 @@ describe("Interpreters", () => {
     };
     const env = { a: { b: 1 } };
     assert.equal(uncps(metaesEval)("a.b", env, config), 2, "works outside of ObjectPattern");
-    assert.equal(uncps(metaesEval)("const {b}=a; b;", env, config), 2, "works inside of ObjectPattern");
+    assert.equal(uncps(metaesEval)("const {b}=a; b;", env, config), 2, "works inside ObjectPattern");
   });
 });
 
@@ -68,7 +68,7 @@ describe("Example Proxy implementation", async () => {
         if (object instanceof Proxy && object.handler.get) {
           c(object.handler.get(object.target, property));
         } else {
-          GetProperty.apply(null, arguments);
+          superi("GetProperty").apply(null, arguments);
         }
       },
       SetProperty({ object, property, value }, c, cerr) {
@@ -79,7 +79,7 @@ describe("Example Proxy implementation", async () => {
             cerr(e);
           }
         } else {
-          SetProperty.apply(null, arguments);
+          superi("SetProperty").apply(null, arguments);
         }
       }
     },
@@ -169,27 +169,27 @@ describe("Example remote context for database access", () => {
     }
   }
 
-  let interpreters = {
+  let interpreters: Environment = {
     values: {
       GetProperty({ object }) {
         if (object instanceof MetaArray) {
           object.GetProperty.apply(object, arguments);
         } else {
-          GetProperty.apply(null, arguments);
+          superi("GetProperty").apply(null, arguments);
         }
       },
       SetProperty({ object }) {
         if (object instanceof MetaArray) {
           object.SetProperty.apply(object, arguments);
         } else {
-          SetProperty.apply(null, arguments);
+          superi("SetProperty").apply(null, arguments);
         }
       },
       Apply({ thisValue }) {
         if (thisValue instanceof MetaArray) {
           thisValue.Apply.apply(thisValue, arguments);
         } else {
-          Apply.apply(null, arguments);
+          superi("Apply").apply(null, arguments);
         }
       }
     },

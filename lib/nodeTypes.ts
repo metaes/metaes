@@ -197,7 +197,7 @@ export interface ThrowStatement extends NodeBase {
 
 export interface CatchClause extends NodeBase {
   type: "CatchClause";
-  param: Identifier;
+  param?: Identifier;
   body: BlockStatement;
 }
 
