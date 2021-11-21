@@ -1,5 +1,5 @@
-import { Environment } from "./../../build/lib/types.d";
 import { superi } from "./../../lib/evaluate";
+import { Environment } from "./../../lib/types";
 import { assert } from "chai";
 import { before, beforeEach, describe, it } from "mocha";
 import { ECMAScriptInterpreters } from "../../lib/interpreters";
