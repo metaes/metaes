@@ -26,6 +26,7 @@ export interface Context {
 }
 
 export const BaseConfig = { interpreters: ECMAScriptInterpreters, schedule: defaultScheduler };
+export const BaseModuleConfig = { ...BaseConfig, interpreters: ModuleECMAScriptInterpreters };
 
 export function isEvaluable(input: EvalParam): input is Script | Source {
   return (
@@ -73,7 +74,7 @@ export const metaesEval: EvaluateBase = (input, c, cerr, env = {}, config = {}) 
     cerr
   );
 
-export const metaesEvalModule: EvaluateBase = (input, c, cerr, env = {}, config = {}) => {
+export const metaesEvalModule: EvaluateBase<{ [key: string]: any }> = (input, c, cerr, env = {}, config = {}) => {
   const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };
   const exportsEnv = { prev: importsEnv, values: {}, [ExportEnvironmentSymbol]: true };
 
@@ -81,7 +82,7 @@ export const metaesEvalModule: EvaluateBase = (input, c, cerr, env = {}, config 
     input,
     (input) => ({
       script: toScript(input, undefined, "module"),
-      config: { ...BaseConfig, interpreters: ModuleECMAScriptInterpreters, ...config },
+      config: { ...BaseModuleConfig, ...config },
       env: { values: {}, prev: exportsEnv }
     }),
     () => c && c(exportsEnv.values),

@@ -1,16 +1,18 @@
-import { getEnvironmentBy } from "../environment";
-import { at, declare, evaluate, get, visitArray } from "../evaluate";
-import { LocatedException, NotImplementedException } from "../exceptions";
-import { bindArgs } from "../metaes";
+import { createEnvironment, getEnvironmentBy, GetValue } from "../environment";
+import { at, declare, evaluate, get, getTrampolineScheduler, visitArray } from "../evaluate";
+import { LocatedException, NotImplementedException, presentException } from "../exceptions";
+import { bindArgs, metaesEvalModule, uncps } from "../metaes";
 import * as NodeTypes from "../nodeTypes";
-import { Environment, Interpreter, Interpreters } from "../types";
-import { ASTNode, NodeLoc } from "./../types";
+import { ASTNode, Continuation, Environment, ErrorContinuation, Interpreter, Interpreters, NodeLoc } from "../types";
 
 export const ImportEnvironmentSymbol = "[[isImportModule]]";
 export const ExportEnvironmentSymbol = "[[isExportModule]]";
 export const GetBindingValueName = "[[GetBindingValue]]";
 export const ImportModuleName = "[[ImportModule]]";
 export const ExportBindingName = "[[ExportBinding]]";
+export const CreateScriptName = "[[CreateScript]]";
+export const ResolveModuleLocationName = "[[ResolveModuleLocation]]";
+export const GetModuleSourceName = "[[GetModuleSource]]";
 
 export const modulesEnv: Interpreters = {
   [GetBindingValueName](value: ImportBinding, c, cerr, env, config) {
@@ -174,6 +176,90 @@ export const ImportDeclaration: Interpreter<NodeTypes.ImportDeclaration> = (e, c
     c,
     cerr
   );
+
+const defaultResolveModuleLocation = (importerPath: string, importedPath: string) =>
+  "./" + importerPath.substring(0, importerPath.lastIndexOf("/") + 1) + importedPath + ".js";
+
+export function createModulesImporter(globalEnv: Environment) {
+  const env = createEnvironment({}, globalEnv);
+  const loadedModules = {};
+  const loadingModules = {};
+
+  function getVar(name: string, fallback?: any) {
+    try {
+      return uncps(GetValue)({ name }, globalEnv);
+    } catch (e) {
+      if (fallback) {
+        return fallback;
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  const resolveModuleLocation = getVar(ResolveModuleLocationName, defaultResolveModuleLocation);
+  const getModuleSource = getVar(GetModuleSourceName);
+
+  const importModuleLocalized = (basePath: string) => (path: string, c: Continuation, cerr: ErrorContinuation) => {
+    if (path.startsWith("./") || path.startsWith("../")) {
+      importModule(resolveModuleLocation(basePath, path), c, cerr);
+    } else {
+      if (loadedModules[path]) {
+        c(loadedModules[path]);
+      } else {
+        getModuleSource(path, (mod) => c((loadedModules[path] = { ...mod, default: mod })), cerr);
+      }
+    }
+  };
+
+  function importModule(url: string, c: Continuation<{ [key: string]: any }>, cerr: ErrorContinuation) {
+    if (loadedModules[url]) {
+      c(loadedModules[url]);
+    } else if (loadingModules[url]) {
+      loadingModules[url].push({ c, cerr });
+    } else {
+      loadingModules[url] = [{ c, cerr }];
+      GetValue(
+        { name: CreateScriptName },
+        bindArgs(
+          url,
+          (script) =>
+            metaesEvalModule(
+              script,
+              function (mod) {
+                const results = loadingModules[url];
+                loadedModules[url] = mod;
+                delete loadingModules[url];
+                results.forEach(({ c }) => c(mod));
+              },
+              function (exception) {
+                console.log(presentException(exception));
+                const results = loadingModules[url];
+
+                delete loadingModules[url];
+                results.forEach(({ cerr }) => cerr(exception.value || exception.message || exception));
+              },
+              {
+                prev: env,
+                values: {
+                  [ImportModuleName]: importModuleLocalized(url)
+                }
+              },
+              {
+                script,
+                schedule: getTrampolineScheduler()
+              }
+            ),
+          cerr
+        ),
+        cerr,
+        env
+      );
+    }
+  }
+
+  return importModule;
+}
 
 export default {
   ExportNamedDeclaration,

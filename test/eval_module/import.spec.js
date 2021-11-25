@@ -12,3 +12,8 @@ assert.equal(a(), 44);
 import { a as _ } from "./a";
 
 assert.equal(_(), 44);
+
+// test: supports multi levels imports
+import { c } from "./a";
+
+assert.equal(c(), 88);
