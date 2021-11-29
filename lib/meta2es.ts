@@ -6,7 +6,7 @@ import { createEnvironment } from "./environment";
 import { createModulesImporter } from "./interpreter/modules";
 import type * as metaes from "./metaes";
 import { cpsify, uncpsp } from "./metaes";
-import { intristic } from "./names";
+import { intrinsic } from "./names";
 import { createScript } from "./script";
 import { Environment } from "./types";
 
@@ -39,7 +39,7 @@ function compileTsToScript(importPath: string, base: string) {
 
 export function getModule2(basePath: string, globalEnv?: Environment) {
   const values = {
-    [intristic.URLToScript]: cpsify(([url, base]) => compileTsToScript(url, base))
+    [intrinsic.URLToScript]: cpsify(([url, base]) => compileTsToScript(url, base))
   };
 
   return createModulesImporter(createEnvironment(values, globalEnv))(basePath);

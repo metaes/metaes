@@ -9,14 +9,14 @@ import { getEnvironmentBy } from "../../lib/environment";
 import { presentException } from "../../lib/exceptions";
 import { EvaluateBase } from "../../lib/types";
 import { uncpsp } from "./../../lib/metaes";
-import { intristic } from "./../../lib/names";
+import { intrinsic } from "./../../lib/names";
 
 const globalEnv = {
   values: {
     assert,
     callcc,
     getExports(_, c, cerr, env) {
-      const exportsEnv = getEnvironmentBy(env, (env) => env[intristic.ExportEnvironment]);
+      const exportsEnv = getEnvironmentBy(env, (env) => env[intrinsic.ExportEnvironment]);
       if (exportsEnv) {
         c(exportsEnv.values);
       } else {

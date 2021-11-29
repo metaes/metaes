@@ -12,7 +12,7 @@ type FullyQualifiedName<N extends string> = `[[${N}]]`;
 
 type valuesOf<T extends readonly string[]> = T[number];
 
-export const intristic = namesParts.reduce(
+export const intrinsic = namesParts.reduce(
   (names, namePart: string) => ((names[namePart] = toFullyQualifiedName(namePart)), names),
   {} as { [key in valuesOf<typeof namesParts>]: FullyQualifiedName<key> }
 );
