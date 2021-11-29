@@ -1,9 +1,9 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
-import { toEnvironment } from "../../lib/environment";
+import { getSuperEnv, toEnvironment } from "../../lib/environment";
 import { createScript } from "../../lib/script";
 import { Environment, EvaluationConfig } from "../../lib/types";
-import { createDynamicApplication, getDynamic, getDynamicMany, getSuperEnv } from "./../../lib/evaluate";
+import { createDynamicApplication, getDynamic, getDynamicMany } from "./../../lib/evaluate";
 import { BaseConfig, uncps } from "./../../lib/metaes";
 
 describe("Evaluate helpers", () => {

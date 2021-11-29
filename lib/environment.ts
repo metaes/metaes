@@ -31,6 +31,16 @@ export function getEnvironmentForValue(env: Environment, name: string) {
   return getEnvironmentBy(env, (env) => name in env.values);
 }
 
+export const getSuperEnv = (name: string, closestEnv: Environment) => {
+  const { prev } = closestEnv;
+
+  if (prev) {
+    return getEnvironmentForValue(prev, name);
+  } else {
+    throw new Error("Provided environment doesn't have outer (prev) environment to search in.");
+  }
+};
+
 export function SetValue<T>(
   { name, value, isDeclaration }: Omit<SetValueT<T>, "type">,
   c: Continuation,

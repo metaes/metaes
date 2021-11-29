@@ -1,93 +1,49 @@
+import { createHash } from "crypto";
 import { readFileSync } from "fs";
-import * as path from "path";
+import { join, parse } from "path";
 import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
-import { getTrampolineScheduler } from "./evaluate";
-import { presentException } from "./exceptions";
-import { ImportModuleName } from "./interpreter/modules";
-import { metaesEvalModule, uncpsp } from "./metaes";
+import { createEnvironment } from "./environment";
+import { createModulesImporter, URLToScript } from "./interpreter/modules";
+import type * as metaes from "./metaes";
+import { cpsify, uncpsp } from "./metaes";
 import { createScript } from "./script";
-import { Continuation, Environment, ErrorContinuation } from "./types";
+import { Environment } from "./types";
 
-function createScriptFromTS(url) {
-  const source = transpileModule(readFileSync(url).toString(), {
-    compilerOptions: { target: ScriptTarget.ES2017, module: ModuleKind.ESNext }
-  }).outputText;
+const compileCache: { [key: string]: string } = {};
 
-  const script = createScript(source, undefined, "module");
-  script.url = `transpiled://${url}`;
-  return script;
+/**
+ * Compile TypeScript script to MetaES script object.
+ */
+function compileTsToScript(importPath: string, base: string) {
+  // Assumption: if this condition is true, then the module should be loaded using MetaES and TS compiler.
+  // Otherwise import using node's `require`.
+  if (importPath.startsWith("./") || importPath.startsWith("../")) {
+    const resolvedPath = "./" + join(parse(base).dir, importPath + ".ts");
+    const source = readFileSync(resolvedPath).toString();
+    const checksum = createHash("sha256").update(source).digest("hex");
+    const compiled =
+      compileCache[checksum] ||
+      (compileCache[checksum] = transpileModule(source, {
+        compilerOptions: { target: ScriptTarget.ES2017, module: ModuleKind.ESNext }
+      }).outputText);
+    const script = createScript(compiled, undefined, "module");
+    script.url = `transpiled://${resolvedPath}`;
+    return { resolvedPath, script };
+  } else {
+    const mod = require(importPath);
+    return { module: { ...mod, default: mod } };
+  }
 }
 
-function createTSModulesImporter(globalEnv: Environment = { values: {} }) {
-  const loadedModules = {};
-  const loadingModules = {};
-
-  const localizedImportTSModule = (base: string) => (url: string, c: Continuation, cerr: ErrorContinuation) => {
-    if (url.startsWith("./") || url.startsWith("../")) {
-      importTSModule("./" + path.join(path.parse(base).dir, url + ".ts"), c, cerr);
-    } else {
-      if (loadedModules[url]) {
-        c(loadedModules[url]);
-      } else {
-        try {
-          const mod = require(url);
-          c((loadedModules[url] = { ...mod, default: mod }));
-        } catch (e) {
-          cerr(e);
-        }
-      }
-    }
+export function getModule2(basePath: string, globalEnv?: Environment) {
+  const values = {
+    [URLToScript]: cpsify(([url, base]) => compileTsToScript(url, base))
   };
 
-  function importTSModule(url: string, c: Continuation, cerr: ErrorContinuation) {
-    if (loadedModules[url]) {
-      c(loadedModules[url]);
-    } else if (loadingModules[url]) {
-      loadingModules[url].push({ c, cerr });
-    } else {
-      loadingModules[url] = [{ c, cerr }];
-      try {
-        const script = createScriptFromTS(url);
-
-        metaesEvalModule(
-          script,
-          function (mod) {
-            const results = loadingModules[url];
-            loadedModules[url] = mod;
-            delete loadingModules[url];
-            results.forEach(({ c }) => c(mod));
-          },
-          function (exception) {
-            console.log(presentException(exception));
-            const results = loadingModules[url];
-
-            delete loadingModules[url];
-            results.forEach(({ cerr }) => cerr(exception.value || exception.message || exception));
-          },
-          {
-            prev: globalEnv,
-            values: {
-              [ImportModuleName]: localizedImportTSModule(url)
-            }
-          },
-          {
-            script,
-            schedule: getTrampolineScheduler()
-          }
-        );
-      } catch (error) {
-        cerr(error);
-      }
-    }
-  }
-
-  return importTSModule;
+  return createModulesImporter(createEnvironment(values, globalEnv))(basePath);
 }
 
-export const getMeta2ESEval = (globalEnv: Environment = { values: {} }) =>
-  getMeta2ES(globalEnv).then((mod: any) => mod.metaesEval);
+export const getMeta2ES = (globalEnv?: Environment) =>
+  uncpsp(getModule2("", globalEnv))("./lib/metaes") as Promise<typeof metaes>;
 
-export const getModule2 = (path: string, globalEnv: Environment = { values: {} }) =>
-  uncpsp(createTSModulesImporter(globalEnv))(path);
-
-export const getMeta2ES = (globalEnv: Environment = { values: {} }) => getModule2("./lib/metaes.ts", globalEnv);
+export const getMeta2ESEval = async (globalEnv?: Environment) => (await getMeta2ES(globalEnv)).metaesEval;

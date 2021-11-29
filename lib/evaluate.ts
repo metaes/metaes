@@ -1,4 +1,4 @@
-import { getEnvironmentForValue, GetValue } from "./environment";
+import { getSuperEnv, GetValue } from "./environment";
 import { NotImplementedException, toException } from "./exceptions";
 import { bindArgs, callInterceptor } from "./metaes";
 import { CallExpression, EvalNode, TaggedTemplateExpression } from "./nodeTypes";
@@ -30,7 +30,7 @@ export const apply = (
     args,
     e
   };
-export const getProperty = (object: any, property: any) => <const>{ type: "GetProperty", object, property };
+export const getProperty = (object: any, property: any) => <const>{ type: "GetProperty", object, property }; // TODO: make sure it properly shows error if object is null/undefined
 export const setProperty = (object: any, property: any, value: any, operator: string) =>
   <const>{
     type: "SetProperty",
@@ -60,19 +60,6 @@ export const createDynamicApplication: <T = any>(name: string) => Evaluate<T> =
   (name: string) =>
   (args, ...rest) =>
     applyDynamic({ name, args }, ...rest);
-
-export const getSuperEnv = (name: string, closestEnv: Environment) => {
-  const { prev } = closestEnv;
-
-  if (prev) {
-    return getEnvironmentForValue(prev, name);
-  } else {
-    throw new Error("Provided environment doesn't have outer (prev) environment to search in.");
-  }
-};
-
-export const supere: (string) => Evaluate = (name) => (e, c, cerr, env, config) =>
-  evaluate(get(name), bindArgs(e, c, cerr, env, config), cerr, getSuperEnv(name, env)!, config);
 
 export const superi: (string) => Evaluate = (name) => (e, c, cerr, env, config) =>
   GetValue({ name }, bindArgs(e, c, cerr, env, config), cerr, getSuperEnv(name, config.interpreters)!);

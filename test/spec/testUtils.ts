@@ -7,7 +7,7 @@ import * as pify from "pify";
 import { callcc } from "../../lib/callcc";
 import { getEnvironmentBy } from "../../lib/environment";
 import { presentException } from "../../lib/exceptions";
-import { ExportEnvironmentSymbol } from "../../lib/interpreter/modules";
+import { ExportEnvironment } from "../../lib/interpreter/modules";
 import { EvaluateBase } from "../../lib/types";
 import { uncpsp } from "./../../lib/metaes";
 
@@ -16,7 +16,7 @@ const globalEnv = {
     assert,
     callcc,
     getExports(_, c, cerr, env) {
-      const exportsEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
+      const exportsEnv = getEnvironmentBy(env, (env) => env[ExportEnvironment]);
       if (exportsEnv) {
         c(exportsEnv.values);
       } else {
