@@ -3,16 +3,18 @@ import { readFileSync } from "fs";
 import { join, parse } from "path";
 import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 import { createEnvironment } from "./environment";
-import { createModulesImporter, URLToScript } from "./interpreter/modules";
+import { createModulesImporter } from "./interpreter/modules";
 import type * as metaes from "./metaes";
 import { cpsify, uncpsp } from "./metaes";
+import { intristic } from "./names";
 import { createScript } from "./script";
 import { Environment } from "./types";
 
 const compileCache: { [key: string]: string } = {};
 
 /**
- * Compile TypeScript script to MetaES script object.
+ * Compile TypeScript sc
+ ript to MetaES script object.
  */
 function compileTsToScript(importPath: string, base: string) {
   // Assumption: if this condition is true, then the module should be loaded using MetaES and TS compiler.
@@ -37,7 +39,7 @@ function compileTsToScript(importPath: string, base: string) {
 
 export function getModule2(basePath: string, globalEnv?: Environment) {
   const values = {
-    [URLToScript]: cpsify(([url, base]) => compileTsToScript(url, base))
+    [intristic.URLToScript]: cpsify(([url, base]) => compileTsToScript(url, base))
   };
 
   return createModulesImporter(createEnvironment(values, globalEnv))(basePath);

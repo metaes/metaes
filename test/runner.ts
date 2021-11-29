@@ -6,7 +6,8 @@ import { toException } from "../lib/exceptions";
 import { getMeta2ESEval } from "../lib/meta2es";
 import { metaesEval } from "../lib/metaes";
 import { createScript } from "../lib/script";
-import { createModulesImporter, URLToScript } from "./../lib/interpreter/modules";
+import { createModulesImporter } from "./../lib/interpreter/modules";
+import { intristic } from "./../lib/names";
 import { Continuation, ErrorContinuation } from "./../lib/types";
 import { buildTests } from "./spec/testUtils";
 
@@ -43,7 +44,7 @@ import { buildTests } from "./spec/testUtils";
           createEnvironment(
             {
               values: {
-                [URLToScript]([url, base], c, cerr: ErrorContinuation) {
+                [intristic.URLToScript]([url, base], c, cerr: ErrorContinuation) {
                   if (url === mainModuleName) {
                     const script = createScript(input, undefined, "module");
                     script.url = mainModuleName;
