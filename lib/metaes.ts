@@ -1,7 +1,8 @@
 import { toEnvironment } from "./environment";
 import { defaultScheduler, evaluate } from "./evaluate";
-import { ExportEnvironment, ImportEnvironment, modulesEnv } from "./interpreter/modules";
+import { modulesEnv } from "./interpreter/modules";
 import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
+import { intrinsic } from "./names";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
 import { createScript, isScript, nextScriptId, toScript } from "./script";
@@ -75,8 +76,8 @@ export const metaesEval: EvaluateBase = (input, c, cerr, env = {}, config = {}) 
   );
 
 export const metaesEvalModule: EvaluateBase<{ [key: string]: any }> = (input, c, cerr, env = {}, config = {}) => {
-  const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironment]: true };
-  const exportsEnv = { prev: importsEnv, values: {}, [ExportEnvironment]: true };
+  const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [intrinsic.ImportEnvironment]: true };
+  const exportsEnv = { prev: importsEnv, values: {}, [intrinsic.ExportEnvironment]: true };
 
   evaluateConditionally(
     input,

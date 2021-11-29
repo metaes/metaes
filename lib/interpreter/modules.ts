@@ -1,3 +1,4 @@
+import { intrinsic } from './../names';
 import { EvaluateMid } from "../types";
 import { getEnvironmentBy, GetValue } from "../environment";
 import { at, declare, evaluate, get, getTrampolineScheduler, superi, visitArray } from "../evaluate";
@@ -16,32 +17,25 @@ import {
   Script
 } from "../types";
 
-// TODO: switch to "intristic" names inside object, like in vanillinjs
-export const ImportEnvironment = "[[ImportEnvironment]]";
-export const ExportEnvironment = "[[ExportEnvironment]]";
-export const GetImportBindingValue = "[[GetImportBindingValue]]";
-export const ImportModule = "[[ImportModule]]";
-export const URLToScript = "[[URLToScript]]";
-export const ExportBinding = "[[ExportBinding]]";
 
 export const modulesEnv: Interpreters = {
-  [GetImportBindingValue](value: ImportBinding, c, cerr, env, config) {
+  [intrinsic.GetImportBindingValue](value: ImportBinding, c, cerr, env, config) {
     evaluate(
-      at(value, get(ImportModule)),
+      at(value, get(intrinsic.ImportModule)),
       bindArgs(value.modulePath, (mod) => c(mod[value.name]), cerr),
       cerr,
       env,
       config
     );
   },
-  [ExportBinding]({ name, value, e }, c, cerr, env, config) {
-    const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironment]);
+  [intrinsic.ExportBinding]({ name, value, e }, c, cerr, env, config) {
+    const exportEnv = getEnvironmentBy(env, (env) => env[intrinsic.ExportEnvironment]);
     if (exportEnv) {
       evaluate(declare(name, value), c, cerr, exportEnv, config);
     } else {
       cerr(
         LocatedException(
-          `Couldn't export declaration, no environment with '${ExportEnvironment}' property found.`,
+          `Couldn't export declaration, no environment with '${intrinsic.ExportEnvironment}' property found.`,
           e.declaration
         )
       );
@@ -54,7 +48,7 @@ export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, c
     e,
     (value) => {
       value instanceof ImportBinding
-        ? evaluate(at(e, get(GetImportBindingValue)), bindArgs(value, c, cerr, env, config), cerr, env, config)
+        ? evaluate(at(e, get(intrinsic.GetImportBindingValue)), bindArgs(value, c, cerr, env, config), cerr, env, config)
         : c(value);
     },
     (exception) => {
@@ -110,7 +104,7 @@ export const ExportNamedDeclaration: Interpreter<NodeTypes.ExportNamedDeclaratio
           );
       }
       evaluate(
-        get(ExportBinding),
+        get(intrinsic.ExportBinding),
         bindArgs({ name, value: toExport, e: e.declaration }, c, cerr, env, config),
         cerr,
         env,
@@ -127,7 +121,7 @@ export const ExportDefaultDeclaration: Interpreter<NodeTypes.ExportDefaultDeclar
     e.declaration,
     (value) =>
       evaluate(
-        get(ExportBinding),
+        get(intrinsic.ExportBinding),
         bindArgs({ name: "default", value, e: e.declaration }, c, cerr, env, config),
         cerr,
         env,
@@ -215,7 +209,7 @@ export function createModulesImporter(globalEnv: Environment) {
         loadingModules[url].push({ c, cerr });
       } else {
         loadingModules[url] = [{ c, cerr }];
-        _(URLToScript)(
+        _(intrinsic.URLToScript)(
           [url, base],
           (result: { script: Script; resolvedPath: string } | { module: object }) => {
             if ("module" in result) {
@@ -226,7 +220,7 @@ export function createModulesImporter(globalEnv: Environment) {
                 script,
                 resolveModule(url),
                 rejectModule(url),
-                { values: { [ImportModule]: importer(resolvedPath) }, prev: globalEnv },
+                { values: { [intrinsic.ImportModule]: importer(resolvedPath) }, prev: globalEnv },
                 {
                   script,
                   schedule: getTrampolineScheduler()
