@@ -1,37 +1,47 @@
-import { createEnvironment, getEnvironmentBy, GetValue } from "../environment";
-import { at, declare, evaluate, get, getTrampolineScheduler, visitArray } from "../evaluate";
-import { LocatedException, NotImplementedException, presentException } from "../exceptions";
-import { bindArgs, metaesEvalModule, uncps } from "../metaes";
+import { EvaluateMid } from "../types";
+import { getEnvironmentBy, GetValue } from "../environment";
+import { at, declare, evaluate, get, getTrampolineScheduler, superi, visitArray } from "../evaluate";
+import { LocatedException, NotImplementedException } from "../exceptions";
+import { bindArgs, metaesEvalModule } from "../metaes";
 import * as NodeTypes from "../nodeTypes";
-import { ASTNode, Continuation, Environment, ErrorContinuation, Interpreter, Interpreters, NodeLoc } from "../types";
+import {
+  ASTNode,
+  Continuation,
+  Environment,
+  ErrorContinuation,
+  Interpreter,
+  Interpreters,
+  MetaesException,
+  NodeLoc,
+  Script
+} from "../types";
 
-export const ImportEnvironmentSymbol = "[[isImportModule]]";
-export const ExportEnvironmentSymbol = "[[isExportModule]]";
-export const GetBindingValueName = "[[GetBindingValue]]";
-export const ImportModuleName = "[[ImportModule]]";
-export const ExportBindingName = "[[ExportBinding]]";
-export const CreateScriptName = "[[CreateScript]]";
-export const ResolveModuleLocationName = "[[ResolveModuleLocation]]";
-export const GetModuleSourceName = "[[GetModuleSource]]";
+// TODO: switch to "intristic" names inside object, like in vanillinjs
+export const ImportEnvironment = "[[ImportEnvironment]]";
+export const ExportEnvironment = "[[ExportEnvironment]]";
+export const GetImportBindingValue = "[[GetImportBindingValue]]";
+export const ImportModule = "[[ImportModule]]";
+export const URLToScript = "[[URLToScript]]";
+export const ExportBinding = "[[ExportBinding]]";
 
 export const modulesEnv: Interpreters = {
-  [GetBindingValueName](value: ImportBinding, c, cerr, env, config) {
+  [GetImportBindingValue](value: ImportBinding, c, cerr, env, config) {
     evaluate(
-      at(value, get(ImportModuleName)),
+      at(value, get(ImportModule)),
       bindArgs(value.modulePath, (mod) => c(mod[value.name]), cerr),
       cerr,
       env,
       config
     );
   },
-  [ExportBindingName]({ name, value, e }, c, cerr, env, config) {
-    const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironmentSymbol]);
+  [ExportBinding]({ name, value, e }, c, cerr, env, config) {
+    const exportEnv = getEnvironmentBy(env, (env) => env[ExportEnvironment]);
     if (exportEnv) {
       evaluate(declare(name, value), c, cerr, exportEnv, config);
     } else {
       cerr(
         LocatedException(
-          `Couldn't export declaration, no environment with '${ExportEnvironmentSymbol}' property found.`,
+          `Couldn't export declaration, no environment with '${ExportEnvironment}' property found.`,
           e.declaration
         )
       );
@@ -40,13 +50,13 @@ export const modulesEnv: Interpreters = {
 };
 
 export const Identifier: Interpreter<NodeTypes.Identifier> = (e, c, cerr, env, config) =>
-  evaluate(
-    // TODO: use `superi` for Identifier once bug in meta2 is solved.
-    get(e.name),
-    (value) =>
+  superi("Identifier")(
+    e,
+    (value) => {
       value instanceof ImportBinding
-        ? evaluate(at(e, get(GetBindingValueName)), bindArgs(value, c, cerr, env, config), cerr, env, config)
-        : c(value),
+        ? evaluate(at(e, get(GetImportBindingValue)), bindArgs(value, c, cerr, env, config), cerr, env, config)
+        : c(value);
+    },
     (exception) => {
       exception.location = e;
       cerr(exception);
@@ -100,7 +110,7 @@ export const ExportNamedDeclaration: Interpreter<NodeTypes.ExportNamedDeclaratio
           );
       }
       evaluate(
-        get(ExportBindingName),
+        get(ExportBinding),
         bindArgs({ name, value: toExport, e: e.declaration }, c, cerr, env, config),
         cerr,
         env,
@@ -117,7 +127,7 @@ export const ExportDefaultDeclaration: Interpreter<NodeTypes.ExportDefaultDeclar
     e.declaration,
     (value) =>
       evaluate(
-        get(ExportBindingName),
+        get(ExportBinding),
         bindArgs({ name: "default", value, e: e.declaration }, c, cerr, env, config),
         cerr,
         env,
@@ -177,88 +187,58 @@ export const ImportDeclaration: Interpreter<NodeTypes.ImportDeclaration> = (e, c
     cerr
   );
 
-const defaultResolveModuleLocation = (importerPath: string, importedPath: string) =>
-  "./" + importerPath.substring(0, importerPath.lastIndexOf("/") + 1) + importedPath + ".js";
-
 export function createModulesImporter(globalEnv: Environment) {
-  const env = createEnvironment({}, globalEnv);
-  const loadedModules = {};
-  const loadingModules = {};
+  const _ = (name: string) => (arg, c, cerr) => GetValue({ name }, bindArgs(arg, c, cerr), cerr, globalEnv);
 
-  function getVar(name: string, fallback?: any) {
-    try {
-      return uncps(GetValue)({ name }, globalEnv);
-    } catch (e) {
-      if (fallback) {
-        return fallback;
-      } else {
-        throw e;
-      }
-    }
-  }
+  const loadedModules: { [key: string]: object } = {};
+  const loadingModules: { [key: string]: [{ c: Continuation; cerr: ErrorContinuation }] } = {};
 
-  const resolveModuleLocation = getVar(ResolveModuleLocationName, defaultResolveModuleLocation);
-  const getModuleSource = getVar(GetModuleSourceName);
-
-  const importModuleLocalized = (basePath: string) => (path: string, c: Continuation, cerr: ErrorContinuation) => {
-    if (path.startsWith("./") || path.startsWith("../")) {
-      importModule(resolveModuleLocation(basePath, path), c, cerr);
-    } else {
-      if (loadedModules[path]) {
-        c(loadedModules[path]);
-      } else {
-        getModuleSource(path, (mod) => c((loadedModules[path] = { ...mod, default: mod })), cerr);
-      }
-    }
+  const resolveModule = (url: string) => (mod: object) => {
+    const results = loadingModules[url];
+    loadedModules[url] = mod;
+    delete loadingModules[url];
+    results.forEach(({ c }) => c(mod));
   };
 
-  function importModule(url: string, c: Continuation<{ [key: string]: any }>, cerr: ErrorContinuation) {
-    if (loadedModules[url]) {
-      c(loadedModules[url]);
-    } else if (loadingModules[url]) {
-      loadingModules[url].push({ c, cerr });
-    } else {
-      loadingModules[url] = [{ c, cerr }];
-      GetValue(
-        { name: CreateScriptName },
-        bindArgs(
-          url,
-          (script) =>
-            metaesEvalModule(
-              script,
-              function (mod) {
-                const results = loadingModules[url];
-                loadedModules[url] = mod;
-                delete loadingModules[url];
-                results.forEach(({ c }) => c(mod));
-              },
-              function (exception) {
-                console.log(presentException(exception));
-                const results = loadingModules[url];
+  const rejectModule = (url: string) => (exception: MetaesException) => {
+    const results = loadingModules[url];
+    delete loadingModules[url];
+    results.forEach(({ cerr }) => cerr(exception));
+  };
 
-                delete loadingModules[url];
-                results.forEach(({ cerr }) => cerr(exception.value || exception.message || exception));
-              },
-              {
-                prev: env,
-                values: {
-                  [ImportModuleName]: importModuleLocalized(url)
-                }
-              },
-              {
+  const importer =
+    (base: string): EvaluateMid<{ [key: string]: any }, string> =>
+    (url, c, cerr) => {
+      if (loadedModules[url]) {
+        c(loadedModules[url]);
+      } else if (loadingModules[url]) {
+        loadingModules[url].push({ c, cerr });
+      } else {
+        loadingModules[url] = [{ c, cerr }];
+        _(URLToScript)(
+          [url, base],
+          (result: { script: Script; resolvedPath: string } | { module: object }) => {
+            if ("module" in result) {
+              resolveModule(url)(result.module);
+            } else {
+              const { script, resolvedPath } = result;
+              metaesEvalModule(
                 script,
-                schedule: getTrampolineScheduler()
-              }
-            ),
-          cerr
-        ),
-        cerr,
-        env
-      );
-    }
-  }
-
-  return importModule;
+                resolveModule(url),
+                rejectModule(url),
+                { values: { [ImportModule]: importer(resolvedPath) }, prev: globalEnv },
+                {
+                  script,
+                  schedule: getTrampolineScheduler()
+                }
+              );
+            }
+          },
+          rejectModule(url)
+        );
+      }
+    };
+  return importer;
 }
 
 export default {

@@ -1,6 +1,6 @@
 import { toEnvironment } from "./environment";
 import { defaultScheduler, evaluate } from "./evaluate";
-import { ExportEnvironmentSymbol, ImportEnvironmentSymbol, modulesEnv } from "./interpreter/modules";
+import { ExportEnvironment, ImportEnvironment, modulesEnv } from "./interpreter/modules";
 import { ECMAScriptInterpreters, ModuleECMAScriptInterpreters } from "./interpreters";
 import { ExpressionStatement, FunctionNode, Program } from "./nodeTypes";
 import { parse, ParseCache } from "./parse";
@@ -75,8 +75,8 @@ export const metaesEval: EvaluateBase = (input, c, cerr, env = {}, config = {}) 
   );
 
 export const metaesEvalModule: EvaluateBase<{ [key: string]: any }> = (input, c, cerr, env = {}, config = {}) => {
-  const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironmentSymbol]: true };
-  const exportsEnv = { prev: importsEnv, values: {}, [ExportEnvironmentSymbol]: true };
+  const importsEnv = { values: modulesEnv, prev: toEnvironment(env), [ImportEnvironment]: true };
+  const exportsEnv = { prev: importsEnv, values: {}, [ExportEnvironment]: true };
 
   evaluateConditionally(
     input,
@@ -206,6 +206,7 @@ export const uncpsp =
   (input?: I, ...rest: R) =>
     new Promise<O>((resolve, reject) => fn.call(thisValue, input, resolve, reject, ...rest));
 
+// TODO: should change list of args into array and vice versa?
 export const cpsify =
   <I, O>(fn: (input: I, env?: Environment, config?: Partial<EvaluationConfig>) => O): EvaluateMid<O, I> =>
   (i, c, cerr, env, config) => {
